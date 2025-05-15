@@ -111,9 +111,9 @@ $recentXuatKho = $stmtXuatKhoRecent->fetchAll(PDO::FETCH_ASSOC);
                         </a>
                     </div>
                 </div>
-                <div class="md:w-1/2 flex justify-center">
+                <!-- <div class="md:w-1/2 flex justify-center">
                     <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRU2OJYIIRPZ0gr7vWKtLO-mx6p62rg1VkzpQ&s" alt="Warehouse Illustration" class="max-w-full h-auto md:max-w-md">
-                </div>
+                </div> -->
             </div>
         </div>
     </section>

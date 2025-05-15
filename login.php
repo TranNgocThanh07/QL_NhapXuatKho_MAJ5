@@ -121,7 +121,7 @@ $savedTaiKhoan = $_COOKIE['taiKhoan'] ?? '';
                             <input type="checkbox" name="remember" class="w-4 h-4 text-red-600 focus:ring-red-500 border-gray-300 rounded" />
                             <span class="text-sm text-gray-500">Nhớ mật khẩu</span>
                         </label>
-                        <a href="#" class="text-sm text-red-600 font-medium mt-5">Quên mật khẩu?</a>
+                        <!-- <a href="#" class="text-sm text-red-600 font-medium mt-5">Quên mật khẩu?</a> -->
                     </div>
                 </div>
 

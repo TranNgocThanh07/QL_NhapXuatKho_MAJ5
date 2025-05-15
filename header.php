@@ -153,10 +153,10 @@ $current_page = basename($_SERVER['PHP_SELF']);
                         </a>
                         <?php endif; ?>
                         
-                        <a href="#" class="nav-link px-3 py-2 text-sm font-medium rounded-md transition duration-300 ease-in-out flex items-center space-x-1.5 text-gray-700 hover:text-red-600">
+                        <!-- <a href="#" class="nav-link px-3 py-2 text-sm font-medium rounded-md transition duration-300 ease-in-out flex items-center space-x-1.5 text-gray-700 hover:text-red-600">
                             <i class="fas fa-chart-bar"></i>
                             <span>Báo cáo</span>
-                        </a>
+                        </a> -->
                     </div>
                 </div>
 

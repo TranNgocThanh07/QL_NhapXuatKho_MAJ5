@@ -235,9 +235,9 @@ $xuatHang = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <h1 class="text-4xl md:text-5xl font-bold mb-4">Xuất Kho MAJ5</h1>
                     <p class="text-lg opacity-90 mb-6">Chào mừng <strong><?php echo htmlspecialchars($tenNhanVien); ?></strong> đến với hệ thống xuất kho của MAJ5.</p>
                 </div>
-                <div class="md:w-1/2 flex justify-center">
+                <!-- <div class="md:w-1/2 flex justify-center">
                     <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRU2OJYIIRPZ0gr7vWKtLO-mx6p62rg1VkzpQ&s" alt="Warehouse Illustration" class="max-w-full h-auto md:max-w-md">
-                </div>
+                </div> -->
             </div>
         </div>
     </section>

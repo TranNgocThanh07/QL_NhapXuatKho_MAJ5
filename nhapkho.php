@@ -157,9 +157,9 @@ $donSanXuat = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <h1 class="text-4xl md:text-5xl font-bold mb-4">Nhập Kho MAJ5</h1>
                     <p class="text-lg opacity-90 mb-6">Chào mừng <strong><?php echo htmlspecialchars($tenNhanVien); ?></strong> đến với hệ thống nhập kho của MAJ5.</p>
                 </div>
-                <div class="md:w-1/2 flex justify-center">
+                <!-- <div class="md:w-1/2 flex justify-center">
                     <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRU2OJYIIRPZ0gr7vWKtLO-mx6p62rg1VkzpQ&s" alt="Warehouse Illustration" class="max-w-full h-auto md:max-w-md">
-                </div>
+                </div> -->
             </div>
         </div>
     </section>
@@ -226,7 +226,7 @@ $donSanXuat = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 ?>
                                     <tr class="hover:bg-red-50 transition-colors duration-200">
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                                            <input type="checkbox" class="row-checkbox" value="<?php echo htmlspecialchars($don['MaSoMe']); ?>">
+                                            <input type="checkbox" class="row-checkbox" style="width: 20px; height: 20px; "value="<?php echo htmlspecialchars($don['MaSoMe']); ?>">
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><?php echo $stt++; ?></td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><?php echo htmlspecialchars($don['MaSoMe']); ?></td>
