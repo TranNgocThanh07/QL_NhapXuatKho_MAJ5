@@ -1,0 +1,8 @@
+{
+    "name": "admin/ql_nhap-xuat-kho_maj5",
+    "require": {
+        "endroid/qr-code": "^5.0",
+        "mpdf/mpdf": "^8.2",
+        "tecnickcom/tcpdf": "^6.8"
+    }
+}
