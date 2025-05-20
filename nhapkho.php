@@ -366,7 +366,7 @@ function updateTable(data, offset) {
         row.className = 'hover:bg-red-50 transition-colors duration-200';
         row.innerHTML = `
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                <input type="checkbox" class="row-checkbox" style="width: 20px; height: 20px; value="${don.MaSoMe}">
+                <input type="checkbox" class="row-checkbox" style="width: 20px; height: 20px;" value="${don.MaSoMe}">
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${stt++}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${don.MaSoMe || ''}</td>
