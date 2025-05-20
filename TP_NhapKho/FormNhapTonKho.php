@@ -559,8 +559,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $sqlInsert = "INSERT INTO TP_ChiTietDonSanXuat (
             MaSoMe, MaNguoiLienHe, MaCTNHTP, MaDonHang, MaVai, MaVatTu, TenVai, 
             MaMau, MaDVT, Kho, SoLuong, MaQR, TrangThai, SoLot, NgayTao, 
-            MaKhachHang, MaNhanVien, TenThanhPhan, SoKgCan, OriginalTrangThai
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            MaKhachHang, MaNhanVien, TenThanhPhan, SoKgCan, OriginalTrangThai, MaKhuVuc, GhiChu
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $stmtInsert = $pdo->prepare($sqlInsert);
 
         foreach ($data as $item) {
@@ -586,6 +586,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $stmtInsert->bindValue(18, $item['TenThanhPhan']);
             $stmtInsert->bindValue(19, $soKgCan);
             $stmtInsert->bindValue(20, $item['OriginalTrangThai']);
+            $stmtInsert->bindValue(21, $item['MaKhuVuc']);
+            $stmtInsert->bindValue(22, $item['GhiChu']);
             $stmtInsert->execute();
         }
 
@@ -705,7 +707,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 
     try {
-        $sqlChiTiet = "SELECT SoLuong, SoKgCan, SoLot, TenThanhPhan 
+        $sqlChiTiet = "SELECT SoLuong, SoKgCan, SoLot, TenThanhPhan, MaKhuVuc, GhiChu 
                        FROM TP_ChiTietDonSanXuat 
                        WHERE MaSoMe = ? AND TrangThai = 2 
                        ORDER BY NgayTao DESC";
@@ -726,6 +728,11 @@ $sqlTenThanhPhan = "SELECT TenThanhPhan FROM TP_ThanhPhan ORDER BY TenThanhPhan"
 $stmtTenThanhPhan = $pdo->prepare($sqlTenThanhPhan);
 $stmtTenThanhPhan->execute();
 $TenThanhPhanList = $stmtTenThanhPhan->fetchAll(PDO::FETCH_ASSOC);
+// Truy vấn dữ liệu từ TP_KhuVuc
+$sqlKhuVuc = "SELECT MaKhuVuc FROM KhuVuc ORDER BY MaKhuVuc";
+$stmtKhuVuc = $pdo->prepare($sqlKhuVuc);
+$stmtKhuVuc->execute();
+$MaKhuVucList = $stmtKhuVuc->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
@@ -939,6 +946,25 @@ $TenThanhPhanList = $stmtTenThanhPhan->fetchAll(PDO::FETCH_ASSOC);
                     </datalist>
                 </div>
 
+                <!-- Khuvuc Và Ghi Chú -->
+                     <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Khu Vực</label>
+                            <input type="text" name="MaKhuVuc" id="MaKhuVuc" class="input-field w-full p-2.5 rounded-lg" list="MaKhuVucList">
+                            <datalist id="MaKhuVucList">
+                                <?php
+                                foreach ($MaKhuVucList as $row) {
+                                    $MaKhuVuc = htmlspecialchars($row['MaKhuVuc']);
+                                    echo "<option value=\"$MaKhuVuc\">";
+                                }
+                                ?>
+                            </datalist>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Ghi chú</label>
+                            <input type="text" name="GhiChu" id="GhiChu" class="input-field w-full p-2.5 rounded-lg" oninput="this.value = this.value.toUpperCase();">
+                        </div>
+                    </div>
                 <!-- Hidden fields -->
                 <input type="hidden" name="MaNguoiLienHe" value="<?php echo htmlspecialchars($don['MaNguoiLienHe'] ?? ''); ?>">
                 <input type="hidden" name="MaNhanVien" value="<?php echo htmlspecialchars($maNhanVien); ?>">
@@ -971,6 +997,8 @@ $TenThanhPhanList = $stmtTenThanhPhan->fetchAll(PDO::FETCH_ASSOC);
                     <?php endif; ?>
                     <th>Số Lot</th>
                     <th>Thành Phần</th>
+                    <th>Khu Vực</th>
+                    <th>Ghi Chú</th>
                     <th>Hành động</th>
                 </tr>
             </thead>
@@ -1028,6 +1056,7 @@ async function getTongSoLuongNhap(maSoMe) {
     }
 }
 
+// Xử lý sự kiện submit form nhập kho, kiểm tra và thêm dữ liệu vào tempData
 document.getElementById('nhapHangForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     const soLuong = parseFloat(document.getElementById('soLuong').value) || 0;
@@ -1036,6 +1065,8 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
     const soKGCan = soKGCanInput && !isNaN(soKGCanInput) && soKGCanInput.trim() !== '' ? parseFloat(soKGCanInput) : null;
     const soLot = document.getElementById('soLot').value.trim();
     const TenThanhPhan = document.getElementById('TenThanhPhan').value.trim();
+    const maKhuVuc = document.getElementById('MaKhuVuc').value.trim();
+    const ghiChu = document.getElementById('GhiChu').value.trim();
 
     let errorMessages = [];
     if (soLuong <= 0) errorMessages.push("Số lượng phải lớn hơn 0.");
@@ -1043,6 +1074,7 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
     if (soKGCan !== null && soKGCan < 0) errorMessages.push("Số KG Cân không được âm.");
     if (!soLot) errorMessages.push("Số Lot không được để trống.");
     if (!TenThanhPhan) errorMessages.push("Thành phần không được để trống.");
+    if (!maKhuVuc) errorMessages.push("Mã khu vực không được để trống.");
 
     if (errorMessages.length > 0) {
         Swal.fire({
@@ -1067,6 +1099,17 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
         Swal.fire({
             icon: 'warning',
             title: 'Thành phần không hợp lệ!',
+            text: 'Vui lòng chọn một giá trị từ danh sách gợi ý.'
+        });
+        return;
+    }
+
+    // Kiểm tra giá trị hợp lệ cho MaKhuVuc
+    const validMaKhuVuc = <?php echo json_encode(array_column($MaKhuVucList, 'MaKhuVuc')); ?>; // Giả sử bạn có danh sách này từ PHP
+    if (!validMaKhuVuc.includes(maKhuVuc)) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Mã khu vực không hợp lệ!',
             text: 'Vui lòng chọn một giá trị từ danh sách gợi ý.'
         });
         return;
@@ -1100,6 +1143,8 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
             TenThanhPhan: TenThanhPhan,
             SoKgCan: soKGCan,
             OriginalTrangThai: 2,
+            MaKhuVuc: maKhuVuc, 
+            GhiChu: ghiChu
         });
     }
 
@@ -1109,6 +1154,8 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
     document.getElementById('soKGCan').value = '';
     document.getElementById('soLot').value = '';
     document.getElementById('TenThanhPhan').value = '';
+    document.getElementById('MaKhuVuc').value = ''; 
+    document.getElementById('GhiChu').value = '';
 
     Swal.fire({
         icon: 'success',
@@ -1124,6 +1171,7 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
     });
 });
 
+// Cập nhật bảng hiển thị dữ liệu nhập kho tạm thời
 function updateTable() {
     const tbody = document.getElementById('dataTableBody');
     tbody.innerHTML = '';
@@ -1133,9 +1181,11 @@ function updateTable() {
         row.innerHTML = `
             <td>${item.STT}</td>
             <td>${item.SoLuong} <?php echo $tenDVT; ?></td>
-            ${isKgUnit === 'false' ? `<td>${item.SoKgCan ? item.SoKgCan + ' kg' : '0'}</td>` : ''}
+            ${isKgUnit === 'false' ? `<td>${item.SoKgCan ? item.SoKgCan + ' kg' : ''}</td>` : ''}
             <td>${item.SoLot}</td>
             <td>${item.TenThanhPhan}</td>
+            <td>${item.MaKhuVuc }</td>
+            <td>${item.GhiChu || ''}</td>
             <td>
                 <button onclick="deleteRow(${index})" class="text-red-600 hover:text-red-800">
                     <i class="fas fa-trash"></i>
@@ -1509,13 +1559,15 @@ document.getElementById('XemChiTietNhap').addEventListener('click', async functi
                     ${isKgUnit === 'false' ? `<td class="border px-4 py-2">${item.SoKgCan ? parseFloat(item.SoKgCan).toFixed(2) + ' kg' : ''}</td>` : ''}
                     <td class="border px-4 py-2">${item.SoLot}</td>
                     <td class="border px-4 py-2">${item.TenThanhPhan}</td>
+                    <td class="border px-4 py-2">${item.MaKhuVuc ||''}</td>
+                    <td class="border px-4 py-2">${item.GhiChu || ''}</td>
                 </tr>
             `).join('');
 
             const htmlContent = `
                 <div class="text-left">                 
                     <div class="overflow-x-auto">
-                        <table class="min-w-[600px] text-sm text-left text-gray-700 border-collapse shadow-sm">
+                        <table class="min-w-[800px] text-sm text-left text-gray-700 border-collapse shadow-sm">
                             <thead class="bg-gray-100">
                                 <tr>
                                     <th class="border px-6 py-3 font-semibold min-w-[60px]">🔢 STT</th>
@@ -1523,6 +1575,8 @@ document.getElementById('XemChiTietNhap').addEventListener('click', async functi
                                     ${isKgUnit === 'false' ? '<th class="border px-6 py-3 font-semibold min-w-[120px]">⚖️ Số KG Cân</th>' : ''}
                                     <th class="border px-6 py-3 font-semibold min-w-[150px] whitespace-nowrap">🏷️ Số Lot</th>
                                     <th class="border px-6 py-3 font-semibold min-w-[200px] whitespace-nowrap">🧵 Thành Phần</th>
+                                    <th class="border px-6 py-3 font-semibold min-w-[120px] whitespace-nowrap">📍 Khu Vực</th>
+                                    <th class="border px-6 py-3 font-semibold min-w-[150px] whitespace-nowrap">📝 Ghi Chú</th>
                                 </tr>
                             </thead>
                             <tbody>${tableRows}</tbody>

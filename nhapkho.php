@@ -13,32 +13,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $tenKhachHang = isset($_POST['tenKhachHang']) ? "%" . $_POST['tenKhachHang'] . "%" : "%";
         $trangThai = isset($_POST['trangThai']) && in_array($_POST['trangThai'], ['0', '2']) ? (int)$_POST['trangThai'] : 0;
 
+        // Điều kiện lọc
+        $whereClause = $trangThai == 0 ? "TP_DonSanXuat.TrangThai = :trangThai AND TP_DonSanXuat.LoaiDon IN (0, 2)" : 
+                                       "(TP_DonSanXuat.TrangThai = :trangThai OR TP_DonSanXuat.LoaiDon = 3)";
+
         // Đếm tổng số bản ghi
         $sqlCount = "SELECT COUNT(*) as total 
                      FROM TP_DonSanXuat 
                      LEFT JOIN TP_KhachHang ON TP_DonSanXuat.MaKhachHang = TP_KhachHang.MaKhachHang 
-                     WHERE TP_DonSanXuat.TrangThai = :trangThai 
+                     WHERE $whereClause 
                      AND TP_DonSanXuat.MaSoMe LIKE :maSoMe 
                      AND TP_KhachHang.TenKhachHang LIKE :tenKhachHang";
         $stmtCount = $pdo->prepare($sqlCount);
-        $stmtCount->execute([':trangThai' => $trangThai, ':maSoMe' => $maSoMe, ':tenKhachHang' => $tenKhachHang]);
+        $stmtCount->bindValue(':trangThai', $trangThai, PDO::PARAM_INT);
+        $stmtCount->bindValue(':maSoMe', $maSoMe, PDO::PARAM_STR);
+        $stmtCount->bindValue(':tenKhachHang', $tenKhachHang, PDO::PARAM_STR);
+        $stmtCount->execute();
         $totalRecords = $stmtCount->fetch(PDO::FETCH_ASSOC)['total'];
         $totalPages = ceil($totalRecords / $recordsPerPage);
 
         // Lấy dữ liệu cho trang hiện tại
         $sql = "SELECT TP_DonSanXuat.MaSoMe, TP_DonSanXuat.MaKhachHang, TP_DonSanXuat.MaDonHang, 
-        TP_DonSanXuat.TenVai, TP_DonSanXuat.TongSoLuongGiao, TP_DonSanXuat.MaDVT, 
-        TP_DonSanXuat.TrangThai, TP_DonSanXuat.NgayNhan, 
-        TP_KhachHang.TenKhachHang, TP_DonViTinh.TenDVT 
-        FROM TP_DonSanXuat 
-        LEFT JOIN TP_KhachHang ON TP_DonSanXuat.MaKhachHang = TP_KhachHang.MaKhachHang 
-        LEFT JOIN TP_DonViTinh ON TP_DonSanXuat.MaDVT = TP_DonViTinh.MaDVT 
-        WHERE TP_DonSanXuat.TrangThai = :trangThai 
-        AND TP_DonSanXuat.MaSoMe LIKE :maSoMe 
-        AND TP_KhachHang.TenKhachHang LIKE :tenKhachHang 
-        ORDER BY TP_DonSanXuat.NgayNhan DESC 
-        OFFSET :offset ROWS 
-        FETCH NEXT :limit ROWS ONLY";
+                       TP_DonSanXuat.TenVai, TP_DonSanXuat.TongSoLuongGiao, TP_DonSanXuat.MaDVT, 
+                       TP_DonSanXuat.TrangThai, TP_DonSanXuat.NgayNhan, TP_DonSanXuat.LoaiDon,
+                       TP_KhachHang.TenKhachHang, TP_DonViTinh.TenDVT 
+                FROM TP_DonSanXuat 
+                LEFT JOIN TP_KhachHang ON TP_DonSanXuat.MaKhachHang = TP_KhachHang.MaKhachHang 
+                LEFT JOIN TP_DonViTinh ON TP_DonSanXuat.MaDVT = TP_DonViTinh.MaDVT 
+                WHERE $whereClause 
+                AND TP_DonSanXuat.MaSoMe LIKE :maSoMe 
+                AND TP_KhachHang.TenKhachHang LIKE :tenKhachHang 
+                ORDER BY TP_DonSanXuat.NgayNhan DESC 
+                OFFSET :offset ROWS 
+                FETCH NEXT :limit ROWS ONLY";
         $stmt = $pdo->prepare($sql);
         $stmt->bindValue(':trangThai', $trangThai, PDO::PARAM_INT);
         $stmt->bindValue(':maSoMe', $maSoMe, PDO::PARAM_STR);
@@ -48,6 +55,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $stmt->execute();
         $donSanXuat = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        // Kiểm tra LoaiDon = 3
+        $hasLoaiDon3 = false;
+        foreach ($donSanXuat as $don) {
+            if ($don['LoaiDon'] == 3) {
+                $hasLoaiDon3 = true;
+                break;
+            }
+        }
+
         // Trả về JSON
         header('Content-Type: application/json');
         echo json_encode([
@@ -55,7 +71,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             'data' => $donSanXuat,
             'totalPages' => $totalPages,
             'currentPage' => $page,
-            'offset' => $offset
+            'offset' => $offset,
+            'hasLoaiDon3' => $hasLoaiDon3
         ]);
     } catch (Exception $e) {
         header('Content-Type: application/json');
@@ -72,22 +89,29 @@ $page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] :
 $trangThai = isset($_GET['trangThai']) && in_array($_GET['trangThai'], ['0', '2']) ? (int)$_GET['trangThai'] : 0;
 $offset = ($page - 1) * $recordsPerPage;
 
+// Điều kiện lọc cho Nhập Hàng và Nhập Hàng Tồn
+$whereClause = $trangThai == 0 ? "TP_DonSanXuat.TrangThai = :trangThai AND TP_DonSanXuat.LoaiDon IN (0, 2)" : 
+                                 "(TP_DonSanXuat.TrangThai = :trangThai OR TP_DonSanXuat.LoaiDon = 3)";
+
+// Đếm tổng số bản ghi
 $sqlCount = "SELECT COUNT(*) as total 
              FROM TP_DonSanXuat 
-             WHERE TP_DonSanXuat.TrangThai = :trangThai";
+             WHERE $whereClause";
 $stmtCount = $pdo->prepare($sqlCount);
-$stmtCount->execute([':trangThai' => $trangThai]);
+$stmtCount->bindValue(':trangThai', $trangThai, PDO::PARAM_INT);
+$stmtCount->execute();
 $totalRecords = $stmtCount->fetch(PDO::FETCH_ASSOC)['total'];
 $totalPages = ceil($totalRecords / $recordsPerPage);
 
+// Lấy dữ liệu cho trang hiện tại
 $sql = "SELECT TP_DonSanXuat.MaSoMe, TP_DonSanXuat.MaKhachHang, TP_DonSanXuat.MaDonHang, 
                TP_DonSanXuat.TenVai, TP_DonSanXuat.TongSoLuongGiao, TP_DonSanXuat.MaDVT, 
-               TP_DonSanXuat.TrangThai, TP_DonSanXuat.NgayNhan, 
+               TP_DonSanXuat.TrangThai, TP_DonSanXuat.NgayNhan, TP_DonSanXuat.LoaiDon,
                TP_KhachHang.TenKhachHang, TP_DonViTinh.TenDVT 
         FROM TP_DonSanXuat 
         LEFT JOIN TP_KhachHang ON TP_DonSanXuat.MaKhachHang = TP_KhachHang.MaKhachHang 
         LEFT JOIN TP_DonViTinh ON TP_DonSanXuat.MaDVT = TP_DonViTinh.MaDVT 
-        WHERE TP_DonSanXuat.TrangThai = :trangThai 
+        WHERE $whereClause 
         ORDER BY TP_DonSanXuat.NgayNhan DESC 
         OFFSET :offset ROWS 
         FETCH NEXT :limit ROWS ONLY";
@@ -97,6 +121,15 @@ $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
 $stmt->bindValue(':limit', $recordsPerPage, PDO::PARAM_INT);
 $stmt->execute();
 $donSanXuat = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Kiểm tra nếu có đơn với LoaiDon = 3 để điều chỉnh hiển thị nút Nhập Hàng Tồn
+$hasLoaiDon3 = false;
+foreach ($donSanXuat as $don) {
+    if ($don['LoaiDon'] == 3) {
+        $hasLoaiDon3 = true;
+        break;
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -191,7 +224,7 @@ $donSanXuat = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </div>
                 </div>
 
-                <!-- Buttons -->               
+                <!-- Buttons -->
                 <div class="flex gap-4 mb-4">
                     <a id="btnXemChiTiet" href="#" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-full shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300">
                         <i class="fas fa-eye mr-2"></i> Xem Chi Tiết
@@ -199,7 +232,7 @@ $donSanXuat = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <a id="btnNhapHang" href="#" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-full shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-300" style="display: <?php echo $trangThai == 0 ? 'inline-flex' : 'none'; ?>;">
                         <i class="fas fa-arrow-circle-down mr-2"></i> Nhập Hàng
                     </a>
-                    <a id="btnNhapHangTon" href="#" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-full shadow-sm text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-all duration-300" style="display: <?php echo $trangThai == 2 ? 'inline-flex' : 'none'; ?>;">
+                    <a id="btnNhapHangTon" href="#" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-full shadow-sm text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-all duration-300" style="display: <?php echo ($trangThai == 2 || $hasLoaiDon3) ? 'inline-flex' : 'none'; ?>;">
                         <i class="fas fa-box-open mr-2"></i> Nhập Hàng Tồn
                     </a>
                 </div>
@@ -333,7 +366,7 @@ function updateTable(data, offset) {
         row.className = 'hover:bg-red-50 transition-colors duration-200';
         row.innerHTML = `
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                <input type="checkbox" class="row-checkbox" value="${don.MaSoMe}">
+                <input type="checkbox" class="row-checkbox" style="width: 20px; height: 20px; value="${don.MaSoMe}">
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${stt++}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${don.MaSoMe || ''}</td>

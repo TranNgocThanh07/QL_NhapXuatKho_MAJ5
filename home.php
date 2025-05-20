@@ -21,19 +21,19 @@ $stmtVai = $pdo->prepare($sqlVai);
 $stmtVai->execute();
 $totalVai = $stmtVai->fetch(PDO::FETCH_ASSOC)['totalVai'];
 
-// Thống kê nhập kho (từ bảng DTO_TP_DonSanXuat, TrangThai = 2)
+// Thống kê nhập kho (từ bảng DTO_TP_DonSanXuat, TrangThai = 3)
 $sqlNhapKho = "SELECT COUNT(*) as totalNhapKho 
                FROM TP_DonSanXuat 
-               WHERE TrangThai = 2 AND $timeCondition";
+               WHERE TrangThai = 3 AND $timeCondition";
 $stmtNhapKho = $pdo->prepare($sqlNhapKho);
 $stmtNhapKho->bindParam(':filterValue', $filterValue);
 $stmtNhapKho->execute();
 $totalNhapKho = $stmtNhapKho->fetch(PDO::FETCH_ASSOC)['totalNhapKho'];
 
-// Thống kê xuất kho (từ bảng DTO_TP_XuatHang, TrangThai = 2)
+// Thống kê xuất kho (từ bảng DTO_TP_XuatHang, TrangThai = 1)
 $sqlXuatKho = "SELECT COUNT(*) as totalXuatKho 
                FROM TP_XuatHang 
-               WHERE TrangThai = 2 AND $timeConditionXuat";
+               WHERE TrangThai = 1 AND $timeConditionXuat";
 $stmtXuatKho = $pdo->prepare($sqlXuatKho);
 $stmtXuatKho->bindParam(':filterValue', $filterValue);
 $stmtXuatKho->execute();
