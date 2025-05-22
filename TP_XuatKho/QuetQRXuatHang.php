@@ -24,28 +24,46 @@ try {
                 exit;
             }
 
+            // Bắt đầu transaction để đảm bảo tính toàn vẹn dữ liệu
+            $pdo->beginTransaction();
+
             // Cập nhật trạng thái
-            $sqlUpdate = "UPDATE TP_ChiTietXuatHang SET TrangThai = 1 WHERE MaCTXHTP = :maCTXHTP AND TrangThai = 0";
+            $sqlUpdate = "UPDATE TP_ChiTietXuatHang 
+                         SET TrangThai = 1 
+                         WHERE MaCTXHTP = :maCTXHTP AND TrangThai = 0";
             $stmtUpdate = $pdo->prepare($sqlUpdate);
             $stmtUpdate->execute([':maCTXHTP' => $maCTXHTP]);
 
+            // Kiểm tra xem có bản ghi nào được cập nhật không
+            $rowCount = $stmtUpdate->rowCount();
+            if ($rowCount === 0) {
+                $pdo->rollBack();
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Chi tiết đã được quét hoặc không tồn tại']);
+                exit;
+            }
+
             // Lấy thông tin tổng và đã xuất
             $sqlProgress = "SELECT 
-                            SUM(ct.SoLuong) as TongSoLuongXuat, 
-                            SUM(CASE WHEN ct.TrangThai = 1 THEN ct.SoLuong ELSE 0 END) as SoLuongDaXuat,
-                            SUM(CASE WHEN ct.TrangThai = 0 THEN 1 ELSE 0 END) as remaining 
-                            FROM TP_ChiTietXuatHang ct 
-                            WHERE ct.MaXuatHang = :maXuatHang";
+                COALESCE(SUM(SoLuong), 0) as TongSoLuongXuat, 
+                COALESCE(SUM(CASE WHEN TrangThai = 1 THEN SoLuong ELSE 0 END), 0) as SoLuongDaXuat,
+                COALESCE(SUM(CASE WHEN TrangThai = 0 THEN SoLuong ELSE 0 END), 0) as SoLuongConLai,
+                COUNT(CASE WHEN TrangThai = 0 THEN 1 END) as remaining 
+            FROM TP_ChiTietXuatHang 
+            WHERE MaXuatHang = :maXuatHang";
             $stmtProgress = $pdo->prepare($sqlProgress);
             $stmtProgress->execute([':maXuatHang' => $maXuatHang]);
             $progress = $stmtProgress->fetch(PDO::FETCH_ASSOC);
 
+            $pdo->commit();
+
             header('Content-Type: application/json');
             echo json_encode([
                 'success' => true,
-                'remaining' => $progress['remaining'],
-                'tongSoLuongXuat' => $progress['TongSoLuongXuat'],
-                'soLuongDaXuat' => $progress['SoLuongDaXuat'],
+                'remaining' => (int)$progress['remaining'],
+                'tongSoLuongXuat' => (float)$progress['TongSoLuongXuat'],
+                'soLuongDaXuat' => (float)$progress['SoLuongDaXuat'],
+                'soLuongConLai' => (float)$progress['SoLuongConLai'],
                 'message' => $progress['remaining'] == 0 ? 'Đã quét thành công toàn bộ đơn xuất hàng!' : 'Cập nhật trạng thái thành công'
             ]);
             exit;
@@ -59,7 +77,9 @@ try {
                 exit;
             }
 
-            $sql = "UPDATE TP_XuatHang SET TrangThai = :status WHERE MaXuatHang = :maXuatHang";
+            $sql = "UPDATE TP_XuatHang 
+                    SET TrangThai = :status 
+                    WHERE MaXuatHang = :maXuatHang";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([':status' => $status, ':maXuatHang' => $maXuatHang]);
 
@@ -69,12 +89,24 @@ try {
         }
     }
 
-    // Lấy thông tin phiếu xuất (giữ nguyên)
-    $sql = "SELECT xh.MaXuatHang, nv.TenNhanVien, xh.NgayXuat, xh.GhiChu,
-                   SUM(ct.SoLuong) as TongSoLuongXuat, 
-                   SUM(CASE WHEN ct.TrangThai = 1 THEN ct.SoLuong ELSE 0 END) as SoLuongDaXuat,
-                   dvt.TenDVT, v.MaVai, v.TenVai, m.TenMau,
-                   ct.SoLot, ct.TenThanhPhan, ct.MaDonHang, ct.MaVatTu, ct.Kho
+    // Lấy thông tin phiếu xuất
+    $sql = "SELECT 
+                xh.MaXuatHang, 
+                nv.TenNhanVien, 
+                xh.NgayXuat, 
+                xh.GhiChu,
+                COALESCE(SUM(ct.SoLuong), 0) as TongSoLuongXuat, 
+                COALESCE(SUM(CASE WHEN ct.TrangThai = 1 THEN ct.SoLuong ELSE 0 END), 0) as SoLuongDaXuat,
+                COALESCE(SUM(CASE WHEN ct.TrangThai = 0 THEN ct.SoLuong ELSE 0 END), 0) as SoLuongConLai,
+                MIN(dvt.TenDVT) as TenDVT, 
+                MIN(v.MaVai) as MaVai, 
+                MIN(v.TenVai) as TenVai, 
+                MIN(m.TenMau) as TenMau,
+                MIN(ct.SoLot) as SoLot, 
+                MIN(ct.TenThanhPhan) as TenThanhPhan, 
+                MIN(ct.MaDonHang) as MaDonHang, 
+                MIN(ct.MaVatTu) as MaVatTu, 
+                MIN(ct.Kho) as Kho
             FROM TP_XuatHang xh
             LEFT JOIN TP_ChiTietXuatHang ct ON xh.MaXuatHang = ct.MaXuatHang
             LEFT JOIN NhanVien nv ON xh.MaNhanVien = nv.MaNhanVien
@@ -82,8 +114,7 @@ try {
             LEFT JOIN Vai v ON ct.MaVai = v.MaVai
             LEFT JOIN TP_Mau m ON ct.MaMau = m.MaMau
             WHERE xh.MaXuatHang = :maXuatHang
-            GROUP BY xh.MaXuatHang, nv.TenNhanVien, xh.NgayXuat, xh.GhiChu, dvt.TenDVT,
-                     v.MaVai, v.TenVai, m.TenMau, ct.SoLot, ct.TenThanhPhan, ct.MaDonHang, ct.MaVatTu, ct.Kho";
+            GROUP BY xh.MaXuatHang, nv.TenNhanVien, xh.NgayXuat, xh.GhiChu";
     $stmt = $pdo->prepare($sql);
     $stmt->bindValue(':maXuatHang', $maXuatHang, PDO::PARAM_STR);
     $stmt->execute();
@@ -94,9 +125,21 @@ try {
         exit;
     }
 
-    $sqlChiTiet = "SELECT ct.MaCTXHTP, ct.SoLuong, ct.TrangThai, dvt.TenDVT,
-                          v.MaVai, v.TenVai, m.TenMau,
-                          ct.SoLot, ct.TenThanhPhan, ct.MaDonHang, ct.MaVatTu, ct.Kho, ct.MaQR
+    // Lấy chi tiết xuất hàng
+    $sqlChiTiet = "SELECT 
+                       ct.MaCTXHTP, 
+                       ct.SoLuong, 
+                       ct.TrangThai, 
+                       dvt.TenDVT,
+                       v.MaVai, 
+                       v.TenVai, 
+                       m.TenMau,
+                       ct.SoLot, 
+                       ct.TenThanhPhan, 
+                       ct.MaDonHang, 
+                       ct.MaVatTu, 
+                       ct.Kho, 
+                       ct.MaQR
                    FROM TP_ChiTietXuatHang ct
                    LEFT JOIN TP_DonViTinh dvt ON ct.MaDVT = dvt.MaDVT
                    LEFT JOIN Vai v ON ct.MaVai = v.MaVai
@@ -107,13 +150,16 @@ try {
     $stmtChiTiet->execute();
     $chiTietXuat = $stmtChiTiet->fetchAll(PDO::FETCH_ASSOC);
 
-    $tongXuat = $phieuXuat['TongSoLuongXuat'];
-    $daXuat = $phieuXuat['SoLuongDaXuat'];
-    $conLai = $tongXuat - $daXuat;
+    $tongXuat = (float)$phieuXuat['TongSoLuongXuat'];
+    $daXuat = (float)$phieuXuat['SoLuongDaXuat'];
+    $conLai = (float)$phieuXuat['SoLuongConLai'];
     $percentCompleted = $tongXuat > 0 ? round(($daXuat / $tongXuat) * 100, 1) : 0;
 
 } catch (Exception $e) {
-    echo "<p class='text-red-600 text-center'>Lỗi: " . $e->getMessage() . "</p>";
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+    echo "<p class='text-red-600 text-center'>Lỗi: " . htmlspecialchars($e->getMessage()) . "</p>";
     exit;
 }
 

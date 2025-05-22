@@ -250,8 +250,14 @@ $recentXuatKho = $stmtXuatKhoRecent->fetchAll(PDO::FETCH_ASSOC);
                                 $tenKhachHang = $row['TenKhachHang'] ?? $row['MaKhachHang'];
                                 $tenHoatDong = $row['TenHoatDong'] ?? 'Không có';
                                 $diaChi = $row['DiaChi'] ?? 'Không có';
-                                $trangThai = $row['TrangThai'] == 2 ? 'Hoàn tất' : 'Đang xử lý';
-                                $trangThaiClass = $row['TrangThai'] == 2 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800';
+                                $trangThai = $row['TrangThai'] == 0 ? 'Đơn hàng mới' : 
+                                ($row['TrangThai'] == 2 ? 'Đơn nhập hàng' : 
+                                ($row['TrangThai'] == 1 ? 'Đơn đã hủy' : 
+                                ($row['TrangThai'] == 3 ? 'Đơn hoàn tất' : 'Đang xử lý')));
+                                $trangThaiClass = $row['TrangThai'] == 0 ? 'bg-blue-100 text-blue-800' : 
+                                ($row['TrangThai'] == 1 ? 'bg-red-100 text-red-800' : 
+                                ($row['TrangThai'] == 2 ? 'bg-yellow-100 text-yellow-800' : 
+                                ($row['TrangThai'] == 3 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800')));
                                 $ghiChu = $row['GhiChu'] ?? 'Không có ghi chú';
                             ?>
                             <tr>
@@ -328,8 +334,8 @@ $recentXuatKho = $stmtXuatKhoRecent->fetchAll(PDO::FETCH_ASSOC);
                                 $thoiGian = date('d/m/Y H:i', strtotime($row['NgayXuat']));
                                 $maPhieu = $row['MaXuatHang'];
                                 $tenNhanVien = $row['TenNhanVien'] ?? $row['MaNhanVien'];
-                                $trangThai = $row['TrangThai'] == 2 ? 'Hoàn tất' : 'Đang xử lý';
-                                $trangThaiClass = $row['TrangThai'] == 2 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800';
+                                $trangThai = $row['TrangThai'] == 1 ? 'Hoàn tất' : 'Đang xử lý';
+                                $trangThaiClass = $row['TrangThai'] == 1 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800';
                                 $ghiChu = $row['GhiChu'] ?? 'Không có ghi chú';
                             ?>
                     <tr>

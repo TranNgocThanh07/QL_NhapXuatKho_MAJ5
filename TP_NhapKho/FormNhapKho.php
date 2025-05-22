@@ -129,16 +129,26 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->Text($cellX, $cellY + $paddingInfo + 28, 'MINH ANH KNITTING CO.,LTD', false, false, true, 0, 0, 'C');
                         }
                         break;
-                    case 1:
-                        if ($col == 0) {
-                            $pdf->SetFont($font, 'B', 8);
-                            $pdf->MultiCell($cellWidth, $cellHeight / 2, 'MẶT HÀNG', 0, 'C', false, 1, $cellX, $cellY + $paddingCell);
-                            $pdf->SetFont($font, 'B', 6);
-                            $pdf->MultiCell($cellWidth, $cellHeight / 2, '(PRODUCT NAME)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
-                        } elseif ($col == 1) {
-                            $pdf->SetFont($font, 'B', 8);
-                            $pdf->MultiCell($cellWidth, $cellHeight, $don['MaVai'] . " (" . $don['TenVai'] . ")", 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
-                        }
+                     case 1:
+                            if ($col == 0) {
+                                $pdf->SetFont($font, 'B', 8);
+                                $pdf->MultiCell($cellWidth, $cellHeight / 2, 'MẶT HÀNG', 0, 'C', false, 1, $cellX, $cellY + $paddingCell);
+                                $pdf->SetFont($font, 'B', 6);
+                                $pdf->MultiCell($cellWidth, $cellHeight / 2, '(PRODUCT NAME)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
+                            } elseif ($col == 1) {
+                                $pdf->SetFont($font, 'B', 8);
+                                // Xử lý tên sản phẩm
+                                $tenVai = $don['TenVai'];
+                                // Trường hợp 1: Loại bỏ mã lặp trong tên nếu có
+                                if (strpos($tenVai, $don['MaVai'] . ' (') === 0) {
+                                    $tenVai = preg_replace('/^' . preg_quote($don['MaVai'], '/') . '\s*\(/', '(', $tenVai);
+                                }
+                                // Lấy phần trong ngoặc nếu có, hoặc giữ nguyên tên
+                                $tenVai = preg_match('/\((.*?)\)/', $tenVai, $matches) ? $matches[1] : $tenVai;
+                                // Nếu tên khác mã, thêm ngoặc; nếu giống mã, chỉ giữ mã
+                                $output = ($tenVai !== $don['MaVai']) ? $don['MaVai'] . " (" . $tenVai . ")" : $don['MaVai'];
+                                $pdf->MultiCell($cellWidth, $cellHeight, $output, 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
+                            }
                         break;
                     case 2:
                         if ($col == 0) {
@@ -346,15 +356,25 @@ function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                         }
                         break;
                     case 1:
-                        if ($col == 0) {
-                            $pdf->SetFont($font, 'B', 8);
-                            $pdf->MultiCell($cellWidth, $cellHeight / 2, 'MẶT HÀNG', 0, 'C', false, 1, $cellX, $cellY + $paddingCell);
-                            $pdf->SetFont($font, 'B', 6);
-                            $pdf->MultiCell($cellWidth, $cellHeight / 2, '(PRODUCT NAME)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
-                        } elseif ($col == 1) {
-                            $pdf->SetFont($font, 'B', 8);
-                            $pdf->MultiCell($cellWidth, $cellHeight, $don['MaVai'] . " (" . $don['TenVai'] . ")", 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
-                        }
+                            if ($col == 0) {
+                                $pdf->SetFont($font, 'B', 8);
+                                $pdf->MultiCell($cellWidth, $cellHeight / 2, 'MẶT HÀNG', 0, 'C', false, 1, $cellX, $cellY + $paddingCell);
+                                $pdf->SetFont($font, 'B', 6);
+                                $pdf->MultiCell($cellWidth, $cellHeight / 2, '(PRODUCT NAME)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
+                            } elseif ($col == 1) {
+                                $pdf->SetFont($font, 'B', 8);
+                                // Xử lý tên sản phẩm
+                                $tenVai = $don['TenVai'];
+                                // Trường hợp 1: Loại bỏ mã lặp trong tên nếu có
+                                if (strpos($tenVai, $don['MaVai'] . ' (') === 0) {
+                                    $tenVai = preg_replace('/^' . preg_quote($don['MaVai'], '/') . '\s*\(/', '(', $tenVai);
+                                }
+                                // Lấy phần trong ngoặc nếu có, hoặc giữ nguyên tên
+                                $tenVai = preg_match('/\((.*?)\)/', $tenVai, $matches) ? $matches[1] : $tenVai;
+                                // Nếu tên khác mã, thêm ngoặc; nếu giống mã, chỉ giữ mã
+                                $output = ($tenVai !== $don['MaVai']) ? $don['MaVai'] . " (" . $tenVai . ")" : $don['MaVai'];
+                                $pdf->MultiCell($cellWidth, $cellHeight, $output, 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
+                            }
                         break;
                     case 2:
                         if ($col == 0) {
