@@ -666,12 +666,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 $maSoMe = $_GET['maSoMe'] ?? '';
+if (!$maSoMe || !preg_match('/^[a-zA-Z0-9_-]+$/', $maSoMe)) {
+    die("Mã số mẻ không hợp lệ.");
+}
 $soLuongGiao = 0;
 $tongSoLuongNhapHang = 0;
 $tongSoLuongNhapTon = 0;
 $tongSoLuong = 0;
 $tenDVT = 'kg';
 $don = null;
+$tenThanhPhan = '';
 
 if ($maSoMe) {
     $sqlDon = "SELECT 
@@ -686,6 +690,10 @@ if ($maSoMe) {
     LEFT JOIN TP_NguoiLienHe nlh ON ds.MaNguoiLienHe = nlh.MaNguoiLienHe
     WHERE ds.MaSoMe = ?";
     $stmtDon = $pdo->prepare($sqlDon);
+    if (!$stmtDon) {
+        error_log("Lỗi chuẩn bị truy vấn SQL: " . print_r($pdo->errorInfo(), true));
+        die("Lỗi hệ thống. Vui lòng thử lại sau.");
+    }
     $stmtDon->execute([$maSoMe]);
     $don = $stmtDon->fetch(PDO::FETCH_ASSOC);
 
@@ -708,12 +716,55 @@ if ($maSoMe) {
         $tongSoLuongNhapTon = floatval($stmtNhapTon->fetch(PDO::FETCH_ASSOC)['TongLuongNhapTon'] ?? 0);
 
         $tongSoLuong = $tongSoLuongNhapHang + $tongSoLuongNhapTon;
+
+        // Truy vấn TenThanhPhan từ TP_Vai
+        $maVai = $don['MaVai'] ?? '';
+        if ($maVai) {
+            $sqlThanhPhan = "SELECT TenThanhPhan 
+                             FROM Vai 
+                             WHERE MaVai = ?";
+            $stmtThanhPhan = $pdo->prepare($sqlThanhPhan);
+            $stmtThanhPhan->execute([$maVai]);
+            $thanhPhan = $stmtThanhPhan->fetch(PDO::FETCH_ASSOC);
+            $tenThanhPhan = $thanhPhan['TenThanhPhan'] ?? ($_GET['TenThanhPhan'] ?? '');
+            if (!$thanhPhan) {
+                error_log("Không tìm thấy TenThanhPhan trong TP_Vai cho MaVai: $maVai");
+            }
+        }
     } else {
-        // Xử lý khi không tìm thấy đơn hàng
-        $tongSoLuongNhapHang = 0;
-        $tongSoLuongNhapTon = 0;
-        $tongSoLuong = 0;
-        $tenDVT = 'kg';
+        error_log("Không tìm thấy đơn hàng với MaSoMe: $maSoMe. Tham số GET: " . json_encode($_GET));
+        // Sử dụng tham số GET làm giá trị mặc định
+        $don = [
+            'MaSoMe' => $maSoMe,
+            'MaDonHang' => $_GET['MaDonHang'] ?? '',
+            'MaKhachHang' => $_GET['MaKhachHang'] ?? '',
+            'TenKhachHang' => '',
+            'MaVatTu' => $_GET['MaVatTu'] ?? '',
+            'MaVai' => $_GET['MaVai'] ?? '',
+            'TenVai' => $_GET['TenVai'] ?? '',
+            'MaMau' => $_GET['MaMau'] ?? '',
+            'TenMau' => '',
+            'MaDVT' => $_GET['MaDVT'] ?? '',
+            'TenDVT' => $tenDVT,
+            'Kho' => $_GET['Kho'] ?? '',
+            'MaNguoiLienHe' => $_GET['MaNguoiLienHe'] ?? '',
+            'TenNguoiLienHe' => '',
+            'TongSoLuongGiao' => $_GET['SoLuong'] ?? 0
+        ];
+        // Truy vấn TenThanhPhan từ TP_Vai nếu có MaVai từ GET
+        $maVai = $don['MaVai'];
+        if ($maVai) {
+            $sqlThanhPhan = "SELECT TenThanhPhan 
+                             FROM Vai 
+                             WHERE MaVai = ?";
+            $stmtThanhPhan = $pdo->prepare($sqlThanhPhan);
+            $stmtThanhPhan->execute([$maVai]);
+            $thanhPhan = $stmtThanhPhan->fetch(PDO::FETCH_ASSOC);
+            $tenThanhPhan = $thanhPhan['TenThanhPhan'] ?? ($_GET['TenThanhPhan'] ?? '');
+            if (!$thanhPhan) {
+                error_log("Không tìm thấy TenThanhPhan trong TP_Vai cho MaVai: $maVai");
+            }
+        }
     }
 }
 //xem hàng tồn
@@ -744,10 +795,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
     exit;
 }
-$sqlTenThanhPhan = "SELECT TenThanhPhan FROM TP_ThanhPhan ORDER BY TenThanhPhan";
-$stmtTenThanhPhan = $pdo->prepare($sqlTenThanhPhan);
-$stmtTenThanhPhan->execute();
-$TenThanhPhanList = $stmtTenThanhPhan->fetchAll(PDO::FETCH_ASSOC);
+
 // Truy vấn dữ liệu từ TP_KhuVuc
 $sqlKhuVuc = "SELECT MaKhuVuc FROM KhuVuc ORDER BY MaKhuVuc";
 $stmtKhuVuc = $pdo->prepare($sqlKhuVuc);
@@ -925,6 +973,12 @@ $MaKhuVucList = $stmtKhuVuc->fetchAll(PDO::FETCH_ASSOC);
                     <input type="hidden" name="MaMau" value="<?php echo htmlspecialchars($don['MaMau'] ?? ''); ?>">
                 </div>
 
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Thành Phần</label>
+                    <input type="text" name="TenThanhPhan" id="TenThanhPhan" 
+                            value="<?php echo htmlspecialchars($tenThanhPhan); ?>" 
+                            class="input-field w-full p-2.5 rounded-lg">
+                </div>
                 <!-- Dòng 4: Số Lượng, Số Cây, Số KG Cân -->
                 <div class="grid <?php echo ($don['MaDVT'] !== '1' && $tenDVT !== 'KG') ? 'grid-cols-3' : 'grid-cols-2'; ?> gap-4">
                     <div>
@@ -946,25 +1000,7 @@ $MaKhuVucList = $stmtKhuVuc->fetchAll(PDO::FETCH_ASSOC);
                     <?php else: ?>
                     <input type="hidden" name="SoKgCan" id="soKGCan" >
                     <?php endif; ?>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Số Lot</label>
-                    <input type="text" name="SoLot" id="soLot" class="input-field w-full p-2.5 rounded-lg" oninput="this.value = this.value.toUpperCase();">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Thành Phần</label>
-                    <input type="text" name="TenThanhPhan" id="TenThanhPhan" class="input-field w-full p-2.5 rounded-lg" list="TenThanhPhanList">
-                    <datalist id="TenThanhPhanList">
-                        <?php
-                        foreach ($TenThanhPhanList as $row) {
-                            $TenThanhPhan = htmlspecialchars($row['TenThanhPhan']);
-                            echo "<option value=\"$TenThanhPhan\">";
-                        }
-                        ?>
-                    </datalist>
-                </div>
+                </div>                       
 
                 <!-- Khuvuc Và Ghi Chú -->
                      <div class="grid grid-cols-2 gap-4">
@@ -985,6 +1021,11 @@ $MaKhuVucList = $stmtKhuVuc->fetchAll(PDO::FETCH_ASSOC);
                             <input type="text" name="GhiChu" id="GhiChu" class="input-field w-full p-2.5 rounded-lg" oninput="this.value = this.value.toUpperCase();">
                         </div>
                     </div>
+
+                 <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Số Lot</label>
+                    <input type="text" name="SoLot" id="soLot" class="input-field w-full p-2.5 rounded-lg" oninput="this.value = this.value.toUpperCase();">
+                </div>     
                 <!-- Hidden fields -->
                 <input type="hidden" name="MaNguoiLienHe" value="<?php echo htmlspecialchars($don['MaNguoiLienHe'] ?? ''); ?>">
                 <input type="hidden" name="MaNhanVien" value="<?php echo htmlspecialchars($maNhanVien); ?>">
@@ -1084,7 +1125,7 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
     const soKGCanInput = document.getElementById('soKGCan').value;
     const soKGCan = soKGCanInput && !isNaN(soKGCanInput) && soKGCanInput.trim() !== '' ? parseFloat(soKGCanInput) : null;
     const soLot = document.getElementById('soLot').value.trim();
-    const TenThanhPhan = document.getElementById('TenThanhPhan').value.trim();
+    const tenThanhPhan = document.getElementById('TenThanhPhan').value.trim();
     const maKhuVuc = document.getElementById('MaKhuVuc').value.trim();
     const ghiChu = document.getElementById('GhiChu').value.trim();
 
@@ -1093,7 +1134,7 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
     if (soCay <= 0) errorMessages.push("Số cây phải lớn hơn 0.");
     if (soKGCan !== null && soKGCan < 0) errorMessages.push("Số KG Cân không được âm.");
     if (!soLot) errorMessages.push("Số Lot không được để trống.");
-    if (!TenThanhPhan) errorMessages.push("Thành phần không được để trống.");
+    if (!tenThanhPhan) errorMessages.push("Thành phần không được để trống.");
     if (!maKhuVuc) errorMessages.push("Mã khu vực không được để trống.");
 
     if (errorMessages.length > 0) {
@@ -1114,18 +1155,8 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
         return;
     }
 
-    const validTenThanhPhan = <?php echo json_encode(array_column($TenThanhPhanList, 'TenThanhPhan')); ?>;
-    if (!validTenThanhPhan.includes(TenThanhPhan)) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Thành phần không hợp lệ!',
-            text: 'Vui lòng chọn một giá trị từ danh sách gợi ý.'
-        });
-        return;
-    }
-
     // Kiểm tra giá trị hợp lệ cho MaKhuVuc
-    const validMaKhuVuc = <?php echo json_encode(array_column($MaKhuVucList, 'MaKhuVuc')); ?>; // Giả sử bạn có danh sách này từ PHP
+    const validMaKhuVuc = <?php echo json_encode(array_column($MaKhuVucList, 'MaKhuVuc')); ?>;
     if (!validMaKhuVuc.includes(maKhuVuc)) {
         Swal.fire({
             icon: 'warning',
@@ -1136,7 +1167,7 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
     }
 
     const formData = new FormData(this);
-    const maQRBase = `${formData.get('MaKhachHang')}_${formData.get('MaVai')}_${formData.get('MaMau')}_${formData.get('MaDVT')}_${formData.get('Kho')}_${soLuong}_${soLot}_${TenThanhPhan}`;
+    const maQRBase = `${formData.get('MaKhachHang')}_${formData.get('MaVai')}_${formData.get('MaMau')}_${formData.get('MaDVT')}_${formData.get('Kho')}_${soLuong}_${soLot}_${tenThanhPhan}`;
 
     for (let i = 1; i <= soCay; i++) {
         tempSTT++;
@@ -1160,7 +1191,7 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
             NgayTao: formData.get('NgayTao'),
             MaKhachHang: formData.get('MaKhachHang'),
             MaNhanVien: formData.get('MaNhanVien'),
-            TenThanhPhan: TenThanhPhan,
+            TenThanhPhan: tenThanhPhan,
             SoKgCan: soKGCan,
             OriginalTrangThai: 2,
             MaKhuVuc: maKhuVuc, 
@@ -1173,7 +1204,6 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
     document.getElementById('soCay').value = '';
     document.getElementById('soKGCan').value = '';
     document.getElementById('soLot').value = '';
-    document.getElementById('TenThanhPhan').value = '';
     document.getElementById('MaKhuVuc').value = ''; 
     document.getElementById('GhiChu').value = '';
 
