@@ -14,8 +14,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $tenKhachHang = isset($_POST['tenKhachHang']) ? "%" . $_POST['tenKhachHang'] . "%" : "%";
             $trangThai = isset($_POST['trangThai']) && in_array($_POST['trangThai'], ['0', '3']) ? (int)$_POST['trangThai'] : 0;
 
-            //lọc 
-           $whereClause = $trangThai == 0 ? "TP_DonSanXuat.TrangThai IN (0, 2) AND TP_DonSanXuat.LoaiDon != 3" : "(TP_DonSanXuat.TrangThai = :trangThai OR TP_DonSanXuat.LoaiDon = 3)";
+            // Lọc
+            $whereClause = $trangThai == 0 ? "TP_DonSanXuat.TrangThai IN (0, 2) AND TP_DonSanXuat.LoaiDon != 3" : "(TP_DonSanXuat.TrangThai = :trangThai OR TP_DonSanXuat.LoaiDon = 3)";
 
             // Đếm tổng số bản ghi
             $sqlCount = "SELECT COUNT(*) as total 
@@ -90,6 +90,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     $stmtUpdate->execute();
                 }
                 // Trả về success cho cả trường hợp cập nhật hoặc không cần cập nhật
+                header('Content-Type: application/json');
+                echo json_encode(['success' => true]);
+            } else {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'error' => 'Không tìm thấy MaSoMe']);
+            }
+        } elseif ($_POST['action'] === 'updateTrangThaiNhapTon' && isset($_POST['maSoMe'])) {
+            // Xử lý cập nhật trạng thái cho Nhập Hàng Tồn
+            $maSoMe = $_POST['maSoMe'];
+
+            // Kiểm tra LoaiDon và TrangThai hiện tại
+            $sqlCheck = "SELECT LoaiDon, TrangThai FROM TP_DonSanXuat WHERE MaSoMe = :maSoMe";
+            $stmtCheck = $pdo->prepare($sqlCheck);
+            $stmtCheck->bindValue(':maSoMe', $maSoMe, PDO::PARAM_STR);
+            $stmtCheck->execute();
+            $result = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+
+            if ($result) {
+                $loaiDon = $result['LoaiDon'];
+                $trangThai = $result['TrangThai'];
+
+                // Nếu LoaiDon = 3 và TrangThai = 0, cập nhật TrangThai = 3
+                if ($loaiDon == 3 && $trangThai == 0) {
+                    $sqlUpdate = "UPDATE TP_DonSanXuat SET TrangThai = 3 WHERE MaSoMe = :maSoMe";
+                    $stmtUpdate = $pdo->prepare($sqlUpdate);
+                    $stmtUpdate->bindValue(':maSoMe', $maSoMe, PDO::PARAM_STR);
+                    $stmtUpdate->execute();
+                }
+                // Trả về success bất kể có cập nhật hay không
                 header('Content-Type: application/json');
                 echo json_encode(['success' => true]);
             } else {
@@ -549,22 +578,63 @@ $donSanXuat = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Sự kiện cho nút Nhập Hàng Tồn
         document.getElementById('btnNhapHangTon').addEventListener('click', function(e) {
+            e.preventDefault(); // Ngăn chuyển hướng mặc định
             const selected = document.querySelectorAll('.row-checkbox:checked');
+
             if (selected.length === 0) {
-                e.preventDefault();
                 Swal.fire({
                     icon: 'warning',
                     title: 'Chưa chọn dòng nào',
                     text: 'Vui lòng chọn 1 dòng để nhập hàng tồn!',
                 });
+                return;
             } else if (selected.length > 1) {
-                e.preventDefault();
                 Swal.fire({
                     icon: 'error',
                     title: 'Chỉ được chọn 1 dòng',
                     text: 'Vui lòng chỉ chọn 1 dòng để nhập hàng tồn!',
                 });
+                return;
             }
+
+            const maSoMe = selected[0].value;
+            const loading = document.getElementById('loading');
+            loading.style.display = 'block';
+
+            // Gọi API để kiểm tra và cập nhật trạng thái
+            fetch(window.location.href, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `action=updateTrangThaiNhapTon&maSoMe=${encodeURIComponent(maSoMe)}`
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Chuyển hướng ngay đến FormNhapTonKho
+                    window.location.href = `TP_NhapKho/FormNhapTonKho.php?maSoMe=${maSoMe}`;
+                } else {
+                    // Hiển thị lỗi nếu thất bại
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Lỗi!',
+                        text: data.error,
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Lỗi!',
+                    text: 'Có lỗi xảy ra: ' + error.message,
+                });
+            })
+            .finally(() => {
+                loading.style.display = 'none';
+            });
         });
 
         // Gắn sự kiện tìm kiếm, lọc trạng thái và nút

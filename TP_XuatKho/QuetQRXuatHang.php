@@ -91,30 +91,39 @@ try {
 
     // Lấy thông tin phiếu xuất
     $sql = "SELECT 
-                xh.MaXuatHang, 
-                nv.TenNhanVien, 
-                xh.NgayXuat, 
-                xh.GhiChu,
-                COALESCE(SUM(ct.SoLuong), 0) as TongSoLuongXuat, 
-                COALESCE(SUM(CASE WHEN ct.TrangThai = 1 THEN ct.SoLuong ELSE 0 END), 0) as SoLuongDaXuat,
-                COALESCE(SUM(CASE WHEN ct.TrangThai = 0 THEN ct.SoLuong ELSE 0 END), 0) as SoLuongConLai,
-                MIN(dvt.TenDVT) as TenDVT, 
-                MIN(v.MaVai) as MaVai, 
-                MIN(v.TenVai) as TenVai, 
-                MIN(m.TenMau) as TenMau,
-                MIN(ct.SoLot) as SoLot, 
-                MIN(ct.TenThanhPhan) as TenThanhPhan, 
-                MIN(ct.MaDonHang) as MaDonHang, 
-                MIN(ct.MaVatTu) as MaVatTu, 
-                MIN(ct.Kho) as Kho
-            FROM TP_XuatHang xh
-            LEFT JOIN TP_ChiTietXuatHang ct ON xh.MaXuatHang = ct.MaXuatHang
-            LEFT JOIN NhanVien nv ON xh.MaNhanVien = nv.MaNhanVien
-            LEFT JOIN TP_DonViTinh dvt ON ct.MaDVT = dvt.MaDVT
-            LEFT JOIN Vai v ON ct.MaVai = v.MaVai
-            LEFT JOIN TP_Mau m ON ct.MaMau = m.MaMau
-            WHERE xh.MaXuatHang = :maXuatHang
-            GROUP BY xh.MaXuatHang, nv.TenNhanVien, xh.NgayXuat, xh.GhiChu";
+            xh.MaXuatHang, 
+            nv.TenNhanVien, 
+            xh.NgayXuat, 
+            xh.GhiChu,
+            COALESCE(SUM(ct.SoLuong), 0) as TongSoLuongXuat, 
+            COALESCE(SUM(CASE WHEN ct.TrangThai = 1 THEN ct.SoLuong ELSE 0 END), 0) as SoLuongDaXuat,
+            COALESCE(SUM(CASE WHEN ct.TrangThai = 0 THEN ct.SoLuong ELSE 0 END), 0) as SoLuongConLai,
+            MIN(dvt.TenDVT) as TenDVT, 
+            MIN(v.MaVai) as MaVai, 
+            MIN(v.TenVai) as TenVai, 
+            MIN(m.TenMau) as TenMau,
+            MIN(ct.SoLot) as SoLot, 
+            MIN(ct.TenThanhPhan) as TenThanhPhan, 
+            MIN(ct.MaDonHang) as MaDonHang, 
+            MIN(ct.MaVatTu) as MaVatTu, 
+            MIN(ct.Kho) as Kho,
+            kh.TenKhachHang,
+            kh.TenHoatDong,
+            kh.DiaChi,
+            nlh.TenNguoiLienHe,
+            nlh.SoDienThoai
+        FROM TP_XuatHang xh
+        LEFT JOIN TP_ChiTietXuatHang ct ON xh.MaXuatHang = ct.MaXuatHang
+        LEFT JOIN NhanVien nv ON xh.MaNhanVien = nv.MaNhanVien
+        LEFT JOIN TP_DonViTinh dvt ON ct.MaDVT = dvt.MaDVT
+        LEFT JOIN Vai v ON ct.MaVai = v.MaVai
+        LEFT JOIN TP_Mau m ON ct.MaMau = m.MaMau
+        LEFT JOIN TP_KhachHang kh ON xh.MaKhachHang = kh.MaKhachHang
+        LEFT JOIN TP_NguoiLienHe nlh ON xh.MaNguoiLienHe = nlh.MaNguoiLienHe
+        WHERE xh.MaXuatHang = :maXuatHang
+        GROUP BY xh.MaXuatHang, nv.TenNhanVien, xh.NgayXuat, xh.GhiChu, 
+                 kh.TenKhachHang, kh.TenHoatDong, kh.DiaChi, 
+                 nlh.TenNguoiLienHe, nlh.SoDienThoai";
     $stmt = $pdo->prepare($sql);
     $stmt->bindValue(':maXuatHang', $maXuatHang, PDO::PARAM_STR);
     $stmt->execute();
@@ -335,6 +344,11 @@ $chiTietXuatWithQR = array_map(function($ct) {
             text-align: center;
             z-index: 10;
         }
+        .wrap-text {
+            white-space: normal; 
+            word-break: break-word; 
+             max-width: 180px;
+        }
     </style>
 </head>
 <body>
@@ -352,8 +366,8 @@ $chiTietXuatWithQR = array_map(function($ct) {
 
             <div class="">
                 <!-- Info Section -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    <div class="card p-5">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 p-6">
+                    <div class="info-card bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm flex flex-col">
                         <h3 class="text-sm font-semibold text-gray-500 mb-4 flex items-center gap-2">
                             <i class="fas fa-file-invoice text-red-500"></i> Thông tin phiếu
                         </h3>
@@ -370,7 +384,7 @@ $chiTietXuatWithQR = array_map(function($ct) {
                             <span class="font-medium"><?php echo htmlspecialchars($phieuXuat['MaVatTu']); ?></span>
                         </p>
                     </div>
-                    <div class="card p-5">
+                    <div class="info-card bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm flex flex-col">
                         <h3 class="text-sm font-semibold text-gray-500 mb-4 flex items-center gap-2">
                             <i class="fas fa-tshirt text-blue-500"></i> Thông tin sản phẩm
                         </h3>
@@ -392,7 +406,7 @@ $chiTietXuatWithQR = array_map(function($ct) {
                             <span class="font-medium"><?php echo htmlspecialchars($phieuXuat['Kho']); ?></span>
                         </p>
                     </div>
-                    <div class="card p-5">
+                    <div class="info-card bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm flex flex-col">
                         <h3 class="text-sm font-semibold text-gray-500 mb-4 flex items-center gap-2">
                             <i class="fas fa-truck-loading text-green-500"></i> Thông tin xuất kho
                         </h3>
@@ -409,7 +423,34 @@ $chiTietXuatWithQR = array_map(function($ct) {
                             <span class="font-medium"><?php echo $ngayXuat; ?></span>
                         </p>
                     </div>
+
+                    <div class="info-card bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm flex flex-col">
+                        <h3 class="text-sm font-semibold text-gray-500 mb-4 flex items-center gap-2">
+                            <i class="fas fa-user-friends text-yellow-500"></i> Thông tin khách hàng
+                        </h3>
+                        <p class="flex justify-between mb-3">
+                            <span class="text-gray-600"><i class="fas fa-building text-red-400 mr-2"></i>Tên khách hàng:</span>
+                            <span class="font-medium"><?php echo htmlspecialchars($phieuXuat['TenKhachHang'] ?? 'Không xác định'); ?></span>
+                        </p>
+                        <p class="flex justify-between mb-3">
+                            <span class="text-gray-600"><i class="fas fa-briefcase text-blue-400 mr-2"></i>Tên hoạt động:</span>
+                            <span class="font-medium wrap-text"><?php echo htmlspecialchars($phieuXuat['TenHoatDong'] ?? 'Không xác định'); ?></span>
+                        </p>
+                        <p class="flex justify-between mb-3">
+                            <span class="text-gray-600"><i class="fas fa-map-marker-alt text-red-400 mr-2"></i>Địa chỉ:</span>
+                            <span class="font-medium wrap-text"><?php echo htmlspecialchars($phieuXuat['DiaChi'] ?? 'Không xác định'); ?></span>
+                        </p>
+                        <p class="flex justify-between mb-3">
+                            <span class="text-gray-600"><i class="fas fa-user text-green-400 mr-2"></i>Người liên hệ:</span>
+                            <span class="font-medium"><?php echo htmlspecialchars($phieuXuat['TenNguoiLienHe'] ?? 'Không xác định'); ?></span>
+                        </p>
+                        <p class="flex justify-between">
+                            <span class="text-gray-600"><i class="fas fa-phone text-yellow-400 mr-2"></i>Số điện thoại:</span>
+                            <span class="font-medium"><?php echo htmlspecialchars($phieuXuat['SoDienThoai'] ?? 'Không xác định'); ?></span>
+                        </p>
+                    </div>
                 </div>
+                
 
                 <!-- Progress Section -->
                 <div class="">

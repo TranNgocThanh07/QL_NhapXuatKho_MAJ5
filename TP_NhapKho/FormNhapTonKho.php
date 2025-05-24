@@ -116,7 +116,7 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                         if ($col == 0) {
                             $qrContent = $item['MaQR'] ?? ($don['MaDonHang'] . "\nSố Lot: " . $item['SoLot'] . "\nSố lượng: " . number_format((float)$item['SoLuong'], 1) . " " . $tenDVT);
                             $qrCodeBinary = generateQRCode($qrContent, 100);
-                            $qrPath = __DIR__ . '/temp_qr.png';
+                            $qrPath = __DIR__ . '/temp_qr_' . uniqid() . '.png';
                             file_put_contents($qrPath, $qrCodeBinary);
                             $qrSize = min($cellWidth, $cellHeight) - 2 * $QRpadding;
                             $qrX = $cellX + ($cellWidth - $qrSize) / 2;
@@ -256,7 +256,7 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                         } elseif ($col == 1) {
                             $qrContent = $item['MaQR'] ?? ($don['MaDonHang'] . "\nSố Lot: " . $item['SoLot'] . "\nSố lượng: " . number_format((float)$item['SoLuong'], 1) . " " . $tenDVT);
                             $qrCodeBinary = generateQRCode($qrContent, 100);
-                            $qrPath = __DIR__ . '/temp_qr.png';
+                            $qrPath = __DIR__ . '/temp_qr_' . uniqid() . '.png';
                             file_put_contents($qrPath, $qrCodeBinary);
                             $qrSize = min($cellWidth, $cellHeight) - 2 * $QRpadding;
                             $qrX = $cellX + ($cellWidth - $qrSize) / 2;
@@ -346,7 +346,7 @@ function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                         if ($col == 0 || $col == 2) { // QR ở góc trên bên trái và trên bên phải
                             $qrContent = $item['MaQR'] ?? ($don['MaDonHang'] . "\nSố Lot: " . $item['SoLot'] . "\nSố lượng: " . number_format((float)$item['SoLuong'], 1) . " " . $tenDVT);
                             $qrCodeBinary = generateQRCode($qrContent, 100);
-                            $qrPath = __DIR__ . '/temp_qr.png';
+                            $qrPath = __DIR__ . '/temp_qr_' . uniqid() . '.png';
                             file_put_contents($qrPath, $qrCodeBinary);
                             $qrSize = min($cellWidth, $cellHeight) - 2 * $QRpadding;
                             $qrX = $cellX + ($cellWidth - $qrSize) / 2;
@@ -443,7 +443,7 @@ function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                         if ($col == 1) {
                             $qrContent = $item['MaQR'] ?? ($don['MaDonHang'] . "\nSố Lot: " . $item['SoLot'] . "\nSố lượng: " . number_format((float)$item['SoLuong'], 1) . " " . $tenDVT);
                             $qrCodeBinary = generateQRCode($qrContent, 100);
-                            $qrPath = __DIR__ . '/temp_qr.png';
+                            $qrPath = __DIR__ . '/temp_qr_' . uniqid() . '.png';
                             file_put_contents($qrPath, $qrCodeBinary);
                             $qrSize = min($cellWidth, $cellHeight) - 2 * $QRpadding;
                             $qrX = $cellX + ($cellWidth - $qrSize) / 2;

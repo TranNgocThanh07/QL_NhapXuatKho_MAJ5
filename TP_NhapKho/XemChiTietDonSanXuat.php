@@ -104,7 +104,7 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                         if ($col == 0) {
                             $qrContent = $item['MaQR'] ?? ($don['MaDonHang'] . "\nSố Lot: " . $item['SoLot'] . "\nSố lượng: " . number_format((float)$item['SoLuong'], 1) . " " . $tenDVT);
                             $qrCodeBinary = generateQRCode($qrContent, 100);
-                            $qrPath = __DIR__ . '/temp_qr.png';
+                            $qrPath = __DIR__ . '/temp_qr_' . uniqid() . '.png';
                             file_put_contents($qrPath, $qrCodeBinary);
                             $qrSize = min($cellWidth, $cellHeight) - 2 * $QRpadding;
                             $qrX = $cellX + ($cellWidth - $qrSize) / 2;
@@ -238,7 +238,7 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                         } elseif ($col == 1) {
                             $qrContent = $item['MaQR'] ?? ($don['MaDonHang'] . "\nSố Lot: " . $item['SoLot'] . "\nSố lượng: " . number_format((float)$item['SoLuong'], 1) . " " . $tenDVT);
                             $qrCodeBinary = generateQRCode($qrContent, 100);
-                            $qrPath = __DIR__ . '/temp_qr.png';
+                            $qrPath = __DIR__ . '/temp_qr_' . uniqid() . '.png';
                             file_put_contents($qrPath, $qrCodeBinary);
                             $qrSize = min($cellWidth, $cellHeight) - 2 * $QRpadding;
                             $qrX = $cellX + ($cellWidth - $qrSize) / 2;
@@ -327,7 +327,7 @@ function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                         if ($col == 0 || $col == 2) {
                             $qrContent = $item['MaQR'] ?? ($don['MaDonHang'] . "\nSố Lot: " . $item['SoLot'] . "\nSố lượng: " . number_format((float)$item['SoLuong'], 1) . " " . $tenDVT);
                             $qrCodeBinary = generateQRCode($qrContent, 100);
-                            $qrPath = __DIR__ . '/temp_qr.png';
+                            $qrPath = __DIR__ . '/temp_qr_' . uniqid() . '.png';
                             file_put_contents($qrPath, $qrCodeBinary);
                             $qrSize = min($cellWidth, $cellHeight) - 2 * $QRpadding;
                             $qrX = $cellX + ($cellWidth - $qrSize) / 2;
@@ -417,7 +417,7 @@ function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                         if ($col == 1) {
                             $qrContent = $item['MaQR'] ?? ($don['MaDonHang'] . "\nSố Lot: " . $item['SoLot'] . "\nSố lượng: " . number_format((float)$item['SoLuong'], 1) . " " . $tenDVT);
                             $qrCodeBinary = generateQRCode($qrContent, 100);
-                            $qrPath = __DIR__ . '/temp_qr.png';
+                            $qrPath = __DIR__ . '/temp_qr_' . uniqid() . '.png';
                             file_put_contents($qrPath, $qrCodeBinary);
                             $qrSize = min($cellWidth, $cellHeight) - 2 * $QRpadding;
                             $qrX = $cellX + ($cellWidth - $qrSize) / 2;
@@ -485,6 +485,18 @@ $sqlChiTiet = "SELECT ct.*, m.TenMau, dvt.TenDVT
 $stmtChiTiet = $pdo->prepare($sqlChiTiet);
 $stmtChiTiet->execute([$maSoMe]);
 $chiTietList = $stmtChiTiet->fetchAll(PDO::FETCH_ASSOC);
+
+// Tính số lượng nhập hàng và nhập tồn từ chi tiết
+$soLuongNhapHang = 0;
+$soLuongNhapTon = 0;
+foreach ($chiTietList as $chiTiet) {
+    if ($chiTiet['TrangThai'] == '0') {
+        $soLuongNhapHang += (float)$chiTiet['SoLuong'];
+    } elseif ($chiTiet['TrangThai'] == '2') {
+        $soLuongNhapTon += (float)$chiTiet['SoLuong'];
+    }
+}
+$tongSoLuong = $soLuongNhapHang + $soLuongNhapTon;
 
 // Xử lý yêu cầu in PDF
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'generatePDF') {
@@ -558,12 +570,18 @@ function safeHtml($value) {
 }
 
 // Hàm lấy class và text trạng thái
-function getStatusClass($status) {
-    return $status === '0' ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' : 'bg-green-100 text-green-800 border border-green-300';
+function getStatusClass($status, $loaiDon = null) {
+    if ($loaiDon === '3') {
+        return 'bg-orange-100 text-orange-800 border border-orange-300';
+    }
+    return in_array($status, ['0', '2']) ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' : ($status === '3' ? 'bg-green-100 text-green-800 border border-green-300' : 'bg-gray-100 text-gray-800 border border-gray-300');
 }
 
-function getStatusText($status) {
-    return $status === '0' ? 'Chưa nhập đủ hàng' : ($status === '2' ? 'Đã nhập đủ hàng' : $status);
+function getStatusText($status, $loaiDon = null) {
+    if ($loaiDon === '3') {
+        return 'Nhập hàng tồn';
+    }
+    return in_array($status, ['0', '2']) ? 'Chưa nhập đủ hàng' : ($status === '3' ? 'Đã nhập đủ hàng' : $status);
 }
 
 function getStatusClassChiTiet($status) {
@@ -711,7 +729,7 @@ $percentCompleted = $don && $don['SoLuongDatHang'] > 0 ? min(100, round(($don['D
                     <a href="../nhapkho.php" class="text-white text-xl hover:scale-110 transition-transform p-2">
                         <i class="fas fa-arrow-left"></i>
                     </a>
-                    <h2 class="text-white font-bold text-2xl flex items-center ml-4">
+                    <h2 class="text-white font-bold text-1xl flex items-center ml-4">
                         <i class="fas fa-file-lines mr-2"></i> Chi Tiết Đơn Sản Xuất & Nhập Kho
                     </h2>
                 </div>
@@ -741,9 +759,9 @@ $percentCompleted = $don && $don['SoLuongDatHang'] > 0 ? min(100, round(($don['D
                                 <div class="w-6 h-6 rounded-full mr-2 shadow-sm" style="background: linear-gradient(to right, red, orange, yellow, green, blue, indigo, violet);"></div>
                                 <span><?php echo safeHtml($don['TenMau']); ?></span>
                             </div>
-                            <span class="status-badge <?php echo getStatusClass($don['TrangThai']); ?>">
-                                <i class="fas <?php echo $don['TrangThai'] === '0' ? 'fa-clock mr-1' : 'fa-check-circle mr-1'; ?>"></i>
-                                <?php echo getStatusText($don['TrangThai']); ?>
+                            <span class="status-badge <?php echo getStatusClass($don['TrangThai'], $don['LoaiDon']); ?>">
+                                <i class="fas <?php echo in_array($don['TrangThai'], ['0', '2']) ? 'fa-clock mr-1' : ($don['TrangThai'] === '3' ? 'fa-check-circle mr-1' : 'fa-info-circle mr-1'); ?>"></i>
+                                <?php echo getStatusText($don['TrangThai'], $don['LoaiDon']); ?>
                             </span>
                         </div>
                         <div>
@@ -760,7 +778,11 @@ $percentCompleted = $don && $don['SoLuongDatHang'] > 0 ? min(100, round(($don['D
                                             <i class="fas fa-spinner text-indigo-500 mr-1"></i>
                                             Hoàn thành: <span class="ml-1 text-indigo-600 font-bold"><?php echo $percentCompleted; ?>%</span>
                                         </span>
-                                        <span class="font-semibold text-gray-700"><?php echo number_format($don['DaNhap'], 2, '.', ''); ?> / <?php echo number_format($don['SoLuongDatHang'], 2, '.', ''); ?> <?php echo safeHtml($don['TenDVT']); ?></span>
+                                        <?php if ($don['TrangThai'] == '3' || $don['LoaiDon'] == '3'): ?>
+                                            <span class="font-semibold text-gray-700"><?php echo number_format($tongSoLuong, 2, '.', ''); ?> <?php echo safeHtml($don['TenDVT']); ?></span>
+                                        <?php else: ?>
+                                            <span class="font-semibold text-gray-700"><?php echo number_format($don['DaNhap'], 2, '.', ''); ?> / <?php echo number_format($don['SoLuongDatHang'], 2, '.', ''); ?> <?php echo safeHtml($don['TenDVT']); ?></span>
+                                        <?php endif; ?>
                                     </div>
                                     <div class="w-full bg-gray-200 rounded-full h-4 mb-4 overflow-hidden">
                                         <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 h-4 rounded-full progress-animate relative" style="width: <?php echo $percentCompleted; ?>%">
@@ -770,30 +792,59 @@ $percentCompleted = $don && $don['SoLuongDatHang'] > 0 ? min(100, round(($don['D
                                         </div>
                                     </div>
                                     <div class="grid grid-cols-3 gap-3">
-                                        <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-3 rounded-lg shadow-sm border border-blue-200 text-center transform transition-all hover:scale-105">
-                                            <div class="icon-circle bg-blue-500 text-white mx-auto mb-2">
-                                                <i class="fas fa-box-open"></i>
+                                        <?php if ($don['TrangThai'] == '3' || $don['LoaiDon'] == '3'): ?>
+                                            <!-- Số lượng nhập hàng -->
+                                            <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-3 rounded-lg shadow-sm border border-blue-200 text-center transform transition-all hover:scale-105">
+                                                <div class="icon-circle bg-blue-500 text-white mx-auto mb-2">
+                                                    <i class="fas fa-box-open"></i>
+                                                </div>
+                                                <p class="text-xs text-blue-700 font-medium mb-1">Số Lượng Nhập Hàng</p>
+                                                <p class="font-bold text-blue-800 text-lg"><?php echo number_format($soLuongNhapHang, 2, '.', ''); ?></p>
                                             </div>
-                                            <p class="text-xs text-blue-700 font-medium mb-1">Tổng Nhập</p>
-                                            <p class="font-bold text-blue-800 text-lg"><?php echo number_format($don['SoLuongDatHang'], 2, '.', ''); ?></p>
-                                        </div>
-                                        <div class="bg-gradient-to-br from-green-50 to-green-100 p-3 rounded-lg shadow-sm border border-green-200 text-center transform transition-all hover:scale-105">
-                                            <div class="icon-circle bg-green-500 text-white mx-auto mb-2">
-                                                <i class="fas fa-check"></i>
+                                            <!-- Số lượng nhập tồn -->
+                                            <div class="bg-gradient-to-br from-green-50 to-green-100 p-3 rounded-lg shadow-sm border border-green-200 text-center transform transition-all hover:scale-105">
+                                                <div class="icon-circle bg-green-500 text-white mx-auto mb-2">
+                                                    <i class="fas fa-check"></i>
+                                                </div>
+                                                <p class="text-xs text-green-700 font-medium mb-1">Số Lượng Nhập Tồn</p>
+                                                <p class="font-bold text-green-800 text-lg"><?php echo number_format($soLuongNhapTon, 2, '.', ''); ?></p>
                                             </div>
-                                            <p class="text-xs text-green-700 font-medium mb-1">Đã Nhập</p>
-                                            <p class="font-bold text-green-800 text-lg"><?php echo number_format($don['DaNhap'], 2, '.', ''); ?></p>
-                                        </div>
-                                        <div class="bg-gradient-to-br from-amber-50 to-amber-100 p-3 rounded-lg shadow-sm border border-amber-200 text-center transform transition-all hover:scale-105">
-                                            <div class="icon-circle bg-amber-500 text-white mx-auto mb-2">
-                                                <i class="fas fa-hourglass-half"></i>
+                                            <!-- Tổng số lượng -->
+                                            <div class="bg-gradient-to-br from-amber-50 to-amber-100 p-3 rounded-lg shadow-sm border border-amber-200 text-center transform transition-all hover:scale-105">
+                                                <div class="icon-circle bg-amber-500 text-white mx-auto mb-2">
+                                                    <i class="fas fa-calculator"></i>
+                                                </div>
+                                                <p class="text-xs text-amber-700 font-medium mb-1">Tổng Số Lượng</p>
+                                                <p class="font-bold text-amber-800 text-lg"><?php echo number_format($tongSoLuong, 2, '.', ''); ?></p>
                                             </div>
-                                            <p class="text-xs text-amber-700 font-medium mb-1">Còn Lại</p>
-                                            <p class="font-bold text-amber-800 text-lg"><?php echo number_format($don['ConLai'], 2, '.', ''); ?></p>
-                                        </div>
+                                        <?php else: ?>
+                                            <!-- Giao diện mặc định -->
+                                            <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-3 rounded-lg shadow-sm border border-blue-200 text-center transform transition-all hover:scale-105">
+                                                <div class="icon-circle bg-blue-500 text-white mx-auto mb-2">
+                                                    <i class="fas fa-box-open"></i>
+                                                </div>
+                                                <p class="text-xs text-blue-700 font-medium mb-1">Tổng Nhập</p>
+                                                <p class="font-bold text-blue-800 text-lg"><?php echo number_format($don['SoLuongDatHang'], 2, '.', ''); ?></p>
+                                            </div>
+                                            <div class="bg-gradient-to-br from-green-50 to-green-100 p-3 rounded-lg shadow-sm border border-green-200 text-center transform transition-all hover:scale-105">
+                                                <div class="icon-circle bg-green-500 text-white mx-auto mb-2">
+                                                    <i class="fas fa-check"></i>
+                                                </div>
+                                                <p class="text-xs text-green-700 font-medium mb-1">Đã Nhập</p>
+                                                <p class="font-bold text-green-800 text-lg"><?php echo number_format($don['DaNhap'], 2, '.', ''); ?></p>
+                                            </div>
+                                            <div class="bg-gradient-to-br from-amber-50 to-amber-100 p-3 rounded-lg shadow-sm border border-amber-200 text-center transform transition-all hover:scale-105">
+                                                <div class="icon-circle bg-amber-500 text-white mx-auto mb-2">
+                                                    <i class="fas fa-hourglass-half"></i>
+                                                </div>
+                                                <p class="text-xs text-amber-700 font-medium mb-1">Còn Lại</p>
+                                                <p class="font-bold text-amber-800 text-lg"><?php echo number_format($don['ConLai'], 2, '.', ''); ?></p>
+                                            </div>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                             </div>
+                            
                         </div>
                     </div>
                 </div>
