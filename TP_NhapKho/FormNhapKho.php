@@ -677,7 +677,7 @@ if ($maSoMe) {
 }
 
 // Truy vấn dữ liệu từ TP_KhuVuc
-$sqlKhuVuc = "SELECT MaKhuVuc FROM KhuVuc ORDER BY MaKhuVuc";
+$sqlKhuVuc = "SELECT MaKhuVuc FROM TP_KhuVuc ORDER BY MaKhuVuc";
 $stmtKhuVuc = $pdo->prepare($sqlKhuVuc);
 $stmtKhuVuc->execute();
 $MaKhuVucList = $stmtKhuVuc->fetchAll(PDO::FETCH_ASSOC);
@@ -703,7 +703,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $tongSoLuongGiao = floatval($resultRemaining['TongSoLuongGiao']);
             $tongDaNhap = floatval($resultRemaining['TongDaNhap'] ?? 0);
             if ($tongDaNhap >= $tongSoLuongGiao) {
-                $sqlUpdateStatus = "UPDATE TP_DonSanXuat SET TrangThai = 2 WHERE MaSoMe = ?";
+                $sqlUpdateStatus = "UPDATE TP_DonSanXuat SET TrangThai = 3 WHERE MaSoMe = ?";
                 $stmtUpdateStatus = $pdo->prepare($sqlUpdateStatus);
                 $stmtUpdateStatus->execute([$maSoMeToUpdate]);
 
@@ -1144,6 +1144,16 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
         return;
     }
 
+    // Kiểm tra giá trị hợp lệ cho MaKhuVuc
+    const validMaKhuVuc = <?php echo json_encode(array_column($MaKhuVucList, 'MaKhuVuc')); ?>;
+    if (!validMaKhuVuc.includes(maKhuVuc)) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Mã khu vực không hợp lệ!',
+            text: 'Vui lòng chọn một giá trị từ danh sách gợi ý.'
+        });
+        return;
+    }
     const formData = new FormData(this);
     const tongSoLuongNhapMoi = soLuong;
     const soLuongGiao = <?php echo $soLuongGiao; ?>;
@@ -1227,8 +1237,7 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
         document.getElementById('soKGCan').value = '';
         document.getElementById('soLot').value = '';
         document.getElementById('MaKhuVuc').value = '';
-        document.getElementById('GhiChu').value = '';      
-        document.getElementById('TenThanhPhan').value = existingTenThanhPhan;
+        document.getElementById('GhiChu').value = '';           
 
         Swal.fire({
             icon: 'success',

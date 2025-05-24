@@ -466,7 +466,7 @@ $don = $stmt->fetch(PDO::FETCH_ASSOC);
 if ($don) {
     $sqlDaNhap = "SELECT SUM(SoLuong) as DaNhap 
                   FROM TP_ChiTietDonSanXuat 
-                  WHERE MaSoMe = ? AND TrangThai = 0";
+                  WHERE MaSoMe = ? ";
     $stmtDaNhap = $pdo->prepare($sqlDaNhap);
     $stmtDaNhap->execute([$maSoMe]);
     $daNhap = $stmtDaNhap->fetch(PDO::FETCH_ASSOC)['DaNhap'] ?? 0;

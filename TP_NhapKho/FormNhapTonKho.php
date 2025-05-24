@@ -797,7 +797,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 // Truy vấn dữ liệu từ TP_KhuVuc
-$sqlKhuVuc = "SELECT MaKhuVuc FROM KhuVuc ORDER BY MaKhuVuc";
+$sqlKhuVuc = "SELECT MaKhuVuc FROM TP_KhuVuc ORDER BY MaKhuVuc";
 $stmtKhuVuc = $pdo->prepare($sqlKhuVuc);
 $stmtKhuVuc->execute();
 $MaKhuVucList = $stmtKhuVuc->fetchAll(PDO::FETCH_ASSOC);
