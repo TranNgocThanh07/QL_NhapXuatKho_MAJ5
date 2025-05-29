@@ -224,10 +224,10 @@ $current_page = basename($_SERVER['PHP_SELF']);
                 </a>
                 <?php endif; ?>
 
-                <a href="#" class="text-center  px-2 py-1 text-gray-300 transition duration-300">
+                <!-- <a href="#" class="text-center  px-2 py-1 text-gray-300 transition duration-300">
                     <i class="fas fa-chart-bar block text-xl mb-1"></i>
                     <span class="text-xs">Báo cáo</span>
-                </a>
+                </a> -->
             </div>
 
             <!-- Mobile user info -->

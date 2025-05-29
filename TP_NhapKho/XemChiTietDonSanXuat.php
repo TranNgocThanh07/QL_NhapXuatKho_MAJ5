@@ -1,16 +1,13 @@
 <?php
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../vendor/tecnickcom/tcpdf/tcpdf.php';
-require_once __DIR__ . '/../convert.php';
-
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
 
 include '../db_config.php';
 
 // Hàm gửi lỗi
-function sendError($message, $exception = null)
-{
+function sendError($message, $exception = null) {
     $errorMsg = $message;
     if ($exception) {
         $errorMsg .= ": " . $exception->getMessage();
@@ -21,8 +18,7 @@ function sendError($message, $exception = null)
 }
 
 // Hàm tạo QR Code
-function generateQRCode($content, $size)
-{
+function generateQRCode($content, $size) {
     try {
         $qrCode = new QrCode($content);
         $qrCode->setSize($size);
@@ -36,10 +32,9 @@ function generateQRCode($content, $size)
 }
 
 // Hàm tạo PDF Tem Hệ Thống
-function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe)
-{
-    $font = 'arial';
-    $pdf->AddFont($font, '', 'arial.php');
+function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
+    $font = 'timesbd';
+    $pdf->AddFont($font, '', 'timesbd.php');
     $pdf->SetFont($font, '', 6);
     $pdf->SetFont($font, 'B', 6);
 
@@ -76,9 +71,9 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe)
             $watermarkHeight = $watermarkWidth * $imgInfo[1] / $imgInfo[0];
             $x = $centerX - $watermarkWidth / 2;
             $y = $centerY - $watermarkHeight / 2;
-            $pdf->SetAlpha(0.05); // Giảm độ mờ watermark xuống thấp hơn để không ảnh hưởng viền
+            $pdf->SetAlpha(0.6);
             $pdf->Image($watermarkPath, $x, $y, $watermarkWidth, $watermarkHeight);
-            $pdf->SetAlpha(1); // Khôi phục độ mờ mặc định
+            $pdf->SetAlpha(1);
         }
 
         $currentY = $tableTop;
@@ -87,26 +82,22 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe)
         $paddingInfo = 5;
         $QRpadding = 2;
 
-        // Đặt độ dày và màu viền một lần duy nhất cho toàn bộ bảng
-        $pdf->SetLineWidth(1);
-        $pdf->SetDrawColor(0, 0, 0); // Đảm bảo màu viền là đen đồng nhất
-
         for ($row = 0; $row < 10; $row++) {
             $rowHeight = $rowHeights[$row];
             $y = $currentY;
             $currentX = $margin;
             $currentColumnWidths = $columnWidthsPerRow[$row];
 
-            // Vẽ viền cho tất cả các ô trước
+            $pdf->Line($margin, $y, $margin + $tableWidth, $y);
+
             for ($col = 0; $col < count($currentColumnWidths); $col++) {
                 $colWidth = $currentColumnWidths[$col];
+                $pdf->Line($currentX, $y, $currentX, $y + $rowHeight);
+
                 $cellX = $currentX;
                 $cellY = $y;
                 $cellWidth = $colWidth;
                 $cellHeight = $rowHeight;
-                $pdf->Rect($cellX, $cellY, $cellWidth, $cellHeight, 'D'); // Vẽ viền trước
-
-                // Thêm nội dung sau khi vẽ viền
                 switch ($row) {
                     case 0:
                         if ($col == 0) {
@@ -260,16 +251,18 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe)
                 $currentX += $colWidth;
             }
 
+            $pdf->Line($currentX, $y, $currentX, $y + $rowHeight);
             $currentY += $rowHeight;
         }
+
+        $pdf->Line($margin, $currentY, $margin + $tableWidth, $currentY);
     }
 }
 
 // Hàm tạo PDF Tem Khách Lẻ
-function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe)
-{
-    $font = 'arial';
-    $pdf->AddFont($font, '', 'arial.php');
+function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
+    $font = 'timesbd';
+    $pdf->AddFont($font, '', 'timesbd.php');
     $pdf->SetFont($font, '', 6);
     $pdf->SetFont($font, 'B', 6);
 
@@ -542,7 +535,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 
     try {
-        // Tạo PDF tạm thời
         $pdf = new TCPDF('P', 'pt', array(297.63, 419.53), true, 'UTF-8', false);
         $pdf->SetMargins(10, 10, 10);
         $pdf->SetAutoPageBreak(false);
@@ -556,75 +548,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
         $timestamp = date('YmdHis');
         $safeMaSoMe = preg_replace('/[^A-Za-z0-9_-]/', '_', $maSoMe);
-        $pdfFileName = sys_get_temp_dir() . "/Tem_NhapKho_" . ($labelType === 'khachle' ? 'KhachLe_' : 'HeThong_') . "{$safeMaSoMe}_{$timestamp}.pdf";
+        $pdfFileName = "Tem_NhapKho_" . ($labelType === 'khachle' ? 'KhachLe_' : 'HeThong_') . "{$safeMaSoMe}_{$timestamp}.pdf";
 
-        // Lưu PDF vào file tạm
-        $pdf->Output($pdfFileName, 'F');
-
-        // Chuyển đổi PDF sang BMP
-        $bmpFile = convertPdfToBmp($pdfFileName);
-        if ($bmpFile === false) {
-            unlink($pdfFileName); // Xóa file PDF tạm
-            sendError("Lỗi khi chuyển đổi PDF sang BMP");
-        }
-
-        // Đọc nội dung file BMP
-        $bmpContent = file_get_contents($bmpFile);
-        if ($bmpContent === false) {
-            unlink($pdfFileName);
-            unlink($bmpFile);
-            sendError("Không thể đọc file BMP");
-        }
-
-        // Xóa file tạm
-        unlink($pdfFileName);
-        unlink($bmpFile);
-
-        // Xuất file BMP
         ob_end_clean();
-        header('Content-Type: image/bmp');
-        header('Content-Disposition: inline; filename="' . str_replace('.pdf', '.bmp', basename($pdfFileName)) . '"');
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: inline; filename="' . $pdfFileName . '"');
         header('Cache-Control: private, max-age=0, must-revalidate');
         header('Pragma: public');
-        echo $bmpContent;
+
+        $pdf->Output($pdfFileName, 'I');
         exit;
     } catch (Throwable $e) {
-        // Xóa file tạm nếu có lỗi
-        if (isset($pdfFileName) && file_exists($pdfFileName)) {
-            unlink($pdfFileName);
-        }
-        if (isset($bmpFile) && file_exists($bmpFile)) {
-            unlink($bmpFile);
-        }
-        sendError("Lỗi nghiêm trọng khi tạo hoặc chuyển đổi file", $e);
+        sendError("Lỗi nghiêm trọng khi tạo hoặc xuất PDF", $e);
     }
 }
 
 // Hàm hỗ trợ hiển thị HTML an toàn
-function safeHtml($value)
-{
+function safeHtml($value) {
     return $value !== null && $value !== '' ? htmlspecialchars($value) : '';
 }
 
 // Hàm lấy class và text trạng thái
-function getStatusClass($status, $loaiDon = null)
-{
+function getStatusClass($status, $loaiDon = null) {
     if ($loaiDon === '3') {
         return 'bg-orange-100 text-orange-800 border border-orange-300';
     }
     return in_array($status, ['0', '2']) ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' : ($status === '3' ? 'bg-green-100 text-green-800 border border-green-300' : 'bg-gray-100 text-gray-800 border border-gray-300');
 }
 
-function getStatusText($status, $loaiDon = null)
-{
+function getStatusText($status, $loaiDon = null) {
     if ($loaiDon === '3') {
         return 'Nhập hàng tồn';
     }
     return in_array($status, ['0', '2']) ? 'Chưa nhập đủ hàng' : ($status === '3' ? 'Đã nhập đủ hàng' : $status);
 }
 
-function getStatusClassChiTiet($status)
-{
+function getStatusClassChiTiet($status) {
     switch ($status) {
         case '0':
             return 'bg-blue-100 text-blue-800';
@@ -637,8 +596,7 @@ function getStatusClassChiTiet($status)
     }
 }
 
-function getStatusTextChiTiet($status)
-{
+function getStatusTextChiTiet($status) {
     switch ($status) {
         case '0':
             return 'Hàng Mới';
@@ -667,118 +625,101 @@ $percentCompleted = $don && $don['SoLuongDatHang'] > 0 ? min(100, round(($don['D
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- nếu commet lại thì sẽ chạy trên trình duyệt web <script src="/TP_NhapKho/cordova.js"></script> -->
-    <!-- <script src="/TP_NhapKho/cordova.js"></script> -->
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
 
-    body {
-        font-family: 'Roboto', sans-serif;
-        background-color: #f0f4f8;
-    }
-
-    .status-badge {
-        display: inline-flex;
-        align-items: center;
-        padding: 0.25rem 0.75rem;
-        border-radius: 9999px;
-        font-weight: 600;
-        font-size: 0.75rem;
-    }
-
-    .card-hover {
-        transition: all 0.3s ease;
-    }
-
-    .card-hover:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-    }
-
-    .icon-circle {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-    }
-
-    .fixed-back-btn {
-        position: fixed;
-        bottom: 1rem;
-        right: 1rem;
-        z-index: 50;
-        animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-        0% {
-            transform: scale(1);
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f0f4f8;
         }
 
-        50% {
-            transform: scale(1.05);
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            font-size: 0.75rem;
         }
 
-        100% {
-            transform: scale(1);
-        }
-    }
-
-    .progress-animate {
-        animation: fillBar 1.5s ease-out;
-    }
-
-    @keyframes fillBar {
-        from {
-            width: 0%;
+        .card-hover {
+            transition: all 0.3s ease;
         }
 
-        to {
-            width: attr(data-percentage);
+        .card-hover:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
         }
-    }
 
-    .section-header {
-        position: relative;
-        overflow: hidden;
-        border-bottom: 1px solid #e5e7eb;
-        padding-bottom: 0.5rem;
-    }
+        .icon-circle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+        }
 
-    .section-header::after {
-        content: "";
-        position: absolute;
-        left: 0;
-        bottom: -1px;
-        height: 3px;
-        width: 60px;
-        background: linear-gradient(90deg, #3b82f6, #60a5fa);
-    }
+        .fixed-back-btn {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            z-index: 50;
+            animation: pulse 2s infinite;
+        }
 
-    .custom-scrollbar::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
-    }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
 
-    .custom-scrollbar::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 10px;
-    }
+        .progress-animate {
+            animation: fillBar 1.5s ease-out;
+        }
 
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: #b91c1c;
-        border-radius: 10px;
-    }
+        @keyframes fillBar {
+            from { width: 0%; }
+            to { width: attr(data-percentage); }
+        }
 
-    th,
-    td {
-        white-space: nowrap;
-    }
+        .section-header {
+            position: relative;
+            overflow: hidden;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 0.5rem;
+        }
+
+        .section-header::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            bottom: -1px;
+            height: 3px;
+            width: 60px;
+            background: linear-gradient(90deg, #3b82f6, #60a5fa);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #b91c1c;
+            border-radius: 10px;
+        }
+
+        th, td {
+            white-space: nowrap;
+        }
     </style>
 </head>
-
 <body class="min-h-screen bg-gray-100 font-sans">
     <div class="relative min-h-screen">
         <!-- Header -->
@@ -797,324 +738,291 @@ $percentCompleted = $don && $don['SoLuongDatHang'] > 0 ? min(100, round(($don['D
 
         <main class="max-w-7xl mx-auto p-4 space-y-5 pb-20">
             <?php if ($don): ?>
-            <!-- Thông tin đơn sản xuất -->
-            <div
-                class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow p-4 border-l-4 border-blue-500 card-hover">
-                <h3 class="section-header text-lg font-bold text-gray-800 flex items-center gap-2 mb-4">
-                    <div class="icon-circle bg-blue-100 text-blue-600">
-                        <i class="fas fa-hashtag"></i>
-                    </div>
-                    <span>Thông Tin Đơn Sản Xuất</span>
-                </h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <p class="flex items-start mb-2"><i class="fas fa-tag text-blue-500 mr-2 mt-1"></i><span><span
-                                    class="font-semibold text-gray-700">Mã Số Mẻ:</span> <span
-                                    class="text-red-600"><?php echo safeHtml($don['MaSoMe']); ?></span></p>
-                        <p class="flex items-start mb-2"><i
-                                class="fas fa-file-alt text-blue-500 mr-2 mt-1"></i><span><span
-                                    class="font-semibold text-gray-700">Mã Đơn Hàng:</span>
-                                <?php echo safeHtml($don['MaDonHang']); ?></p>
-                        <p class="flex items-start mb-2"><i class="fas fa-user text-blue-500 mr-2 mt-1"></i><span><span
-                                    class="font-semibold text-gray-700">Khách Hàng:</span>
-                                <?php echo safeHtml($don['TenKhachHang']); ?></p>
-                        <p class="flex items-start mb-2"><i
-                                class="fas fa-tshirt text-blue-500 mr-2 mt-1"></i><span><span
-                                    class="font-semibold text-gray-700">Vải:</span>
-                                <?php echo safeHtml($don['TenVai']); ?> (<?php echo safeHtml($don['MaVai']); ?>)</p>
-                        <p class="flex items-start mb-2"><i class="fas fa-ruler text-blue-500 mr-2 mt-1"></i><span><span
-                                    class="font-semibold text-gray-700">Khổ:</span> <?php echo safeHtml($don['Kho']); ?>
-                        </p>
-                        <div class="flex items-center mb-2">
-                            <i class="fas fa-palette text-blue-500 mr-2 mt-1"></i>
-                            <span class="font-semibold text-gray-700">Màu:</span>
-                            <div class="w-6 h-6 rounded-full mr-2 shadow-sm"
-                                style="background: linear-gradient(to right, red, orange, yellow, green, blue, indigo, violet);">
-                            </div>
-                            <span><?php echo safeHtml($don['TenMau']); ?></span>
+                <!-- Thông tin đơn sản xuất -->
+                <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow p-4 border-l-4 border-blue-500 card-hover">
+                    <h3 class="section-header text-lg font-bold text-gray-800 flex items-center gap-2 mb-4">
+                        <div class="icon-circle bg-blue-100 text-blue-600">
+                            <i class="fas fa-hashtag"></i>
                         </div>
-                        <span class="status-badge <?php echo getStatusClass($don['TrangThai'], $don['LoaiDon']); ?>">
-                            <i
-                                class="fas <?php echo in_array($don['TrangThai'], ['0', '2']) ? 'fa-clock mr-1' : ($don['TrangThai'] === '3' ? 'fa-check-circle mr-1' : 'fa-info-circle mr-1'); ?>"></i>
-                            <?php echo getStatusText($don['TrangThai'], $don['LoaiDon']); ?>
-                        </span>
-                    </div>
-                    <div>
-                        <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
-                            <h4 class="text-base font-bold text-gray-800 flex items-center gap-2 mb-4">
-                                <div class="icon-circle bg-indigo-100 text-indigo-600">
-                                    <i class="fas fa-chart-pie"></i>
-                                </div>
-                                <span>Tiến Độ Nhập Hàng</span>
-                            </h4>
-                            <div class="text-sm">
-                                <div class="flex justify-between mb-2">
-                                    <span class="font-semibold text-gray-700 flex items-center">
-                                        <i class="fas fa-spinner text-indigo-500 mr-1"></i>
-                                        Hoàn thành: <span
-                                            class="ml-1 text-indigo-600 font-bold"><?php echo $percentCompleted; ?>%</span>
-                                    </span>
-                                    <?php if ($don['TrangThai'] == '3' || $don['LoaiDon'] == '3'): ?>
-                                    <span
-                                        class="font-semibold text-gray-700"><?php echo number_format($tongSoLuong, 2, '.', ''); ?>
-                                        <?php echo safeHtml($don['TenDVT']); ?></span>
-                                    <?php else: ?>
-                                    <span
-                                        class="font-semibold text-gray-700"><?php echo number_format($don['DaNhap'], 2, '.', ''); ?>
-                                        / <?php echo number_format($don['SoLuongDatHang'], 2, '.', ''); ?>
-                                        <?php echo safeHtml($don['TenDVT']); ?></span>
-                                    <?php endif; ?>
-                                </div>
-                                <div class="w-full bg-gray-200 rounded-full h-4 mb-4 overflow-hidden">
-                                    <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 h-4 rounded-full progress-animate relative"
-                                        style="width: <?php echo $percentCompleted; ?>%">
-                                        <?php if ($percentCompleted > 25): ?>
-                                        <span
-                                            class="absolute inset-0 flex items-center justify-center text-xs font-bold text-white"><?php echo $percentCompleted; ?>%</span>
+                        <span>Thông Tin Đơn Sản Xuất</span>
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <p class="flex items-start mb-2"><i class="fas fa-tag text-blue-500 mr-2 mt-1"></i><span><span class="font-semibold text-gray-700">Mã Số Mẻ:</span> <span class="text-red-600"><?php echo safeHtml($don['MaSoMe']); ?></span></p>
+                            <p class="flex items-start mb-2"><i class="fas fa-file-alt text-blue-500 mr-2 mt-1"></i><span><span class="font-semibold text-gray-700">Mã Đơn Hàng:</span> <?php echo safeHtml($don['MaDonHang']); ?></p>
+                            <p class="flex items-start mb-2"><i class="fas fa-user text-blue-500 mr-2 mt-1"></i><span><span class="font-semibold text-gray-700">Khách Hàng:</span> <?php echo safeHtml($don['TenKhachHang']); ?></p>
+                            <p class="flex items-start mb-2"><i class="fas fa-tshirt text-blue-500 mr-2 mt-1"></i><span><span class="font-semibold text-gray-700">Vải:</span> <?php echo safeHtml($don['TenVai']); ?> (<?php echo safeHtml($don['MaVai']); ?>)</p>
+                            <p class="flex items-start mb-2"><i class="fas fa-ruler text-blue-500 mr-2 mt-1"></i><span><span class="font-semibold text-gray-700">Khổ:</span> <?php echo safeHtml($don['Kho']); ?></p>
+                            <div class="flex items-center mb-2">
+                                <i class="fas fa-palette text-blue-500 mr-2 mt-1"></i>
+                                <span class="font-semibold text-gray-700">Màu:</span>
+                                <div class="w-6 h-6 rounded-full mr-2 shadow-sm" style="background: linear-gradient(to right, red, orange, yellow, green, blue, indigo, violet);"></div>
+                                <span><?php echo safeHtml($don['TenMau']); ?></span>
+                            </div>
+                            <span class="status-badge <?php echo getStatusClass($don['TrangThai'], $don['LoaiDon']); ?>">
+                                <i class="fas <?php echo in_array($don['TrangThai'], ['0', '2']) ? 'fa-clock mr-1' : ($don['TrangThai'] === '3' ? 'fa-check-circle mr-1' : 'fa-info-circle mr-1'); ?>"></i>
+                                <?php echo getStatusText($don['TrangThai'], $don['LoaiDon']); ?>
+                            </span>
+                        </div>
+                        <div>
+                            <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+                                <h4 class="text-base font-bold text-gray-800 flex items-center gap-2 mb-4">
+                                    <div class="icon-circle bg-indigo-100 text-indigo-600">
+                                        <i class="fas fa-chart-pie"></i>
+                                    </div>
+                                    <span>Tiến Độ Nhập Hàng</span>
+                                </h4>
+                                <div class="text-sm">
+                                    <div class="flex justify-between mb-2">
+                                        <span class="font-semibold text-gray-700 flex items-center">
+                                            <i class="fas fa-spinner text-indigo-500 mr-1"></i>
+                                            Hoàn thành: <span class="ml-1 text-indigo-600 font-bold"><?php echo $percentCompleted; ?>%</span>
+                                        </span>
+                                        <?php if ($don['TrangThai'] == '3' || $don['LoaiDon'] == '3'): ?>
+                                            <span class="font-semibold text-gray-700"><?php echo number_format($tongSoLuong, 2, '.', ''); ?> <?php echo safeHtml($don['TenDVT']); ?></span>
+                                        <?php else: ?>
+                                            <span class="font-semibold text-gray-700"><?php echo number_format($don['DaNhap'], 2, '.', ''); ?> / <?php echo number_format($don['SoLuongDatHang'], 2, '.', ''); ?> <?php echo safeHtml($don['TenDVT']); ?></span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-4 mb-4 overflow-hidden">
+                                        <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 h-4 rounded-full progress-animate relative" style="width: <?php echo $percentCompleted; ?>%">
+                                            <?php if ($percentCompleted > 25): ?>
+                                                <span class="absolute inset-0 flex items-center justify-center text-xs font-bold text-white"><?php echo $percentCompleted; ?>%</span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-3 gap-3">
+                                        <?php if ($don['TrangThai'] == '3' || $don['LoaiDon'] == '3'): ?>
+                                            <!-- Số lượng nhập hàng -->
+                                            <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-3 rounded-lg shadow-sm border border-blue-200 text-center transform transition-all hover:scale-105">
+                                                <div class="icon-circle bg-blue-500 text-white mx-auto mb-2">
+                                                    <i class="fas fa-box-open"></i>
+                                                </div>
+                                                <p class="text-xs text-blue-700 font-medium mb-1">Số Lượng Nhập Hàng</p>
+                                                <p class="font-bold text-blue-800 text-lg"><?php echo number_format($soLuongNhapHang, 2, '.', ''); ?></p>
+                                            </div>
+                                            <!-- Số lượng nhập tồn -->
+                                            <div class="bg-gradient-to-br from-green-50 to-green-100 p-3 rounded-lg shadow-sm border border-green-200 text-center transform transition-all hover:scale-105">
+                                                <div class="icon-circle bg-green-500 text-white mx-auto mb-2">
+                                                    <i class="fas fa-check"></i>
+                                                </div>
+                                                <p class="text-xs text-green-700 font-medium mb-1">Số Lượng Nhập Tồn</p>
+                                                <p class="font-bold text-green-800 text-lg"><?php echo number_format($soLuongNhapTon, 2, '.', ''); ?></p>
+                                            </div>
+                                            <!-- Tổng số lượng -->
+                                            <div class="bg-gradient-to-br from-amber-50 to-amber-100 p-3 rounded-lg shadow-sm border border-amber-200 text-center transform transition-all hover:scale-105">
+                                                <div class="icon-circle bg-amber-500 text-white mx-auto mb-2">
+                                                    <i class="fas fa-calculator"></i>
+                                                </div>
+                                                <p class="text-xs text-amber-700 font-medium mb-1">Tổng Số Lượng</p>
+                                                <p class="font-bold text-amber-800 text-lg"><?php echo number_format($tongSoLuong, 2, '.', ''); ?></p>
+                                            </div>
+                                        <?php else: ?>
+                                            <!-- Giao diện mặc định -->
+                                            <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-3 rounded-lg shadow-sm border border-blue-200 text-center transform transition-all hover:scale-105">
+                                                <div class="icon-circle bg-blue-500 text-white mx-auto mb-2">
+                                                    <i class="fas fa-box-open"></i>
+                                                </div>
+                                                <p class="text-xs text-blue-700 font-medium mb-1">Tổng Nhập</p>
+                                                <p class="font-bold text-blue-800 text-lg"><?php echo number_format($don['SoLuongDatHang'], 2, '.', ''); ?></p>
+                                            </div>
+                                            <div class="bg-gradient-to-br from-green-50 to-green-100 p-3 rounded-lg shadow-sm border border-green-200 text-center transform transition-all hover:scale-105">
+                                                <div class="icon-circle bg-green-500 text-white mx-auto mb-2">
+                                                    <i class="fas fa-check"></i>
+                                                </div>
+                                                <p class="text-xs text-green-700 font-medium mb-1">Đã Nhập</p>
+                                                <p class="font-bold text-green-800 text-lg"><?php echo number_format($don['DaNhap'], 2, '.', ''); ?></p>
+                                            </div>
+                                            <div class="bg-gradient-to-br from-amber-50 to-amber-100 p-3 rounded-lg shadow-sm border border-amber-200 text-center transform transition-all hover:scale-105">
+                                                <div class="icon-circle bg-amber-500 text-white mx-auto mb-2">
+                                                    <i class="fas fa-hourglass-half"></i>
+                                                </div>
+                                                <p class="text-xs text-amber-700 font-medium mb-1">Còn Lại</p>
+                                                <p class="font-bold text-amber-800 text-lg"><?php echo number_format($don['ConLai'], 2, '.', ''); ?></p>
+                                            </div>
                                         <?php endif; ?>
                                     </div>
                                 </div>
-                                <div class="grid grid-cols-3 gap-3">
-                                    <?php if ($don['TrangThai'] == '3' || $don['LoaiDon'] == '3'): ?>
-                                    <!-- Số lượng nhập hàng -->
-                                    <div
-                                        class="bg-gradient-to-br from-blue-50 to-blue-100 p-3 rounded-lg shadow-sm border border-blue-200 text-center transform transition-all hover:scale-105">
-                                        <div class="icon-circle bg-blue-500 text-white mx-auto mb-2">
-                                            <i class="fas fa-box-open"></i>
-                                        </div>
-                                        <p class="text-xs text-blue-700 font-medium mb-1">Số Lượng Nhập Hàng</p>
-                                        <p class="font-bold text-blue-800 text-lg">
-                                            <?php echo number_format($soLuongNhapHang, 2, '.', ''); ?></p>
-                                    </div>
-                                    <!-- Số lượng nhập tồn -->
-                                    <div
-                                        class="bg-gradient-to-br from-green-50 to-green-100 p-3 rounded-lg shadow-sm border border-green-200 text-center transform transition-all hover:scale-105">
-                                        <div class="icon-circle bg-green-500 text-white mx-auto mb-2">
-                                            <i class="fas fa-check"></i>
-                                        </div>
-                                        <p class="text-xs text-green-700 font-medium mb-1">Số Lượng Nhập Tồn</p>
-                                        <p class="font-bold text-green-800 text-lg">
-                                            <?php echo number_format($soLuongNhapTon, 2, '.', ''); ?></p>
-                                    </div>
-                                    <!-- Tổng số lượng -->
-                                    <div
-                                        class="bg-gradient-to-br from-amber-50 to-amber-100 p-3 rounded-lg shadow-sm border border-amber-200 text-center transform transition-all hover:scale-105">
-                                        <div class="icon-circle bg-amber-500 text-white mx-auto mb-2">
-                                            <i class="fas fa-calculator"></i>
-                                        </div>
-                                        <p class="text-xs text-amber-700 font-medium mb-1">Tổng Số Lượng</p>
-                                        <p class="font-bold text-amber-800 text-lg">
-                                            <?php echo number_format($tongSoLuong, 2, '.', ''); ?></p>
-                                    </div>
-                                    <?php else: ?>
-                                    <!-- Giao diện mặc định -->
-                                    <div
-                                        class="bg-gradient-to-br from-blue-50 to-blue-100 p-3 rounded-lg shadow-sm border border-blue-200 text-center transform transition-all hover:scale-105">
-                                        <div class="icon-circle bg-blue-500 text-white mx-auto mb-2">
-                                            <i class="fas fa-box-open"></i>
-                                        </div>
-                                        <p class="text-xs text-blue-700 font-medium mb-1">Tổng Nhập</p>
-                                        <p class="font-bold text-blue-800 text-lg">
-                                            <?php echo number_format($don['SoLuongDatHang'], 2, '.', ''); ?></p>
-                                    </div>
-                                    <div
-                                        class="bg-gradient-to-br from-green-50 to-green-100 p-3 rounded-lg shadow-sm border border-green-200 text-center transform transition-all hover:scale-105">
-                                        <div class="icon-circle bg-green-500 text-white mx-auto mb-2">
-                                            <i class="fas fa-check"></i>
-                                        </div>
-                                        <p class="text-xs text-green-700 font-medium mb-1">Đã Nhập</p>
-                                        <p class="font-bold text-green-800 text-lg">
-                                            <?php echo number_format($don['DaNhap'], 2, '.', ''); ?></p>
-                                    </div>
-                                    <div
-                                        class="bg-gradient-to-br from-amber-50 to-amber-100 p-3 rounded-lg shadow-sm border border-amber-200 text-center transform transition-all hover:scale-105">
-                                        <div class="icon-circle bg-amber-500 text-white mx-auto mb-2">
-                                            <i class="fas fa-hourglass-half"></i>
-                                        </div>
-                                        <p class="text-xs text-amber-700 font-medium mb-1">Còn Lại</p>
-                                        <p class="font-bold text-amber-800 text-lg">
-                                            <?php echo number_format($don['ConLai'], 2, '.', ''); ?></p>
-                                    </div>
-                                    <?php endif; ?>
-                                </div>
+                            </div>
+                            
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Thông tin chi tiết -->
+                <div class="bg-white rounded-xl shadow-sm p-4 card-hover border border-gray-100">
+                    <h3 class="section-header text-base font-bold text-gray-800 flex items-center gap-2 mb-4">
+                        <div class="icon-circle bg-indigo-100 text-indigo-600">
+                            <i class="fas fa-info-circle"></i>
+                        </div>
+                        <span>Thông Tin Chi Tiết</span>
+                    </h3>
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div class="flex bg-gray-50 p-2 rounded-lg items-center gap-2">
+                            <div class="icon-circle bg-red-100 text-red-500">
+                                <i class="fas fa-box"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500">Số Lượng Đặt</p>
+                                <p class="font-semibold"><?php echo number_format($don['SoLuongDatHang'], 2, '.', '') . ' ' . safeHtml($don['TenDVT']); ?></p>
                             </div>
                         </div>
-
+                        <div class="flex bg-gray-50 p-2 rounded-lg items-center gap-2">
+                            <div class="icon-circle bg-red-100 text-red-500">
+                                <i class="fas fa-weight-hanging"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500">Kg Quy Đổi</p>
+                                <p class="font-semibold"><?php echo number_format((float)$don['SoKgQuyDoi'], 2, '.', '') . ' Kg'; ?></p>
+                            </div>
+                        </div>
+                        <div class="flex bg-gray-50 p-2 rounded-lg items-center gap-2">
+                            <div class="icon-circle bg-red-100 text-red-500">
+                                <i class="fas fa-calendar-alt"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500">Ngày Nhận</p>
+                                <p class="font-semibold"><?php echo safeHtml($don['NgayNhan']); ?></p>
+                            </div>
+                        </div>
+                        <div class="flex bg-gray-50 p-2 rounded-lg items-center gap-2">
+                            <div class="icon-circle bg-red-100 text-red-500">
+                                <i class="fas fa-calendar-check"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500">Ngày Giao</p>
+                                <p class="font-semibold"><?php echo safeHtml($don['NgayGiao']); ?></p>
+                            </div>
+                        </div>
+                        <div class="flex bg-gray-50 p-2 rounded-lg items-center gap-2">
+                            <div class="icon-circle bg-red-100 text-red-500">
+                                <i class="fas fa-percentage"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500">Loss</p>
+                                <p class="font-semibold"><?php echo number_format((float)$don['Loss'], 2, '.', '') . ' Kg'; ?></p>
+                            </div>
+                        </div>
+                        <div class="flex bg-gray-50 p-2 rounded-lg items-center gap-2">
+                            <div class="icon-circle bg-red-100 text-red-500">
+                                <i class="fas fa-file-alt"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500">Loại Đơn</p>
+                                <p class="font-semibold"><?php echo safeHtml($don['LoaiDon']); ?></p>
+                            </div>
+                        </div>
+                        <div class="flex bg-gray-50 p-2 rounded-lg items-center gap-2">
+                            <div class="icon-circle bg-red-100 text-red-500">
+                                <i class="fas fa-user-friends"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500">Người Liên Hệ</p>
+                                <p class="font-semibold"><?php echo safeHtml($don['TenNguoiLienHe']); ?></p>
+                            </div>
+                        </div>
+                        <div class="flex bg-gray-50 p-2 rounded-lg items-center gap-2">
+                            <div class="icon-circle bg-red-100 text-red-500">
+                                <i class="fas fa-user-tie"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500">Nhân Viên</p>
+                                <p class="font-semibold"><?php echo safeHtml($don['TenNhanVien']); ?></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4 bg-blue-50 p-3 rounded-lg border border-blue-100">
+                        <p class="flex items-start">
+                            <i class="fas fa-comment-dots text-blue-500 mr-2 mt-1"></i>
+                            <span>
+                                <span class="font-semibold text-blue-700">Yêu Cầu Khác:</span><br>
+                                <span class="text-gray-700"><?php echo safeHtml($don['YeuCauKhac']) ?: 'Không có yêu cầu khác.'; ?></span>
+                            </span>
+                        </p>
                     </div>
                 </div>
             </div>
 
-            <!-- Thông tin chi tiết -->
-            <div class="bg-white rounded-xl shadow-sm p-4 card-hover border border-gray-100">
-                <h3 class="section-header text-base font-bold text-gray-800 flex items-center gap-2 mb-4">
-                    <div class="icon-circle bg-indigo-100 text-indigo-600">
-                        <i class="fas fa-info-circle"></i>
-                    </div>
-                    <span>Thông Tin Chi Tiết</span>
-                </h3>
-                <div class="grid grid-cols-2 gap-4 text-sm">
-                    <div class="flex bg-gray-50 p-2 rounded-lg items-center gap-2">
-                        <div class="icon-circle bg-red-100 text-red-500">
-                            <i class="fas fa-box"></i>
+                <!-- Thông tin kỹ thuật -->
+                <div class="bg-white rounded-xl shadow-sm p-4 card-hover border border-gray-100">
+                    <h3 class="section-header text-base font-bold text-gray-800 flex items-center gap-2 mb-4">
+                        <div class="icon-circle bg-indigo-100 text-indigo-600">
+                            <i class="fas fa-cogs"></i>
                         </div>
-                        <div>
-                            <p class="text-xs text-gray-500">Số Lượng Đặt</p>
-                            <p class="font-semibold">
-                                <?php echo number_format($don['SoLuongDatHang'], 2, '.', '') . ' ' . safeHtml($don['TenDVT']); ?>
-                            </p>
+                        <span>Thông Tin Kỹ Thuật</span>
+                    </h3>
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div class="flex bg-gray-50 p-2 rounded-lg">
+                            <div class="icon-circle bg-red-100 text-red-500 mr-2">
+                                <i class="fas fa-ruler"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500">Định Mức</p>
+                                <p class="font-semibold"><?php echo safeHtml($don['DinhMuc']); ?></p>
+                            </div>
                         </div>
-                    </div>
-                    <div class="flex bg-gray-50 p-2 rounded-lg items-center gap-2">
-                        <div class="icon-circle bg-red-100 text-red-500">
-                            <i class="fas fa-weight-hanging"></i>
+                        <div class="flex bg-gray-50 p-2 rounded-lg">
+                            <div class="icon-circle bg-red-100 text-red-500 mr-2">
+                                <i class="fas fa-weight"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500">Định Lượng</p>
+                                <p class="font-semibold"><?php echo safeHtml($don['DinhLuong']); ?></p>
+                            </div>
                         </div>
-                        <div>
-                            <p class="text-xs text-gray-500">Kg Quy Đổi</p>
-                            <p class="font-semibold">
-                                <?php echo number_format((float)$don['SoKgQuyDoi'], 2, '.', '') . ' Kg'; ?></p>
+                        <div class="flex bg-gray-50 p-2 rounded-lg">
+                            <div class="icon-circle bg-red-100 text-red-500 mr-2">
+                                <i class="fas fa-tint"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500">Độ Bền Màu</p>
+                                <p class="font-semibold"><?php echo safeHtml($don['DoBenMau']); ?></p>
+                            </div>
                         </div>
-                    </div>
-                    <div class="flex bg-gray-50 p-2 rounded-lg items-center gap-2">
-                        <div class="icon-circle bg-red-100 text-red-500">
-                            <i class="fas fa-calendar-alt"></i>
+                        <div class="flex bg-gray-50 p-2 rounded-lg">
+                            <div class="icon-circle bg-red-100 text-red-500 mr-2">
+                                <i class="fas fa-tint-slash"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500">Độ Lệch Màu</p>
+                                <p class="font-semibold"><?php echo safeHtml($don['DoLechMau']); ?></p>
+                            </div>
                         </div>
-                        <div>
-                            <p class="text-xs text-gray-500">Ngày Nhận</p>
-                            <p class="font-semibold"><?php echo safeHtml($don['NgayNhan']); ?></p>
+                        <div class="flex bg-gray-50 p-2 rounded-lg">
+                            <div class="icon-circle bg-red-100 text-red-500 mr-2">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500">Sử Dụng Hộ</p>
+                                <p class="font-semibold"><?php echo safeHtml($don['TenSuDungHo']); ?></p>
+                            </div>
                         </div>
-                    </div>
-                    <div class="flex bg-gray-50 p-2 rounded-lg items-center gap-2">
-                        <div class="icon-circle bg-red-100 text-red-500">
-                            <i class="fas fa-calendar-check"></i>
-                        </div>
-                        <div>
-                            <p class="text-xs text-gray-500">Ngày Giao</p>
-                            <p class="font-semibold"><?php echo safeHtml($don['NgayGiao']); ?></p>
-                        </div>
-                    </div>
-                    <div class="flex bg-gray-50 p-2 rounded-lg items-center gap-2">
-                        <div class="icon-circle bg-red-100 text-red-500">
-                            <i class="fas fa-percentage"></i>
-                        </div>
-                        <div>
-                            <p class="text-xs text-gray-500">Loss</p>
-                            <p class="font-semibold">
-                                <?php echo number_format((float)$don['Loss'], 2, '.', '') . ' Kg'; ?></p>
-                        </div>
-                    </div>
-                    <div class="flex bg-gray-50 p-2 rounded-lg items-center gap-2">
-                        <div class="icon-circle bg-red-100 text-red-500">
-                            <i class="fas fa-file-alt"></i>
-                        </div>
-                        <div>
-                            <p class="text-xs text-gray-500">Loại Đơn</p>
-                            <p class="font-semibold"><?php echo safeHtml($don['LoaiDon']); ?></p>
-                        </div>
-                    </div>
-                    <div class="flex bg-gray-50 p-2 rounded-lg items-center gap-2">
-                        <div class="icon-circle bg-red-100 text-red-500">
-                            <i class="fas fa-user-friends"></i>
-                        </div>
-                        <div>
-                            <p class="text-xs text-gray-500">Người Liên Hệ</p>
-                            <p class="font-semibold"><?php echo safeHtml($don['TenNguoiLienHe']); ?></p>
-                        </div>
-                    </div>
-                    <div class="flex bg-gray-50 p-2 rounded-lg items-center gap-2">
-                        <div class="icon-circle bg-red-100 text-red-500">
-                            <i class="fas fa-user-tie"></i>
-                        </div>
-                        <div>
-                            <p class="text-xs text-gray-500">Nhân Viên</p>
-                            <p class="font-semibold"><?php echo safeHtml($don['TenNhanVien']); ?></p>
-                        </div>
-                    </div>
-                </div>
-                <div class="mt-4 bg-blue-50 p-3 rounded-lg border border-blue-100">
-                    <p class="flex items-start">
-                        <i class="fas fa-comment-dots text-blue-500 mr-2 mt-1"></i>
-                        <span>
-                            <span class="font-semibold text-blue-700">Yêu Cầu Khác:</span><br>
-                            <span
-                                class="text-gray-700"><?php echo safeHtml($don['YeuCauKhac']) ?: 'Không có yêu cầu khác.'; ?></span>
-                        </span>
-                    </p>
-                </div>
-            </div>
-
-            <!-- Thông tin kỹ thuật -->
-            <div class="bg-white rounded-xl shadow-sm p-4 card-hover border border-gray-100">
-                <h3 class="section-header text-base font-bold text-gray-800 flex items-center gap-2 mb-4">
-                    <div class="icon-circle bg-indigo-100 text-indigo-600">
-                        <i class="fas fa-cogs"></i>
-                    </div>
-                    <span>Thông Tin Kỹ Thuật</span>
-                </h3>
-                <div class="grid grid-cols-2 gap-4 text-sm">
-                    <div class="flex bg-gray-50 p-2 rounded-lg">
-                        <div class="icon-circle bg-red-100 text-red-500 mr-2">
-                            <i class="fas fa-ruler"></i>
-                        </div>
-                        <div>
-                            <p class="text-xs text-gray-500">Định Mức</p>
-                            <p class="font-semibold"><?php echo safeHtml($don['DinhMuc']); ?></p>
-                        </div>
-                    </div>
-                    <div class="flex bg-gray-50 p-2 rounded-lg">
-                        <div class="icon-circle bg-red-100 text-red-500 mr-2">
-                            <i class="fas fa-weight"></i>
-                        </div>
-                        <div>
-                            <p class="text-xs text-gray-500">Định Lượng</p>
-                            <p class="font-semibold"><?php echo safeHtml($don['DinhLuong']); ?></p>
-                        </div>
-                    </div>
-                    <div class="flex bg-gray-50 p-2 rounded-lg">
-                        <div class="icon-circle bg-red-100 text-red-500 mr-2">
-                            <i class="fas fa-tint"></i>
-                        </div>
-                        <div>
-                            <p class="text-xs text-gray-500">Độ Bền Màu</p>
-                            <p class="font-semibold"><?php echo safeHtml($don['DoBenMau']); ?></p>
-                        </div>
-                    </div>
-                    <div class="flex bg-gray-50 p-2 rounded-lg">
-                        <div class="icon-circle bg-red-100 text-red-500 mr-2">
-                            <i class="fas fa-tint-slash"></i>
-                        </div>
-                        <div>
-                            <p class="text-xs text-gray-500">Độ Lệch Màu</p>
-                            <p class="font-semibold"><?php echo safeHtml($don['DoLechMau']); ?></p>
-                        </div>
-                    </div>
-                    <div class="flex bg-gray-50 p-2 rounded-lg">
-                        <div class="icon-circle bg-red-100 text-red-500 mr-2">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <div>
-                            <p class="text-xs text-gray-500">Sử Dụng Hộ</p>
-                            <p class="font-semibold"><?php echo safeHtml($don['TenSuDungHo']); ?></p>
-                        </div>
-                    </div>
-                    <div class="flex bg-gray-50 p-2 rounded-lg">
-                        <div class="icon-circle bg-red-100 text-red-500 mr-2">
-                            <i class="fas fa-check-circle"></i>
-                        </div>
-                        <div>
-                            <p class="text-xs text-gray-500">Tiêu Chuẩn</p>
-                            <p class="font-semibold"><?php echo safeHtml($don['TenTieuChuan']); ?></p>
+                        <div class="flex bg-gray-50 p-2 rounded-lg">
+                            <div class="icon-circle bg-red-100 text-red-500 mr-2">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500">Tiêu Chuẩn</p>
+                                <p class="font-semibold"><?php echo safeHtml($don['TenTieuChuan']); ?></p>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Ghi chú -->
-            <div
-                class="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl shadow-sm p-4 card-hover border border-amber-200">
-                <h3
-                    class="text-base font-bold text-amber-800 flex items-center gap-2 mb-3 pb-2 border-b border-amber-200">
-                    <div class="icon-circle bg-amber-200 text-amber-700">
-                        <i class="fas fa-sticky-note"></i>
+                <!-- Ghi chú -->
+                <div class="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl shadow-sm p-4 card-hover border border-amber-200">
+                    <h3 class="text-base font-bold text-amber-800 flex items-center gap-2 mb-3 pb-2 border-b border-amber-200">
+                        <div class="icon-circle bg-amber-200 text-amber-700">
+                            <i class="fas fa-sticky-note"></i>
+                        </div>
+                        <span>Ghi Chú</span>
+                    </h3>
+                    <div class="bg-white p-3 rounded-lg shadow-sm">
+                        <p class="text-sm text-gray-700 flex items-start">
+                            <i class="fas fa-quote-left text-amber-500 mr-2 mt-1"></i>
+                            <span><?php echo safeHtml($don['GhiChu']) ?: 'Không có ghi chú.'; ?></span>
+                        </p>
                     </div>
                     <span>Ghi Chú</span>
                 </h3>
@@ -1124,461 +1032,293 @@ $percentCompleted = $don && $don['SoLuongDatHang'] > 0 ? min(100, round(($don['D
                         <span><?php echo safeHtml($don['GhiChu']) ?: 'Không có ghi chú.'; ?></span>
                     </p>
                 </div>
-            </div>
 
-            <!-- Chi tiết nhập kho -->
-            <div class="bg-white rounded-xl shadow-sm p-4 card-hover border border-gray-100">
-                <h3 class="section-header text-base font-bold text-gray-800 flex items-center gap-2 mb-4">
-                    <div class="icon-circle bg-indigo-100 text-indigo-600">
-                        <i class="fas fa-list"></i>
-                    </div>
-                    <span>Chi Tiết Nhập Kho</span>
-                </h3>
-                <?php if ($chiTietList): ?>
-                <div class="overflow-x-auto custom-scrollbar">
-                    <table class="w-full min-w-[1000px] border-collapse">
-                        <thead class="bg-red-50 text-red-800 sticky top-0 z-10">
-                            <tr>
-                                <th class="text-left sticky left-0 bg-red-50 z-20 p-3 font-semibold">STT</th>
-                                <th class="text-left p-3 font-semibold">Số Lượng</th>
-                                <th class="text-left p-3 font-semibold">Số Lot</th>
-                                <th class="text-left p-3 font-semibold">Thành Phần</th>
-                                <th class="text-left p-3 font-semibold">Trạng Thái</th>
-                                <th class="text-left p-3 font-semibold">Ngày Tạo</th>
-                                <th class="text-left p-3 font-semibold">Khu Vực</th>
-                                <th class="text-left p-3 font-semibold">Ghi Chú</th>
-                                <th class="text-left p-3 font-semibold">In Tem</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($chiTietList as $index => $chiTiet): ?>
-                            <tr class="border-b border-gray-200 hover:bg-red-100 transition-colors">
-                                <td class="sticky left-0 bg-white p-3"><?php echo $index + 1; ?></td>
-                                <td
-                                    class="font-bold p-3 whitespace-normal <?php echo intval($chiTiet['SoLuong']) > 0 ? 'text-green-600' : 'text-red-600'; ?>">
-                                    <?php echo safeHtml($chiTiet['SoLuong']) . ' ' . safeHtml($chiTiet['TenDVT']); ?>
-                                </td>
-                                <td class="p-3"><?php echo safeHtml($chiTiet['SoLot']); ?></td>
-                                <td class="p-3"><?php echo safeHtml($chiTiet['TenThanhPhan']); ?></td>
-                                <td class="p-3">
-                                    <span
-                                        class="px-2 py-1 rounded-full text-xs <?php echo getStatusClassChiTiet($chiTiet['TrangThai']); ?>">
-                                        <?php echo getStatusTextChiTiet($chiTiet['TrangThai']); ?>
-                                    </span>
-                                </td>
-                                <td class="text-gray-600 p-3"><?php echo safeHtml($chiTiet['NgayTao']); ?></td>
-                                <td class="text-gray-600 p-3"><?php echo safeHtml($chiTiet['MaKhuVuc']); ?></td>
-                                <td class="text-gray-600 p-3"><?php echo safeHtml($chiTiet['GhiChu']); ?></td>
-                                <td class="p-3">
-                                    <button onclick='generatePDF(<?php echo json_encode([$chiTiet]); ?>)'
-                                        class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700">
-                                        <i class="ri-printer-line"></i> In Tem
-                                    </button>
-                                </td>
-                            </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
+                <!-- Chi tiết nhập kho -->
+                <div class="bg-white rounded-xl shadow-sm p-4 card-hover border border-gray-100">
+                    <h3 class="section-header text-base font-bold text-gray-800 flex items-center gap-2 mb-4">
+                        <div class="icon-circle bg-indigo-100 text-indigo-600">
+                            <i class="fas fa-list"></i>
+                        </div>
+                        <span>Chi Tiết Nhập Kho</span>
+                    </h3>
+                    <?php if ($chiTietList): ?>
+                        <div class="overflow-x-auto custom-scrollbar">
+                            <table class="w-full min-w-[1000px] border-collapse">
+                                <thead class="bg-red-50 text-red-800 sticky top-0 z-10">
+                                    <tr>
+                                        <th class="text-left sticky left-0 bg-red-50 z-20 p-3 font-semibold">STT</th>                                     
+                                        <th class="text-left p-3 font-semibold">Số Lượng</th>
+                                        <th class="text-left p-3 font-semibold">Số Lot</th>
+                                        <th class="text-left p-3 font-semibold">Thành Phần</th>
+                                        <th class="text-left p-3 font-semibold">Trạng Thái</th>
+                                        <th class="text-left p-3 font-semibold">Ngày Tạo</th>
+                                        <th class="text-left p-3 font-semibold">Khu Vực</th>
+                                        <th class="text-left p-3 font-semibold">Ghi Chú</th>
+                                        <th class="text-left p-3 font-semibold">In Tem</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($chiTietList as $index => $chiTiet): ?>
+                                        <tr class="border-b border-gray-200 hover:bg-red-100 transition-colors">
+                                            <td class="sticky left-0 bg-white p-3"><?php echo $index + 1; ?></td>                                        
+                                            <td class="font-bold p-3 whitespace-normal <?php echo intval($chiTiet['SoLuong']) > 0 ? 'text-green-600' : 'text-red-600'; ?>">
+                                                <?php echo safeHtml($chiTiet['SoLuong']) . ' ' . safeHtml($chiTiet['TenDVT']); ?>
+                                            </td>
+                                            <td class="p-3"><?php echo safeHtml($chiTiet['SoLot']); ?></td>
+                                            <td class="p-3"><?php echo safeHtml($chiTiet['TenThanhPhan']); ?></td>
+                                            <td class="p-3">
+                                                <span class="px-2 py-1 rounded-full text-xs <?php echo getStatusClassChiTiet($chiTiet['TrangThai']); ?>">
+                                                    <?php echo getStatusTextChiTiet($chiTiet['TrangThai']); ?>
+                                                </span>
+                                            </td>
+                                            <td class="text-gray-600 p-3"><?php echo safeHtml($chiTiet['NgayTao']); ?></td>
+                                            <td class="text-gray-600 p-3"><?php echo safeHtml($chiTiet['MaKhuVuc']); ?></td>
+                                            <td class="text-gray-600 p-3"><?php echo safeHtml($chiTiet['GhiChu']); ?></td>
+                                            <td class="p-3">
+                                                <button onclick='generatePDF(<?php echo json_encode([$chiTiet]); ?>)' class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700">
+                                                    <i class="ri-printer-line"></i> In Tem
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php else: ?>
+                        <div class="text-center bg-red-50 rounded-lg p-6">
+                            <i class="ri-error-warning-line text-4xl text-red-500 mb-3"></i>
+                            <p class="text-red-600 text-base font-semibold">Không tìm thấy chi tiết nhập kho cho đơn này.</p>
+                        </div>
+                    <?php endif; ?>
                 </div>
-                <?php else: ?>
-                <div class="text-center bg-red-50 rounded-lg p-6">
-                    <i class="ri-error-warning-line text-4xl text-red-500 mb-3"></i>
-                    <p class="text-red-600 text-base font-semibold">Không tìm thấy chi tiết nhập kho cho đơn này.</p>
-                </div>
-                <?php endif; ?>
-            </div>
             <?php else: ?>
-            <div class="flex items-center justify-center h-[calc(100vh-64px)]">
-                <div class="text-center p-6 bg-white rounded-lg shadow-lg border-t-4 border-red-500">
-                    <div class="w-20 h-20 mx-auto mb-4 flex items-center justify-center bg-red-100 rounded-full">
-                        <i class="fas fa-exclamation-triangle text-4xl text-red-500"></i>
+                <div class="flex items-center justify-center h-[calc(100vh-64px)]">
+                    <div class="text-center p-6 bg-white rounded-lg shadow-lg border-t-4 border-red-500">
+                        <div class="w-20 h-20 mx-auto mb-4 flex items-center justify-center bg-red-100 rounded-full">
+                            <i class="fas fa-exclamation-triangle text-4xl text-red-500"></i>
+                        </div>
+                        <p class="text-lg font-semibold text-gray-800 mb-1">Không tìm thấy đơn sản xuất</p>
+                        <p class="text-sm text-gray-600 mb-4">Mã số mẻ không tồn tại hoặc đã bị xóa.</p>
+                        <a href="../nhapkho.php" class="inline-block bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                            <i class="fas fa-arrow-left mr-2"></i>Quay lại Trang Chính
+                        </a>
                     </div>
-                    <p class="text-lg font-semibold text-gray-800 mb-1">Không tìm thấy đơn sản xuất</p>
-                    <p class="text-sm text-gray-600 mb-4">Mã số mẻ không tồn tại hoặc đã bị xóa.</p>
-                    <a href="../nhapkho.php"
-                        class="inline-block bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">
-                        <i class="fas fa-arrow-left mr-2"></i>Quay lại Trang Chính
-                    </a>
                 </div>
-            </div>
             <?php endif; ?>
         </main>
     </div>
 
     <script>
-    // Hàm ghi log
-    function logToScreen(message, type = 'info') {
-        console[type === 'error' ? 'error' : 'log'](message);
-    }
+        // Hàm ghi log
+        function logToScreen(message, type = 'info') {
+            console[type === 'error' ? 'error' : 'log'](message);
+        }
 
-    // Kiểm tra môi trường Cordova
-    function checkCordovaEnvironment() {
-        logToScreen('[checkCordova] Kiểm tra môi trường Cordova...');
-        return typeof cordova !== 'undefined' && typeof cordova.plugins !== 'undefined' && typeof cordova.file !==
-            'undefined' && typeof cordova.plugins.fileOpener2 !== 'undefined';
-    }
+        // Kiểm tra môi trường Cordova
+        function checkCordovaEnvironment() {
+            logToScreen('[checkCordova] Kiểm tra môi trường Cordova...');
+            return typeof cordova !== 'undefined' && typeof cordova.plugins !== 'undefined' && typeof cordova.file !== 'undefined' && typeof cordova.plugins.fileOpener2 !== 'undefined';
+        }
 
-    // Xử lý khi Cordova sẵn sàng
-    document.addEventListener('deviceready', onDeviceReady, false);
-
-    function onDeviceReady() {
-        logToScreen('[deviceready] Cordova đã sẵn sàng.');
-        checkCordovaEnvironment();
-    }
-
-    // Nếu không phải Cordova, chạy logic trình duyệt
-    document.addEventListener('DOMContentLoaded', function() {
-        if (typeof cordova === 'undefined') {
-            logToScreen('[DOMContentLoaded] Không phát hiện Cordova, chạy như trình duyệt.');
+        // Xử lý khi Cordova sẵn sàng
+        document.addEventListener('deviceready', onDeviceReady, false);
+        function onDeviceReady() {
+            logToScreen('[deviceready] Cordova đã sẵn sàng.');
             checkCordovaEnvironment();
         }
-    });
 
-    // Hàm generatePDF(tải về)
-    //    window.generatePDF = async function(data) {
-    //         logToScreen('[generatePDF] Bắt đầu hàm generatePDF với dữ liệu: ' + JSON.stringify(data));
-    //         if (!data || data.length === 0) {
-    //             logToScreen('[generatePDF] Dữ liệu rỗng.', 'error');
-    //             Swal.fire({ icon: 'warning', title: 'Dữ liệu không hợp lệ', text: 'Không có dữ liệu để tạo BMP.' });
-    //             return;
-    //         }
-
-    //         if (typeof cordova !== 'undefined') {
-    //             await new Promise((resolve) => {
-    //                 if (typeof cordova.plugins !== 'undefined') {
-    //                     resolve();
-    //                 } else {
-    //                     document.addEventListener('deviceready', resolve, { once: true });
-    //                 }
-    //             });
-    //             logToScreen('[generatePDF] deviceready đã sẵn sàng.');
-    //         } else {
-    //             logToScreen('[generatePDF] Chạy trong môi trường trình duyệt.');
-    //         }
-
-    //         const { value: labelType } = await Swal.fire({
-    //             title: 'Chọn loại tem',
-    //             text: 'Vui lòng chọn loại tem bạn muốn in:',
-    //             icon: 'question',
-    //             input: 'select',
-    //             inputOptions: { 'system': 'Tem Hệ Thống', 'khachle': 'Tem Khách Lẻ' },
-    //             inputPlaceholder: 'Chọn loại tem',
-    //             showCancelButton: true,
-    //             confirmButtonText: 'In Tem',
-    //             cancelButtonText: 'Hủy',
-    //             inputValidator: (value) => !value && 'Bạn phải chọn một loại tem!'
-    //         });
-
-    //         if (!labelType) {
-    //             logToScreen('[generatePDF] Người dùng hủy chọn.');
-    //             return;
-    //         }
-
-    //         Swal.fire({ title: 'Đang tạo BMP...', text: 'Vui lòng chờ.', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
-    //         const formData = new FormData();
-    //         formData.append('action', 'generatePDF');
-    //         formData.append('pdfData', JSON.stringify(data));
-    //         formData.append('labelType', labelType);
-
-    //         try {
-    //             logToScreen('[generatePDF] Gửi request POST tới: ' + window.location.href);
-    //             const response = await fetch(window.location.href, { method: 'POST', body: formData });
-    //             logToScreen('[generatePDF] Phản hồi từ server, trạng thái: ' + response.status);
-
-    //             if (!response.ok) {
-    //                 const errorData = await response.json().catch(() => response.text());
-    //                 throw new Error(errorData.error || `Lỗi Server: ${response.status}`);
-    //             }
-
-    //             const bmpBlob = await response.blob();
-    //             const contentDisposition = response.headers.get('Content-Disposition');
-    //             let fileName = contentDisposition?.match(/filename="(.+)"/)?.[1] || `Tem_${labelType}_${new Date().toISOString().replace(/[:.]/g, '-')}.bmp`;
-
-    //             logToScreen('[generatePDF] Tên file BMP: ' + fileName);
-
-    //             if (typeof cordova !== 'undefined') {
-    //                 // Môi trường Cordova: Lưu file tạm thời và mở bằng plugin
-    //                 const directory = cordova.file.externalDataDirectory || cordova.file.dataDirectory;
-    //                 const filePath = directory + fileName;
-
-    //                 window.resolveLocalFileSystemURL(directory, function(dirEntry) {
-    //                     dirEntry.getFile(fileName, { create: true, exclusive: false }, function(fileEntry) {
-    //                         fileEntry.createWriter(function(fileWriter) {
-    //                             fileWriter.onwriteend = function() {
-    //                                 logToScreen('[generatePDF] Đã lưu file BMP tạm thời tại: ' + filePath);
-    //                                 cordova.plugins.fileOpener2.open(filePath, 'image/bmp', {
-    //                                     error: function(e) {
-    //                                         logToScreen('[generatePDF] Lỗi khi mở file BMP: ' + JSON.stringify(e), 'error');
-    //                                         Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Không thể mở file BMP: ' + e.status + ' - ' + e.message });
-    //                                     },
-    //                                     success: function() {
-    //                                         logToScreen('[generatePDF] Đã mở file BMP thành công.');
-    //                                         Swal.fire({ icon: 'success', title: 'Thành công', text: 'File BMP đã được mở.' });
-    //                                     }
-    //                                 });
-    //                             };
-    //                             fileWriter.onerror = function(e) {
-    //                                 logToScreen('[generatePDF] Lỗi khi ghi file BMP: ' + e.toString(), 'error');
-    //                                 Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Không thể lưu file BMP.' });
-    //                             };
-    //                             fileWriter.write(bmpBlob);
-    //                         }, function(e) {
-    //                             logToScreen('[generatePDF] Lỗi khi tạo file BMP: ' + JSON.stringify(e), 'error');
-    //                             Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Không thể tạo file BMP.' });
-    //                         });
-    //                     }, function(e) {
-    //                         logToScreen('[generatePDF] Lỗi khi truy cập thư mục: ' + JSON.stringify(e), 'error');
-    //                         Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Không thể truy cập thư mục lưu trữ.' });
-    //                     });
-    //                 }, function(e) {
-    //                     logToScreen('[generatePDF] Lỗi khi resolve file system: ' + JSON.stringify(e), 'error');
-    //                     Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Không thể truy cập hệ thống file.' });
-    //                 });
-    //             } else {
-    //                 // Môi trường trình duyệt: Tạo URL blob và tải file
-    //                 const url = window.URL.createObjectURL(bmpBlob);
-    //                 const link = document.createElement('a');
-    //                 link.href = url;
-    //                 link.download = fileName;
-    //                 document.body.appendChild(link);
-    //                 link.click();
-    //                 document.body.removeChild(link);
-    //                 window.URL.revokeObjectURL(url);
-
-    //                 logToScreen('[generatePDF] Đã tải file BMP: ' + fileName);
-    //                 Swal.fire({ icon: 'success', title: 'Thành công', text: 'File BMP đã được tải xuống.' });
-    //             }
-    //         } catch (error) {
-    //             logToScreen('[generatePDF] Lỗi: ' + error.message, 'error');
-    //             Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Không thể tạo file BMP: ' + error.message });
-    //         }
-    //     };
-    window.generatePDF = async function(data) {
-        logToScreen('[generatePDF] Bắt đầu hàm generatePDF với dữ liệu: ' + JSON.stringify(data));
-        if (!data || data.length === 0) {
-            logToScreen('[generatePDF] Dữ liệu rỗng.', 'error');
-            Swal.fire({
-                icon: 'warning',
-                title: 'Dữ liệu không hợp lệ',
-                text: 'Không có dữ liệu để tạo BMP.'
-            });
-            return;
-        }
-
-        if (typeof cordova !== 'undefined') {
-            await new Promise((resolve) => {
-                if (typeof cordova.plugins !== 'undefined') {
-                    resolve();
-                } else {
-                    document.addEventListener('deviceready', resolve, {
-                        once: true
-                    });
-                }
-            });
-            logToScreen('[generatePDF] deviceready đã sẵn sàng.');
-        } else {
-            logToScreen('[generatePDF] Chạy trong môi trường trình duyệt.');
-        }
-
-        const {
-            value: labelType
-        } = await Swal.fire({
-            title: 'Chọn loại tem',
-            text: 'Vui lòng chọn loại tem bạn muốn in:',
-            icon: 'question',
-            input: 'select',
-            inputOptions: {
-                'system': 'Tem Hệ Thống',
-                'khachle': 'Tem Khách Lẻ'
-            },
-            inputPlaceholder: 'Chọn loại tem',
-            showCancelButton: true,
-            confirmButtonText: 'In Tem',
-            cancelButtonText: 'Hủy',
-            inputValidator: (value) => !value && 'Bạn phải chọn một loại tem!'
-        });
-
-        if (!labelType) {
-            logToScreen('[generatePDF] Người dùng hủy chọn.');
-            return;
-        }
-
-        Swal.fire({
-            title: 'Đang tạo BMP...',
-            text: 'Vui lòng chờ.',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-        });
-
-        const formData = new FormData();
-        formData.append('action', 'generatePDF');
-        formData.append('pdfData', JSON.stringify(data));
-        formData.append('labelType', labelType);
-
-        try {
-            logToScreen('[generatePDF] Gửi request POST tới: ' + window.location.href);
-            const response = await fetch(window.location.href, {
-                method: 'POST',
-                body: formData
-            });
-            logToScreen('[generatePDF] Phản hồi từ server, trạng thái: ' + response.status);
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => response.text());
-                throw new Error(errorData.error || `Lỗi Server: ${response.status}`);
+        // Nếu không phải Cordova, chạy logic trình duyệt
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof cordova === 'undefined') {
+                logToScreen('[DOMContentLoaded] Không phát hiện Cordova, chạy như trình duyệt.');
+                checkCordovaEnvironment();
             }
+        });
 
-            const bmpBlob = await response.blob();
-            const contentDisposition = response.headers.get('Content-Disposition');
-            let fileName = contentDisposition?.match(/filename="(.+)"/)?. [1] ||
-                `Tem_${new Date().toISOString().replace(/[:.]/g, '-')}.bmp`;
-
-            logToScreen('[generatePDF] Tên file BMP: ' + fileName);
+        // Hàm generatePDF
+        window.generatePDF = async function(data) {
+            logToScreen('[generatePDF] Bắt đầu hàm generatePDF với dữ liệu: ' + JSON.stringify(data));
+            if (!data || data.length === 0) {
+                logToScreen('[generatePDF] Dữ liệu rỗng.', 'error');
+                Swal.fire({ icon: 'warning', title: 'Dữ liệu không hợp lệ', text: 'Không có dữ liệu để tạo PDF.' });
+                return;
+            }
 
             if (typeof cordova !== 'undefined') {
-                // Môi trường Cordova: Lưu file BMP tạm thời và chuyển hướng
-                const directory = cordova.file.externalDataDirectory || cordova.file.dataDirectory;
-                const filePath = directory + fileName;
-
-                await new Promise((resolve, reject) => {
-                    window.resolveLocalFileSystemURL(directory, function(dirEntry) {
-                        dirEntry.getFile(fileName, {
-                            create: true,
-                            exclusive: false
-                        }, function(fileEntry) {
-                            fileEntry.createWriter(function(fileWriter) {
-                                fileWriter.onwriteend = function() {
-                                    logToScreen(
-                                        '[generatePDF] Đã lưu file BMP tạm thời tại: ' +
-                                        filePath);
-                                    // Lưu labelType vào sessionStorage hoặc gửi qua URL
-                                    sessionStorage.setItem('labelType',
-                                        labelType);
-                                    window.location.href =
-                                        `printer_interface.php?filePath=${encodeURIComponent(filePath)}&labelType=${encodeURIComponent(labelType)}`;
-                                    resolve();
-                                };
-                                fileWriter.onerror = function(e) {
-                                    logToScreen(
-                                        '[generatePDF] Lỗi khi ghi file BMP: ' +
-                                        e.toString(), 'error');
-                                    reject(new Error(
-                                        'Không thể lưu file BMP.'));
-                                };
-                                fileWriter.write(bmpBlob);
-                            }, reject);
-                        }, reject);
-                    }, reject);
+                await new Promise((resolve) => {
+                    if (typeof cordova.plugins !== 'undefined') {
+                        resolve();
+                    } else {
+                        document.addEventListener('deviceready', resolve, { once: true });
+                    }
                 });
+                logToScreen('[generatePDF] deviceready đã sẵn sàng.');
             } else {
-                // Môi trường trình duyệt: Lưu file BMP vào sessionStorage và chuyển hướng
-                const reader = new FileReader();
-                reader.onload = function() {
-                    sessionStorage.setItem('bmpFile', reader.result);
-                    sessionStorage.setItem('bmpFileName', fileName);
-                    sessionStorage.setItem('labelType', labelType); // Lưu loại tem
-                    window.location.href = 'printer_interface.php';
-                };
-                reader.readAsDataURL(bmpBlob);
+                logToScreen('[generatePDF] Chạy trong môi trường trình duyệt.');
             }
-        } catch (error) {
-            logToScreen('[generatePDF] Lỗi: ' + error.message, 'error');
-            Swal.fire({
-                icon: 'error',
-                title: 'Lỗi',
-                text: 'Không thể tạo file BMP: ' + error.message
+
+            const { value: labelType } = await Swal.fire({
+                title: 'Chọn loại tem',
+                text: 'Vui lòng chọn loại tem bạn muốn in:',
+                icon: 'question',
+                input: 'select',
+                inputOptions: { 'system': 'Tem Hệ Thống', 'khachle': 'Tem Khách Lẻ' },
+                inputPlaceholder: 'Chọn loại tem',
+                showCancelButton: true,
+                confirmButtonText: 'In Tem',
+                cancelButtonText: 'Hủy',
+                inputValidator: (value) => !value && 'Bạn phải chọn một loại tem!'
             });
-        }
-    };
-    // Hàm lưu và mở PDF trên Android (Cordova)
-    async function saveAndOpenPDF(pdfBlob, fileName) {
-        logToScreen('[saveAndOpenPDF] Bắt đầu lưu và mở PDF...');
-        if (!cordova.file || !cordova.plugins.fileOpener2) {
-            throw new Error('Plugin Cordova không sẵn sàng (file hoặc fileOpener2).');
-        }
 
-        await requestPermissions();
+            if (!labelType) {
+                logToScreen('[generatePDF] Người dùng hủy chọn.');
+                return;
+            }
 
-        return new Promise((resolve, reject) => {
-            const directory = cordova.file.externalDataDirectory || cordova.file.documentsDirectory ||
-                cordova.file.dataDirectory;
-            logToScreen('[saveAndOpenPDF] Thư mục lưu trữ: ' + directory);
+            Swal.fire({ title: 'Đang tạo PDF...', text: 'Vui lòng chờ.', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-            window.resolveLocalFileSystemURL(directory, function(dirEntry) {
-                dirEntry.getFile(fileName, {
-                    create: true,
-                    exclusive: false
-                }, function(fileEntry) {
-                    fileEntry.createWriter(function(fileWriter) {
-                        fileWriter.onwriteend = function() {
-                            logToScreen('[saveAndOpenPDF] Đã lưu file tại: ' +
-                                fileEntry.nativeURL);
-                            cordova.plugins.fileOpener2.open(
-                                fileEntry.nativeURL,
-                                'application/pdf', {
-                                    error: function(e) {
-                                        logToScreen(
-                                            '[saveAndOpenPDF] Lỗi khi mở file: ' +
-                                            JSON.stringify(e),
-                                            'error');
-                                        reject(new Error(
-                                            'Không thể mở file: ' +
-                                            e.message));
-                                    },
-                                    success: function() {
-                                        logToScreen(
-                                            '[saveAndOpenPDF] Đã mở file thành công.'
-                                        );
-                                        resolve();
-                                    }
+            const formData = new FormData();
+            formData.append('action', 'generatePDF');
+            formData.append('pdfData', JSON.stringify(data));
+            formData.append('labelType', labelType);
+
+            try {
+                logToScreen('[generatePDF] Gửi request POST tới: ' + window.location.href);
+                const response = await fetch(window.location.href, { method: 'POST', body: formData });
+                logToScreen('[generatePDF] Phản hồi từ server, trạng thái: ' + response.status);
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => response.text());
+                    throw new Error(errorData.error || `Lỗi Server: ${response.status}`);
+                }
+
+                const pdfBlob = await response.blob();
+                const fileName = response.headers.get('Content-Disposition')?.match(/filename="(.+)"/)?.[1] || `Tem_NhapKho_${labelType}_${Date.now()}.pdf`;
+                logToScreen('[generatePDF] Đã nhận Blob PDF, tên file: ' + fileName);
+
+                const isCordova = checkCordovaEnvironment();
+                logToScreen('[generatePDF] Xác định môi trường: ' + (isCordova ? 'Cordova' : 'Trình duyệt'));
+
+                if (isCordova) {
+                    logToScreen('[generatePDF] Chạy logic Cordova...');
+                    await saveAndOpenPDF(pdfBlob, fileName);
+                } else {
+                    logToScreen('[generatePDF] Chạy logic trình duyệt...');
+                    const pdfUrl = URL.createObjectURL(pdfBlob);
+                    logToScreen('[generatePDF] Đã tạo URL cho PDF: ' + pdfUrl);
+                    const newWindow = window.open(pdfUrl, '_blank');
+                    if (!newWindow) {
+                        logToScreen('[generatePDF] Popup bị chặn, hiển thị tùy chọn tải.');
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Popup bị chặn',
+                            text: 'Trình duyệt đã chặn mở tab mới. Nhấn OK để tải file.',
+                            showCancelButton: true,
+                            confirmButtonText: 'Tải file',
+                            cancelButtonText: 'Hủy'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                const link = document.createElement('a');
+                                link.href = pdfUrl;
+                                link.download = fileName;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                                logToScreen('[generatePDF] Đã tải file xuống: ' + fileName);
+                            }
+                        });
+                    } else {
+                        logToScreen('[generatePDF] Đã mở PDF trong tab mới.');
+                    }
+                    setTimeout(() => {
+                        URL.revokeObjectURL(pdfUrl);
+                        logToScreen('[generatePDF] Đã giải phóng URL: ' + pdfUrl);
+                    }, 10000);
+                }
+
+                Swal.fire({ icon: 'success', title: 'Thành công!', text: 'File PDF đã được xử lý.' });
+            } catch (error) {
+                logToScreen('[generatePDF] Lỗi: ' + error.message, 'error');
+                Swal.fire({ icon: 'error', title: 'Lỗi!', text: `Lỗi khi tạo PDF: ${error.message}` });
+            } finally {
+                if (Swal.isLoading()) Swal.close();
+            }
+        };
+
+       // Hàm lưu và mở PDF trên Android (Cordova)
+async function saveAndOpenPDF(pdfBlob, fileName) {
+    logToScreen('[saveAndOpenPDF] Bắt đầu lưu và mở PDF...');
+    if (!cordova.file || !cordova.plugins.fileOpener2) {
+        throw new Error('Plugin Cordova không sẵn sàng (file hoặc fileOpener2).');
+    }
+
+    await requestPermissions();
+
+    return new Promise((resolve, reject) => {
+        const directory = cordova.file.externalDataDirectory || cordova.file.documentsDirectory || cordova.file.dataDirectory;
+        logToScreen('[saveAndOpenPDF] Thư mục lưu trữ: ' + directory);
+
+        window.resolveLocalFileSystemURL(directory, function(dirEntry) {
+            dirEntry.getFile(fileName, { create: true, exclusive: false }, function(fileEntry) {
+                fileEntry.createWriter(function(fileWriter) {
+                    fileWriter.onwriteend = function() {
+                        logToScreen('[saveAndOpenPDF] Đã lưu file tại: ' + fileEntry.nativeURL);
+                        cordova.plugins.fileOpener2.open(
+                            fileEntry.nativeURL,
+                            'application/pdf',
+                            {
+                                error: function(e) {
+                                    logToScreen('[saveAndOpenPDF] Lỗi khi mở file: ' + JSON.stringify(e), 'error');
+                                    reject(new Error('Không thể mở file: ' + e.message));
+                                },
+                                success: function() {
+                                    logToScreen('[saveAndOpenPDF] Đã mở file thành công.');
+                                    resolve();
                                 }
-                            );
-                        };
-                        fileWriter.onerror = function(e) {
-                            logToScreen('[saveAndOpenPDF] Lỗi khi ghi file: ' +
-                                e.toString(), 'error');
-                            reject(new Error('Không thể ghi file: ' + e
-                                .toString()));
-                        };
-                        fileWriter.write(pdfBlob);
-                    }, reject);
+                            }
+                        );
+                    };
+                    fileWriter.onerror = function(e) {
+                        logToScreen('[saveAndOpenPDF] Lỗi khi ghi file: ' + e.toString(), 'error');
+                        reject(new Error('Không thể ghi file: ' + e.toString()));
+                    };
+                    fileWriter.write(pdfBlob);
                 }, reject);
             }, reject);
-        });
+        }, reject);
+    });
+}
+
+// Hàm yêu cầu quyền (Cordova)
+async function requestPermissions() {
+    if (!cordova.plugins.permissions) {
+        logToScreen('[requestPermissions] Plugin permissions không sẵn sàng.');
+        return;
     }
 
-    // Hàm yêu cầu quyền (Cordova)
-    async function requestPermissions() {
-        if (!cordova.plugins.permissions) {
-            logToScreen('[requestPermissions] Plugin permissions không sẵn sàng.');
-            return;
-        }
+    const permissions = cordova.plugins.permissions;
+    const perms = [permissions.WRITE_EXTERNAL_STORAGE, permissions.READ_EXTERNAL_STORAGE];
 
-        const permissions = cordova.plugins.permissions;
-        const perms = [permissions.WRITE_EXTERNAL_STORAGE, permissions.READ_EXTERNAL_STORAGE];
-
-        return new Promise((resolve, reject) => {
-            permissions.checkPermission(perms[0], function(status) {
-                if (status.hasPermission) {
-                    logToScreen('[requestPermissions] Quyền đã được cấp.');
-                    resolve();
-                } else {
-                    permissions.requestPermissions(perms, function(status) {
-                        if (status.hasPermission) {
-                            logToScreen(
-                                '[requestPermissions] Quyền được cấp sau khi yêu cầu.');
-                            resolve();
-                        } else {
-                            logToScreen('[requestPermissions] Quyền bị từ chối.', 'error');
-                            reject(new Error('Quyền truy cập bộ nhớ bị từ chối.'));
-                        }
-                    }, reject);
-                }
-            }, reject);
-        });
-    }
-    </script>
+    return new Promise((resolve, reject) => {
+        permissions.checkPermission(perms[0], function(status) {
+            if (status.hasPermission) {
+                logToScreen('[requestPermissions] Quyền đã được cấp.');
+                resolve();
+            } else {
+                permissions.requestPermissions(perms, function(status) {
+                    if (status.hasPermission) {
+                        logToScreen('[requestPermissions] Quyền được cấp sau khi yêu cầu.');
+                        resolve();
+                    } else {
+                        logToScreen('[requestPermissions] Quyền bị từ chối.', 'error');
+                        reject(new Error('Quyền truy cập bộ nhớ bị từ chối.'));
+                    }
+                }, reject);
+            }
+        }, reject);
+    });
+}
+</script>  
 </body>
 
 </html>

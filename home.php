@@ -21,19 +21,19 @@ $stmtVai = $pdo->prepare($sqlVai);
 $stmtVai->execute();
 $totalVai = $stmtVai->fetch(PDO::FETCH_ASSOC)['totalVai'];
 
-// Thống kê nhập kho (từ bảng DTO_TP_DonSanXuat, TrangThai = 2)
+// Thống kê nhập kho (từ bảng DTO_TP_DonSanXuat, TrangThai = 3)
 $sqlNhapKho = "SELECT COUNT(*) as totalNhapKho 
                FROM TP_DonSanXuat 
-               WHERE TrangThai = 2 AND $timeCondition";
+               WHERE TrangThai = 3 AND $timeCondition";
 $stmtNhapKho = $pdo->prepare($sqlNhapKho);
 $stmtNhapKho->bindParam(':filterValue', $filterValue);
 $stmtNhapKho->execute();
 $totalNhapKho = $stmtNhapKho->fetch(PDO::FETCH_ASSOC)['totalNhapKho'];
 
-// Thống kê xuất kho (từ bảng DTO_TP_XuatHang, TrangThai = 2)
+// Thống kê xuất kho (từ bảng DTO_TP_XuatHang, TrangThai = 1)
 $sqlXuatKho = "SELECT COUNT(*) as totalXuatKho 
                FROM TP_XuatHang 
-               WHERE TrangThai = 2 AND $timeConditionXuat";
+               WHERE TrangThai = 1 AND $timeConditionXuat";
 $stmtXuatKho = $pdo->prepare($sqlXuatKho);
 $stmtXuatKho->bindParam(':filterValue', $filterValue);
 $stmtXuatKho->execute();
@@ -250,8 +250,14 @@ $recentXuatKho = $stmtXuatKhoRecent->fetchAll(PDO::FETCH_ASSOC);
                                 $tenKhachHang = $row['TenKhachHang'] ?? $row['MaKhachHang'];
                                 $tenHoatDong = $row['TenHoatDong'] ?? 'Không có';
                                 $diaChi = $row['DiaChi'] ?? 'Không có';
-                                $trangThai = $row['TrangThai'] == 2 ? 'Hoàn tất' : 'Đang xử lý';
-                                $trangThaiClass = $row['TrangThai'] == 2 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800';
+                                $trangThai = $row['TrangThai'] == 0 ? 'Đơn hàng mới' : 
+                                ($row['TrangThai'] == 2 ? 'Đơn nhập hàng' : 
+                                ($row['TrangThai'] == 1 ? 'Đơn đã hủy' : 
+                                ($row['TrangThai'] == 3 ? 'Đơn hoàn tất' : 'Đang xử lý')));
+                                $trangThaiClass = $row['TrangThai'] == 0 ? 'bg-blue-100 text-blue-800' : 
+                                ($row['TrangThai'] == 1 ? 'bg-red-100 text-red-800' : 
+                                ($row['TrangThai'] == 2 ? 'bg-yellow-100 text-yellow-800' : 
+                                ($row['TrangThai'] == 3 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800')));
                                 $ghiChu = $row['GhiChu'] ?? 'Không có ghi chú';
                             ?>
                             <tr>
@@ -328,8 +334,8 @@ $recentXuatKho = $stmtXuatKhoRecent->fetchAll(PDO::FETCH_ASSOC);
                                 $thoiGian = date('d/m/Y H:i', strtotime($row['NgayXuat']));
                                 $maPhieu = $row['MaXuatHang'];
                                 $tenNhanVien = $row['TenNhanVien'] ?? $row['MaNhanVien'];
-                                $trangThai = $row['TrangThai'] == 2 ? 'Hoàn tất' : 'Đang xử lý';
-                                $trangThaiClass = $row['TrangThai'] == 2 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800';
+                                $trangThai = $row['TrangThai'] == 1 ? 'Hoàn tất' : 'Đang xử lý';
+                                $trangThaiClass = $row['TrangThai'] == 1 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800';
                                 $ghiChu = $row['GhiChu'] ?? 'Không có ghi chú';
                             ?>
                     <tr>

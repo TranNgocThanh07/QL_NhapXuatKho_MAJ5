@@ -2,7 +2,7 @@
 // xuatkho.php
 include 'db_config.php'; // File cấu hình kết nối database
 
-// Xử lý yêu cầu AJAX
+
 // Xử lý yêu cầu AJAX
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'getData') {
     try {
@@ -11,15 +11,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $offset = ($page - 1) * $recordsPerPage;
 
         $tenNhanVien = isset($_POST['tenNhanVien']) ? "%" . $_POST['tenNhanVien'] . "%" : "%";
+        $tenKhachHang = isset($_POST['tenKhachHang']) ? "%" . $_POST['tenKhachHang'] . "%" : "%";
         $trangThaiFilter = isset($_POST['trangThai']) && in_array($_POST['trangThai'], ['chua_xuat', 'dang_xuat']) ? $_POST['trangThai'] : 'chua_xuat';
 
         // Đếm tổng số bản ghi
         $sqlCount = "SELECT COUNT(DISTINCT xh.MaXuatHang) as total 
-                     FROM TP_XuatHang xh
-                     LEFT JOIN TP_ChiTietXuatHang ct ON xh.MaXuatHang = ct.MaXuatHang
-                     LEFT JOIN NhanVien nv ON xh.MaNhanVien = nv.MaNhanVien
-                     WHERE xh.TrangThai = 0 
-                     AND nv.TenNhanVien LIKE :tenNhanVien";
+                    FROM TP_XuatHang xh
+                    LEFT JOIN TP_ChiTietXuatHang ct ON xh.MaXuatHang = ct.MaXuatHang
+                    LEFT JOIN NhanVien nv ON xh.MaNhanVien = nv.MaNhanVien
+                    LEFT JOIN TP_KhachHang kh ON xh.MaKhachHang = kh.MaKhachHang
+                    WHERE xh.TrangThai = 0 
+                    AND nv.TenNhanVien LIKE :tenNhanVien
+                    AND kh.TenKhachHang LIKE :tenKhachHang";
         if ($trangThaiFilter === 'chua_xuat') {
             $sqlCount .= " AND NOT EXISTS (
                             SELECT 1 
@@ -43,49 +46,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
         $stmtCount = $pdo->prepare($sqlCount);
         $stmtCount->bindValue(':tenNhanVien', $tenNhanVien, PDO::PARAM_STR);
+        $stmtCount->bindValue(':tenKhachHang', $tenKhachHang, PDO::PARAM_STR);
         $stmtCount->execute();
         $totalRecords = $stmtCount->fetch(PDO::FETCH_ASSOC)['total'];
         $totalPages = ceil($totalRecords / $recordsPerPage);
 
         // Lấy dữ liệu phiếu xuất
-        $sql = "SELECT xh.MaXuatHang, nv.TenNhanVien, xh.NgayXuat, xh.TrangThai, xh.GhiChu,
-                       SUM(ct.SoLuong) as TongSoLuongXuat,
-                       dvt.TenDVT,
-                       SUM(CASE WHEN ct.TrangThai = 1 THEN 1 ELSE 0 END) as DangXuat,
-                       SUM(CASE WHEN ct.TrangThai = 0 THEN 1 ELSE 0 END) as ChuaXuat
+        $sql = "SELECT xh.MaXuatHang, nv.TenNhanVien, kh.TenKhachHang, xh.NgayXuat, xh.TrangThai, xh.GhiChu,
+               SUM(ct.SoLuong) as TongSoLuongXuat,
+               dvt.TenDVT,
+               SUM(CASE WHEN ct.TrangThai = 1 THEN 1 ELSE 0 END) as DangXuat,
+               SUM(CASE WHEN ct.TrangThai = 0 THEN 1 ELSE 0 END) as ChuaXuat
                 FROM TP_XuatHang xh
                 LEFT JOIN TP_ChiTietXuatHang ct ON xh.MaXuatHang = ct.MaXuatHang
                 LEFT JOIN NhanVien nv ON xh.MaNhanVien = nv.MaNhanVien
+                LEFT JOIN TP_KhachHang kh ON xh.MaKhachHang = kh.MaKhachHang
                 LEFT JOIN TP_DonViTinh dvt ON ct.MaDVT = dvt.MaDVT
                 WHERE xh.TrangThai = 0 
-                AND nv.TenNhanVien LIKE :tenNhanVien";
+                AND nv.TenNhanVien LIKE :tenNhanVien
+                AND kh.TenKhachHang LIKE :tenKhachHang";
         if ($trangThaiFilter === 'chua_xuat') {
             $sql .= " AND NOT EXISTS (
                         SELECT 1 
                         FROM TP_ChiTietXuatHang ct2 
                         WHERE ct2.MaXuatHang = xh.MaXuatHang 
                         AND ct2.TrangThai = 1
-                      )";
+                    )";
         } elseif ($trangThaiFilter === 'dang_xuat') {
             $sql .= " AND EXISTS (
                         SELECT 1 
                         FROM TP_ChiTietXuatHang ct2 
                         WHERE ct2.MaXuatHang = xh.MaXuatHang 
                         AND ct2.TrangThai = 1
-                      )
-                      AND EXISTS (
+                    )
+                    AND EXISTS (
                         SELECT 1 
                         FROM TP_ChiTietXuatHang ct3 
                         WHERE ct3.MaXuatHang = xh.MaXuatHang 
                         AND ct3.TrangThai = 0
-                      )";
+                    )";
         }
-        $sql .= " GROUP BY xh.MaXuatHang, nv.TenNhanVien, xh.NgayXuat, xh.TrangThai, xh.GhiChu, dvt.TenDVT
-                  ORDER BY xh.NgayXuat DESC
-                  OFFSET :offset ROWS 
-                  FETCH NEXT :limit ROWS ONLY";
+        $sql .= " GROUP BY xh.MaXuatHang, nv.TenNhanVien, kh.TenKhachHang, xh.NgayXuat, xh.TrangThai, xh.GhiChu, dvt.TenDVT
+                ORDER BY xh.NgayXuat DESC
+                OFFSET :offset ROWS 
+                FETCH NEXT :limit ROWS ONLY";
         $stmt = $pdo->prepare($sql);
         $stmt->bindValue(':tenNhanVien', $tenNhanVien, PDO::PARAM_STR);
+        $stmt->bindValue(':tenKhachHang', $tenKhachHang, PDO::PARAM_STR);
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
         $stmt->bindValue(':limit', $recordsPerPage, PDO::PARAM_INT);
         $stmt->execute();
@@ -112,13 +119,16 @@ $recordsPerPage = 10;
 $page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
 $offset = ($page - 1) * $recordsPerPage;
 $trangThaiFilter = isset($_GET['trangThai']) && in_array($_GET['trangThai'], ['chua_xuat', 'dang_xuat']) ? $_GET['trangThai'] : 'chua_xuat';
+$tenKhachHang = isset($_GET['tenKhachHang']) ? "%" . $_GET['tenKhachHang'] . "%" : "%";
 
 // Lấy dữ liệu ban đầu
 $sqlCount = "SELECT COUNT(DISTINCT xh.MaXuatHang) as total 
              FROM TP_XuatHang xh
              LEFT JOIN TP_ChiTietXuatHang ct ON xh.MaXuatHang = ct.MaXuatHang
              LEFT JOIN NhanVien nv ON xh.MaNhanVien = nv.MaNhanVien
-             WHERE xh.TrangThai = 0";
+             LEFT JOIN TP_KhachHang kh ON xh.MaKhachHang = kh.MaKhachHang
+             WHERE xh.TrangThai = 0
+             AND kh.TenKhachHang LIKE :tenKhachHang";
 if ($trangThaiFilter === 'chua_xuat') {
     $sqlCount .= " AND NOT EXISTS (
                     SELECT 1 
@@ -141,11 +151,12 @@ if ($trangThaiFilter === 'chua_xuat') {
                   )";
 }
 $stmtCount = $pdo->prepare($sqlCount);
+$stmtCount->bindValue(':tenKhachHang', $tenKhachHang, PDO::PARAM_STR);
 $stmtCount->execute();
 $totalRecords = $stmtCount->fetch(PDO::FETCH_ASSOC)['total'];
 $totalPages = ceil($totalRecords / $recordsPerPage);
 
-$sql = "SELECT xh.MaXuatHang, nv.TenNhanVien, xh.NgayXuat, xh.TrangThai, xh.GhiChu,
+$sql = "SELECT xh.MaXuatHang, nv.TenNhanVien, kh.TenKhachHang, xh.NgayXuat, xh.TrangThai, xh.GhiChu,
                SUM(ct.SoLuong) as TongSoLuongXuat,
                dvt.TenDVT,
                SUM(CASE WHEN ct.TrangThai = 1 THEN 1 ELSE 0 END) as DangXuat,
@@ -153,8 +164,10 @@ $sql = "SELECT xh.MaXuatHang, nv.TenNhanVien, xh.NgayXuat, xh.TrangThai, xh.GhiC
         FROM TP_XuatHang xh
         LEFT JOIN TP_ChiTietXuatHang ct ON xh.MaXuatHang = ct.MaXuatHang
         LEFT JOIN NhanVien nv ON xh.MaNhanVien = nv.MaNhanVien
+        LEFT JOIN TP_KhachHang kh ON xh.MaKhachHang = kh.MaKhachHang
         LEFT JOIN TP_DonViTinh dvt ON ct.MaDVT = dvt.MaDVT
-        WHERE xh.TrangThai = 0";
+        WHERE xh.TrangThai = 0
+        AND kh.TenKhachHang LIKE :tenKhachHang";
 if ($trangThaiFilter === 'chua_xuat') {
     $sql .= " AND NOT EXISTS (
                 SELECT 1 
@@ -176,11 +189,12 @@ if ($trangThaiFilter === 'chua_xuat') {
                 AND ct3.TrangThai = 0
               )";
 }
-$sql .= " GROUP BY xh.MaXuatHang, nv.TenNhanVien, xh.NgayXuat, xh.TrangThai, xh.GhiChu, dvt.TenDVT
+$sql .= " GROUP BY xh.MaXuatHang, nv.TenNhanVien, kh.TenKhachHang, xh.NgayXuat, xh.TrangThai, xh.GhiChu, dvt.TenDVT
           ORDER BY xh.NgayXuat DESC
           OFFSET :offset ROWS 
           FETCH NEXT :limit ROWS ONLY";
 $stmt = $pdo->prepare($sql);
+$stmt->bindValue(':tenKhachHang', $tenKhachHang, PDO::PARAM_STR);
 $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
 $stmt->bindValue(':limit', $recordsPerPage, PDO::PARAM_INT);
 $stmt->execute();
@@ -215,7 +229,7 @@ $xuatHang = $stmt->fetchAll(PDO::FETCH_ASSOC);
             position: sticky; /* Giữ header cố định khi cuộn dọc */
             top: 0; /* Đặt ở đỉnh */
             background: #fef2f2; /* Màu nền của bg-red-50 */
-            z-index: 10; /* Đảm bảo header nằm trên nội dung */
+            z-index: 1; /* Đảm bảo header nằm trên nội dung */
         }
         th {
             white-space: nowrap;
@@ -253,11 +267,15 @@ $xuatHang = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                 <!-- Thanh tìm kiếm và bộ lọc trạng thái -->
                 <div class="flex flex-col md:flex-row gap-4 mb-4">
-                    <div class="relative w-full md:w-1/2 group">
+                    <div class="relative w-full md:w-1/3 group">
                         <input type="text" id="searchTenNhanVien" placeholder="Tìm theo Tên Nhân Viên" class="p-3 border border-gray-300 rounded-lg w-full pl-12 focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-300 shadow-sm">
                         <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-red-500 transition-colors duration-300"></i>
                     </div>
-                    <div class="w-full md:w-1/2">
+                    <div class="relative w-full md:w-1/3 group">
+                        <input type="text" id="searchTenKhachHang" placeholder="Tìm theo Tên Khách Hàng" class="p-3 border border-gray-300 rounded-lg w-full pl-12 focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-300 shadow-sm">
+                        <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-red-500 transition-colors duration-300"></i>
+                    </div>
+                    <div class="w-full md:w-1/3">
                         <select id="filterTrangThai" class="p-3 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-300 shadow-sm">
                             <option value="chua_xuat" <?php echo $trangThaiFilter === 'chua_xuat' ? 'selected' : ''; ?>>Đơn Hàng Chưa Xuất</option>
                             <option value="dang_xuat" <?php echo $trangThaiFilter === 'dang_xuat' ? 'selected' : ''; ?>>Đơn Hàng Đang Xuất</option>
@@ -283,6 +301,7 @@ $xuatHang = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <th class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Chọn</th>
                                 <th class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">STT</th>
                                 <th class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Mã Phiếu Xuất</th>
+                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Tên Khách Hàng</th>
                                 <th class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Tên Nhân Viên</th>
                                 <th class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Ngày Tạo</th>
                                 <th class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Trạng Thái</th>
@@ -303,6 +322,7 @@ $xuatHang = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><?php echo $stt++; ?></td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><?php echo htmlspecialchars($xh['MaXuatHang']); ?></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><?php echo htmlspecialchars($xh['TenKhachHang']); ?></td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><?php echo htmlspecialchars($xh['TenNhanVien']); ?></td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><?php echo htmlspecialchars($xh['NgayXuat']); ?></td>
                                     <td class="px-6 py-4 text-sm <?php echo $trangThaiClass; ?> whitespace-nowrap"><?php echo htmlspecialchars($trangThaiHienThi); ?></td>
@@ -359,6 +379,7 @@ $xuatHang = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         function loadPage(page) {
             const tenNhanVien = document.getElementById('searchTenNhanVien').value;
+            const tenKhachHang = document.getElementById('searchTenKhachHang').value;
             const trangThai = document.getElementById('filterTrangThai').value;
             const loading = document.getElementById('loading');
 
@@ -367,7 +388,7 @@ $xuatHang = $stmt->fetchAll(PDO::FETCH_ASSOC);
             fetch(window.location.href, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `action=getData&page=${page}&tenNhanVien=${encodeURIComponent(tenNhanVien)}&trangThai=${trangThai}`
+                body: `action=getData&page=${page}&tenNhanVien=${encodeURIComponent(tenNhanVien)}&tenKhachHang=${encodeURIComponent(tenKhachHang)}&trangThai=${trangThai}`
             })
             .then(response => response.json())
             .then(data => {
@@ -400,6 +421,7 @@ $xuatHang = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${stt++}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${xh.MaXuatHang}</td>
+                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${xh.TenKhachHang}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${xh.TenNhanVien}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${xh.NgayXuat}</td>
                     <td class="px-6 py-4 text-sm ${trangThaiClass} whitespace-nowrap">${trangThaiHienThi}</td>
@@ -460,6 +482,7 @@ $xuatHang = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
 
         document.getElementById('searchTenNhanVien').addEventListener('input', debounce(() => loadPage(1), 300));
+        document.getElementById('searchTenKhachHang').addEventListener('input', debounce(() => loadPage(1), 300));
         document.getElementById('filterTrangThai').addEventListener('change', () => loadPage(1));
         attachCheckboxEvents();
 

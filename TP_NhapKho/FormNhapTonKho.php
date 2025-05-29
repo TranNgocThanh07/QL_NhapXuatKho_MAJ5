@@ -116,7 +116,7 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                         if ($col == 0) {
                             $qrContent = $item['MaQR'] ?? ($don['MaDonHang'] . "\nSố Lot: " . $item['SoLot'] . "\nSố lượng: " . number_format((float)$item['SoLuong'], 1) . " " . $tenDVT);
                             $qrCodeBinary = generateQRCode($qrContent, 100);
-                            $qrPath = __DIR__ . '/temp_qr.png';
+                            $qrPath = __DIR__ . '/temp_qr_' . uniqid() . '.png';
                             file_put_contents($qrPath, $qrCodeBinary);
                             $qrSize = min($cellWidth, $cellHeight) - 2 * $QRpadding;
                             $qrX = $cellX + ($cellWidth - $qrSize) / 2;
@@ -131,15 +131,25 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                         }
                         break;
                     case 1:
-                        if ($col == 0) {
-                            $pdf->SetFont($font, 'B', 8);
-                            $pdf->MultiCell($cellWidth, $cellHeight / 2, 'MẶT HÀNG', 0, 'C', false, 1, $cellX, $cellY + $paddingCell);
-                            $pdf->SetFont($font, 'B', 6);
-                            $pdf->MultiCell($cellWidth, $cellHeight / 2, '(PRODUCT NAME)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
-                        } elseif ($col == 1) {
-                            $pdf->SetFont($font, 'B', 8);
-                            $pdf->MultiCell($cellWidth, $cellHeight, $don['MaVai'] . " (" . $don['TenVai'] . ")", 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
-                        }
+                            if ($col == 0) {
+                                $pdf->SetFont($font, 'B', 8);
+                                $pdf->MultiCell($cellWidth, $cellHeight / 2, 'MẶT HÀNG', 0, 'C', false, 1, $cellX, $cellY + $paddingCell);
+                                $pdf->SetFont($font, 'B', 6);
+                                $pdf->MultiCell($cellWidth, $cellHeight / 2, '(PRODUCT NAME)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
+                            } elseif ($col == 1) {
+                                $pdf->SetFont($font, 'B', 8);
+                                // Xử lý tên sản phẩm
+                                $tenVai = $don['TenVai'];
+                                // Trường hợp 1: Loại bỏ mã lặp trong tên nếu có
+                                if (strpos($tenVai, $don['MaVai'] . ' (') === 0) {
+                                    $tenVai = preg_replace('/^' . preg_quote($don['MaVai'], '/') . '\s*\(/', '(', $tenVai);
+                                }
+                                // Lấy phần trong ngoặc nếu có, hoặc giữ nguyên tên
+                                $tenVai = preg_match('/\((.*?)\)/', $tenVai, $matches) ? $matches[1] : $tenVai;
+                                // Nếu tên khác mã, thêm ngoặc; nếu giống mã, chỉ giữ mã
+                                $output = ($tenVai !== $don['MaVai']) ? $don['MaVai'] . " (" . $tenVai . ")" : $don['MaVai'];
+                                $pdf->MultiCell($cellWidth, $cellHeight, $output, 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
+                            }
                         break;
                     case 2:
                         if ($col == 0) {
@@ -246,7 +256,7 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                         } elseif ($col == 1) {
                             $qrContent = $item['MaQR'] ?? ($don['MaDonHang'] . "\nSố Lot: " . $item['SoLot'] . "\nSố lượng: " . number_format((float)$item['SoLuong'], 1) . " " . $tenDVT);
                             $qrCodeBinary = generateQRCode($qrContent, 100);
-                            $qrPath = __DIR__ . '/temp_qr.png';
+                            $qrPath = __DIR__ . '/temp_qr_' . uniqid() . '.png';
                             file_put_contents($qrPath, $qrCodeBinary);
                             $qrSize = min($cellWidth, $cellHeight) - 2 * $QRpadding;
                             $qrX = $cellX + ($cellWidth - $qrSize) / 2;
@@ -336,7 +346,7 @@ function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                         if ($col == 0 || $col == 2) { // QR ở góc trên bên trái và trên bên phải
                             $qrContent = $item['MaQR'] ?? ($don['MaDonHang'] . "\nSố Lot: " . $item['SoLot'] . "\nSố lượng: " . number_format((float)$item['SoLuong'], 1) . " " . $tenDVT);
                             $qrCodeBinary = generateQRCode($qrContent, 100);
-                            $qrPath = __DIR__ . '/temp_qr.png';
+                            $qrPath = __DIR__ . '/temp_qr_' . uniqid() . '.png';
                             file_put_contents($qrPath, $qrCodeBinary);
                             $qrSize = min($cellWidth, $cellHeight) - 2 * $QRpadding;
                             $qrX = $cellX + ($cellWidth - $qrSize) / 2;
@@ -345,16 +355,26 @@ function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             unlink($qrPath);
                         }
                         break;
-                    case 1:
-                        if ($col == 0) {
-                            $pdf->SetFont($font, 'B', 8);
-                            $pdf->MultiCell($cellWidth, $cellHeight / 2, 'MẶT HÀNG', 0, 'C', false, 1, $cellX, $cellY + $paddingCell);
-                            $pdf->SetFont($font, 'B', 6);
-                            $pdf->MultiCell($cellWidth, $cellHeight / 2, '(PRODUCT NAME)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
-                        } elseif ($col == 1) {
-                            $pdf->SetFont($font, 'B', 8);
-                            $pdf->MultiCell($cellWidth, $cellHeight, $don['MaVai'] . " (" . $don['TenVai'] . ")", 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
-                        }
+                     case 1:
+                            if ($col == 0) {
+                                $pdf->SetFont($font, 'B', 8);
+                                $pdf->MultiCell($cellWidth, $cellHeight / 2, 'MẶT HÀNG', 0, 'C', false, 1, $cellX, $cellY + $paddingCell);
+                                $pdf->SetFont($font, 'B', 6);
+                                $pdf->MultiCell($cellWidth, $cellHeight / 2, '(PRODUCT NAME)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
+                            } elseif ($col == 1) {
+                                $pdf->SetFont($font, 'B', 8);
+                                // Xử lý tên sản phẩm
+                                $tenVai = $don['TenVai'];
+                                // Trường hợp 1: Loại bỏ mã lặp trong tên nếu có
+                                if (strpos($tenVai, $don['MaVai'] . ' (') === 0) {
+                                    $tenVai = preg_replace('/^' . preg_quote($don['MaVai'], '/') . '\s*\(/', '(', $tenVai);
+                                }
+                                // Lấy phần trong ngoặc nếu có, hoặc giữ nguyên tên
+                                $tenVai = preg_match('/\((.*?)\)/', $tenVai, $matches) ? $matches[1] : $tenVai;
+                                // Nếu tên khác mã, thêm ngoặc; nếu giống mã, chỉ giữ mã
+                                $output = ($tenVai !== $don['MaVai']) ? $don['MaVai'] . " (" . $tenVai . ")" : $don['MaVai'];
+                                $pdf->MultiCell($cellWidth, $cellHeight, $output, 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
+                            }
                         break;
                     case 2:
                         if ($col == 0) {
@@ -423,7 +443,7 @@ function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                         if ($col == 1) {
                             $qrContent = $item['MaQR'] ?? ($don['MaDonHang'] . "\nSố Lot: " . $item['SoLot'] . "\nSố lượng: " . number_format((float)$item['SoLuong'], 1) . " " . $tenDVT);
                             $qrCodeBinary = generateQRCode($qrContent, 100);
-                            $qrPath = __DIR__ . '/temp_qr.png';
+                            $qrPath = __DIR__ . '/temp_qr_' . uniqid() . '.png';
                             file_put_contents($qrPath, $qrCodeBinary);
                             $qrSize = min($cellWidth, $cellHeight) - 2 * $QRpadding;
                             $qrX = $cellX + ($cellWidth - $qrSize) / 2;
@@ -559,8 +579,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $sqlInsert = "INSERT INTO TP_ChiTietDonSanXuat (
             MaSoMe, MaNguoiLienHe, MaCTNHTP, MaDonHang, MaVai, MaVatTu, TenVai, 
             MaMau, MaDVT, Kho, SoLuong, MaQR, TrangThai, SoLot, NgayTao, 
-            MaKhachHang, MaNhanVien, TenThanhPhan, SoKgCan, OriginalTrangThai
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            MaKhachHang, MaNhanVien, TenThanhPhan, SoKgCan, OriginalTrangThai, MaKhuVuc, GhiChu
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $stmtInsert = $pdo->prepare($sqlInsert);
 
         foreach ($data as $item) {
@@ -586,6 +606,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $stmtInsert->bindValue(18, $item['TenThanhPhan']);
             $stmtInsert->bindValue(19, $soKgCan);
             $stmtInsert->bindValue(20, $item['OriginalTrangThai']);
+            $stmtInsert->bindValue(21, $item['MaKhuVuc']);
+            $stmtInsert->bindValue(22, $item['GhiChu']);
             $stmtInsert->execute();
         }
 
@@ -644,12 +666,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 $maSoMe = $_GET['maSoMe'] ?? '';
+if (!$maSoMe || !preg_match('/^[a-zA-Z0-9_-]+$/', $maSoMe)) {
+    die("Mã số mẻ không hợp lệ.");
+}
 $soLuongGiao = 0;
 $tongSoLuongNhapHang = 0;
 $tongSoLuongNhapTon = 0;
 $tongSoLuong = 0;
 $tenDVT = 'kg';
 $don = null;
+$tenThanhPhan = '';
 
 if ($maSoMe) {
     $sqlDon = "SELECT 
@@ -664,6 +690,10 @@ if ($maSoMe) {
     LEFT JOIN TP_NguoiLienHe nlh ON ds.MaNguoiLienHe = nlh.MaNguoiLienHe
     WHERE ds.MaSoMe = ?";
     $stmtDon = $pdo->prepare($sqlDon);
+    if (!$stmtDon) {
+        error_log("Lỗi chuẩn bị truy vấn SQL: " . print_r($pdo->errorInfo(), true));
+        die("Lỗi hệ thống. Vui lòng thử lại sau.");
+    }
     $stmtDon->execute([$maSoMe]);
     $don = $stmtDon->fetch(PDO::FETCH_ASSOC);
 
@@ -686,12 +716,55 @@ if ($maSoMe) {
         $tongSoLuongNhapTon = floatval($stmtNhapTon->fetch(PDO::FETCH_ASSOC)['TongLuongNhapTon'] ?? 0);
 
         $tongSoLuong = $tongSoLuongNhapHang + $tongSoLuongNhapTon;
+
+        // Truy vấn TenThanhPhan từ TP_Vai
+        $maVai = $don['MaVai'] ?? '';
+        if ($maVai) {
+            $sqlThanhPhan = "SELECT TenThanhPhan 
+                             FROM Vai 
+                             WHERE MaVai = ?";
+            $stmtThanhPhan = $pdo->prepare($sqlThanhPhan);
+            $stmtThanhPhan->execute([$maVai]);
+            $thanhPhan = $stmtThanhPhan->fetch(PDO::FETCH_ASSOC);
+            $tenThanhPhan = $thanhPhan['TenThanhPhan'] ?? ($_GET['TenThanhPhan'] ?? '');
+            if (!$thanhPhan) {
+                error_log("Không tìm thấy TenThanhPhan trong TP_Vai cho MaVai: $maVai");
+            }
+        }
     } else {
-        // Xử lý khi không tìm thấy đơn hàng
-        $tongSoLuongNhapHang = 0;
-        $tongSoLuongNhapTon = 0;
-        $tongSoLuong = 0;
-        $tenDVT = 'kg';
+        error_log("Không tìm thấy đơn hàng với MaSoMe: $maSoMe. Tham số GET: " . json_encode($_GET));
+        // Sử dụng tham số GET làm giá trị mặc định
+        $don = [
+            'MaSoMe' => $maSoMe,
+            'MaDonHang' => $_GET['MaDonHang'] ?? '',
+            'MaKhachHang' => $_GET['MaKhachHang'] ?? '',
+            'TenKhachHang' => '',
+            'MaVatTu' => $_GET['MaVatTu'] ?? '',
+            'MaVai' => $_GET['MaVai'] ?? '',
+            'TenVai' => $_GET['TenVai'] ?? '',
+            'MaMau' => $_GET['MaMau'] ?? '',
+            'TenMau' => '',
+            'MaDVT' => $_GET['MaDVT'] ?? '',
+            'TenDVT' => $tenDVT,
+            'Kho' => $_GET['Kho'] ?? '',
+            'MaNguoiLienHe' => $_GET['MaNguoiLienHe'] ?? '',
+            'TenNguoiLienHe' => '',
+            'TongSoLuongGiao' => $_GET['SoLuong'] ?? 0
+        ];
+        // Truy vấn TenThanhPhan từ TP_Vai nếu có MaVai từ GET
+        $maVai = $don['MaVai'];
+        if ($maVai) {
+            $sqlThanhPhan = "SELECT TenThanhPhan 
+                             FROM Vai 
+                             WHERE MaVai = ?";
+            $stmtThanhPhan = $pdo->prepare($sqlThanhPhan);
+            $stmtThanhPhan->execute([$maVai]);
+            $thanhPhan = $stmtThanhPhan->fetch(PDO::FETCH_ASSOC);
+            $tenThanhPhan = $thanhPhan['TenThanhPhan'] ?? ($_GET['TenThanhPhan'] ?? '');
+            if (!$thanhPhan) {
+                error_log("Không tìm thấy TenThanhPhan trong TP_Vai cho MaVai: $maVai");
+            }
+        }
     }
 }
 //xem hàng tồn
@@ -705,7 +778,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 
     try {
-        $sqlChiTiet = "SELECT SoLuong, SoKgCan, SoLot, TenThanhPhan 
+        $sqlChiTiet = "SELECT SoLuong, SoKgCan, SoLot, TenThanhPhan, MaKhuVuc, GhiChu 
                        FROM TP_ChiTietDonSanXuat 
                        WHERE MaSoMe = ? AND TrangThai = 2 
                        ORDER BY NgayTao DESC";
@@ -722,10 +795,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
     exit;
 }
-$sqlTenThanhPhan = "SELECT TenThanhPhan FROM TP_ThanhPhan ORDER BY TenThanhPhan";
-$stmtTenThanhPhan = $pdo->prepare($sqlTenThanhPhan);
-$stmtTenThanhPhan->execute();
-$TenThanhPhanList = $stmtTenThanhPhan->fetchAll(PDO::FETCH_ASSOC);
+
+// Truy vấn dữ liệu từ TP_KhuVuc
+$sqlKhuVuc = "SELECT MaKhuVuc FROM TP_KhuVuc ORDER BY MaKhuVuc";
+$stmtKhuVuc = $pdo->prepare($sqlKhuVuc);
+$stmtKhuVuc->execute();
+$MaKhuVucList = $stmtKhuVuc->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
@@ -740,6 +815,8 @@ $TenThanhPhanList = $stmtTenThanhPhan->fetchAll(PDO::FETCH_ASSOC);
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+     <!-- nếu commet lại thì sẽ chạy trên trình duyệt web <script src="/TP_NhapKho/cordova.js"></script> -->
+    <!-- <script src="/TP_NhapKho/cordova.js"></script> -->
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -896,6 +973,12 @@ $TenThanhPhanList = $stmtTenThanhPhan->fetchAll(PDO::FETCH_ASSOC);
                     <input type="hidden" name="MaMau" value="<?php echo htmlspecialchars($don['MaMau'] ?? ''); ?>">
                 </div>
 
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Thành Phần</label>
+                    <input type="text" name="TenThanhPhan" id="TenThanhPhan" 
+                            value="<?php echo htmlspecialchars($tenThanhPhan); ?>" 
+                            class="input-field w-full p-2.5 rounded-lg">
+                </div>
                 <!-- Dòng 4: Số Lượng, Số Cây, Số KG Cân -->
                 <div class="grid <?php echo ($don['MaDVT'] !== '1' && $tenDVT !== 'KG') ? 'grid-cols-3' : 'grid-cols-2'; ?> gap-4">
                     <div>
@@ -917,26 +1000,32 @@ $TenThanhPhanList = $stmtTenThanhPhan->fetchAll(PDO::FETCH_ASSOC);
                     <?php else: ?>
                     <input type="hidden" name="SoKgCan" id="soKGCan" >
                     <?php endif; ?>
-                </div>
+                </div>                       
 
-                <div>
+                <!-- Khuvuc Và Ghi Chú -->
+                     <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Khu Vực</label>
+                            <input type="text" name="MaKhuVuc" id="MaKhuVuc" class="input-field w-full p-2.5 rounded-lg" list="MaKhuVucList">
+                            <datalist id="MaKhuVucList">
+                                <?php
+                                foreach ($MaKhuVucList as $row) {
+                                    $MaKhuVuc = htmlspecialchars($row['MaKhuVuc']);
+                                    echo "<option value=\"$MaKhuVuc\">";
+                                }
+                                ?>
+                            </datalist>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Ghi chú</label>
+                            <input type="text" name="GhiChu" id="GhiChu" class="input-field w-full p-2.5 rounded-lg" oninput="this.value = this.value.toUpperCase();">
+                        </div>
+                    </div>
+
+                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Số Lot</label>
                     <input type="text" name="SoLot" id="soLot" class="input-field w-full p-2.5 rounded-lg" oninput="this.value = this.value.toUpperCase();">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Thành Phần</label>
-                    <input type="text" name="TenThanhPhan" id="TenThanhPhan" class="input-field w-full p-2.5 rounded-lg" list="TenThanhPhanList">
-                    <datalist id="TenThanhPhanList">
-                        <?php
-                        foreach ($TenThanhPhanList as $row) {
-                            $TenThanhPhan = htmlspecialchars($row['TenThanhPhan']);
-                            echo "<option value=\"$TenThanhPhan\">";
-                        }
-                        ?>
-                    </datalist>
-                </div>
-
+                </div>     
                 <!-- Hidden fields -->
                 <input type="hidden" name="MaNguoiLienHe" value="<?php echo htmlspecialchars($don['MaNguoiLienHe'] ?? ''); ?>">
                 <input type="hidden" name="MaNhanVien" value="<?php echo htmlspecialchars($maNhanVien); ?>">
@@ -969,6 +1058,8 @@ $TenThanhPhanList = $stmtTenThanhPhan->fetchAll(PDO::FETCH_ASSOC);
                     <?php endif; ?>
                     <th>Số Lot</th>
                     <th>Thành Phần</th>
+                    <th>Khu Vực</th>
+                    <th>Ghi Chú</th>
                     <th>Hành động</th>
                 </tr>
             </thead>
@@ -1026,6 +1117,7 @@ async function getTongSoLuongNhap(maSoMe) {
     }
 }
 
+// Xử lý sự kiện submit form nhập kho, kiểm tra và thêm dữ liệu vào tempData
 document.getElementById('nhapHangForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     const soLuong = parseFloat(document.getElementById('soLuong').value) || 0;
@@ -1033,14 +1125,17 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
     const soKGCanInput = document.getElementById('soKGCan').value;
     const soKGCan = soKGCanInput && !isNaN(soKGCanInput) && soKGCanInput.trim() !== '' ? parseFloat(soKGCanInput) : null;
     const soLot = document.getElementById('soLot').value.trim();
-    const TenThanhPhan = document.getElementById('TenThanhPhan').value.trim();
+    const tenThanhPhan = document.getElementById('TenThanhPhan').value.trim();
+    const maKhuVuc = document.getElementById('MaKhuVuc').value.trim();
+    const ghiChu = document.getElementById('GhiChu').value.trim();
 
     let errorMessages = [];
     if (soLuong <= 0) errorMessages.push("Số lượng phải lớn hơn 0.");
     if (soCay <= 0) errorMessages.push("Số cây phải lớn hơn 0.");
     if (soKGCan !== null && soKGCan < 0) errorMessages.push("Số KG Cân không được âm.");
     if (!soLot) errorMessages.push("Số Lot không được để trống.");
-    if (!TenThanhPhan) errorMessages.push("Thành phần không được để trống.");
+    if (!tenThanhPhan) errorMessages.push("Thành phần không được để trống.");
+    if (!maKhuVuc) errorMessages.push("Mã khu vực không được để trống.");
 
     if (errorMessages.length > 0) {
         Swal.fire({
@@ -1060,18 +1155,19 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
         return;
     }
 
-    const validTenThanhPhan = <?php echo json_encode(array_column($TenThanhPhanList, 'TenThanhPhan')); ?>;
-    if (!validTenThanhPhan.includes(TenThanhPhan)) {
+    // Kiểm tra giá trị hợp lệ cho MaKhuVuc
+    const validMaKhuVuc = <?php echo json_encode(array_column($MaKhuVucList, 'MaKhuVuc')); ?>;
+    if (!validMaKhuVuc.includes(maKhuVuc)) {
         Swal.fire({
             icon: 'warning',
-            title: 'Thành phần không hợp lệ!',
+            title: 'Mã khu vực không hợp lệ!',
             text: 'Vui lòng chọn một giá trị từ danh sách gợi ý.'
         });
         return;
     }
 
     const formData = new FormData(this);
-    const maQRBase = `${formData.get('MaKhachHang')}_${formData.get('MaVai')}_${formData.get('MaMau')}_${formData.get('MaDVT')}_${formData.get('Kho')}_${soLuong}_${soLot}_${TenThanhPhan}`;
+    const maQRBase = `${formData.get('MaKhachHang')}_${formData.get('MaVai')}_${formData.get('MaMau')}_${formData.get('MaDVT')}_${formData.get('Kho')}_${soLuong}_${soLot}_${tenThanhPhan}`;
 
     for (let i = 1; i <= soCay; i++) {
         tempSTT++;
@@ -1095,9 +1191,11 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
             NgayTao: formData.get('NgayTao'),
             MaKhachHang: formData.get('MaKhachHang'),
             MaNhanVien: formData.get('MaNhanVien'),
-            TenThanhPhan: TenThanhPhan,
+            TenThanhPhan: tenThanhPhan,
             SoKgCan: soKGCan,
             OriginalTrangThai: 2,
+            MaKhuVuc: maKhuVuc, 
+            GhiChu: ghiChu
         });
     }
 
@@ -1106,7 +1204,8 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
     document.getElementById('soCay').value = '';
     document.getElementById('soKGCan').value = '';
     document.getElementById('soLot').value = '';
-    document.getElementById('TenThanhPhan').value = '';
+    document.getElementById('MaKhuVuc').value = ''; 
+    document.getElementById('GhiChu').value = '';
 
     Swal.fire({
         icon: 'success',
@@ -1122,6 +1221,7 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
     });
 });
 
+// Cập nhật bảng hiển thị dữ liệu nhập kho tạm thời
 function updateTable() {
     const tbody = document.getElementById('dataTableBody');
     tbody.innerHTML = '';
@@ -1131,9 +1231,11 @@ function updateTable() {
         row.innerHTML = `
             <td>${item.STT}</td>
             <td>${item.SoLuong} <?php echo $tenDVT; ?></td>
-            ${isKgUnit === 'false' ? `<td>${item.SoKgCan ? item.SoKgCan + ' kg' : '0'}</td>` : ''}
+            ${isKgUnit === 'false' ? `<td>${item.SoKgCan ? item.SoKgCan + ' kg' : ''}</td>` : ''}
             <td>${item.SoLot}</td>
             <td>${item.TenThanhPhan}</td>
+            <td>${item.MaKhuVuc }</td>
+            <td>${item.GhiChu || ''}</td>
             <td>
                 <button onclick="deleteRow(${index})" class="text-red-600 hover:text-red-800">
                     <i class="fas fa-trash"></i>
@@ -1507,13 +1609,15 @@ document.getElementById('XemChiTietNhap').addEventListener('click', async functi
                     ${isKgUnit === 'false' ? `<td class="border px-4 py-2">${item.SoKgCan ? parseFloat(item.SoKgCan).toFixed(2) + ' kg' : ''}</td>` : ''}
                     <td class="border px-4 py-2">${item.SoLot}</td>
                     <td class="border px-4 py-2">${item.TenThanhPhan}</td>
+                    <td class="border px-4 py-2">${item.MaKhuVuc ||''}</td>
+                    <td class="border px-4 py-2">${item.GhiChu || ''}</td>
                 </tr>
             `).join('');
 
             const htmlContent = `
                 <div class="text-left">                 
                     <div class="overflow-x-auto">
-                        <table class="min-w-[600px] text-sm text-left text-gray-700 border-collapse shadow-sm">
+                        <table class="min-w-[800px] text-sm text-left text-gray-700 border-collapse shadow-sm">
                             <thead class="bg-gray-100">
                                 <tr>
                                     <th class="border px-6 py-3 font-semibold min-w-[60px]">🔢 STT</th>
@@ -1521,6 +1625,8 @@ document.getElementById('XemChiTietNhap').addEventListener('click', async functi
                                     ${isKgUnit === 'false' ? '<th class="border px-6 py-3 font-semibold min-w-[120px]">⚖️ Số KG Cân</th>' : ''}
                                     <th class="border px-6 py-3 font-semibold min-w-[150px] whitespace-nowrap">🏷️ Số Lot</th>
                                     <th class="border px-6 py-3 font-semibold min-w-[200px] whitespace-nowrap">🧵 Thành Phần</th>
+                                    <th class="border px-6 py-3 font-semibold min-w-[120px] whitespace-nowrap">📍 Khu Vực</th>
+                                    <th class="border px-6 py-3 font-semibold min-w-[150px] whitespace-nowrap">📝 Ghi Chú</th>
                                 </tr>
                             </thead>
                             <tbody>${tableRows}</tbody>

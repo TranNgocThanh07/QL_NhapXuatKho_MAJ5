@@ -1,5 +1,5 @@
 <?php
-// TP_XuatHang/QUetQRXuatHang.php
+// TP_XuatHang/QuetQRXuatHang.php
 include '../db_config.php';
 
 require_once '../vendor/autoload.php';
@@ -16,77 +16,176 @@ if (!$maXuatHang) {
 try {
     // Xử lý AJAX
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+        header('Content-Type: application/json');
+
         if ($_POST['action'] === 'updateStatus') {
             $maCTXHTP = $_POST['maCTXHTP'] ?? '';
             if (empty($maCTXHTP)) {
-                header('Content-Type: application/json');
                 echo json_encode(['success' => false, 'message' => 'Thiếu mã chi tiết xuất hàng']);
                 exit;
             }
 
-            // Cập nhật trạng thái
-            $sqlUpdate = "UPDATE TP_ChiTietXuatHang SET TrangThai = 1 WHERE MaCTXHTP = :maCTXHTP AND TrangThai = 0";
+            $pdo->beginTransaction();
+
+            // Kiểm tra trạng thái đơn hàng
+            $sqlCheckOrder = "SELECT TrangThai FROM TP_XuatHang WHERE MaXuatHang = :maXuatHang";
+            $stmtCheckOrder = $pdo->prepare($sqlCheckOrder);
+            $stmtCheckOrder->execute([':maXuatHang' => $maXuatHang]);
+            $orderStatus = $stmtCheckOrder->fetchColumn();
+
+            if ($orderStatus == 1) {
+                $pdo->rollBack();
+                echo json_encode(['success' => false, 'message' => 'Đơn hàng đã hoàn tất, không thể quét thêm!']);
+                exit;
+            }
+
+            // Cập nhật trạng thái chi tiết
+            $sqlUpdate = "UPDATE TP_ChiTietXuatHang 
+                         SET TrangThai = 1 
+                         WHERE MaCTXHTP = :maCTXHTP AND TrangThai = 0";
             $stmtUpdate = $pdo->prepare($sqlUpdate);
             $stmtUpdate->execute([':maCTXHTP' => $maCTXHTP]);
 
-            // Lấy thông tin tổng và đã xuất
+            if ($stmtUpdate->rowCount() === 0) {
+                $pdo->rollBack();
+                echo json_encode(['success' => false, 'message' => 'Chi tiết đã được quét hoặc không tồn tại']);
+                exit;
+            }
+
+            // L lấy thông tin tiến độ
             $sqlProgress = "SELECT 
-                            SUM(ct.SoLuong) as TongSoLuongXuat, 
-                            SUM(CASE WHEN ct.TrangThai = 1 THEN ct.SoLuong ELSE 0 END) as SoLuongDaXuat,
-                            SUM(CASE WHEN ct.TrangThai = 0 THEN 1 ELSE 0 END) as remaining 
-                            FROM TP_ChiTietXuatHang ct 
-                            WHERE ct.MaXuatHang = :maXuatHang";
+                COALESCE(SUM(SoLuong), 0) as TongSoLuongXuat, 
+                COALESCE(SUM(CASE WHEN TrangThai = 1 THEN SoLuong ELSE 0 END), 0) as SoLuongDaXuat,
+                COALESCE(SUM(CASE WHEN TrangThai = 0 THEN SoLuong ELSE 0 END), 0) as SoLuongConLai,
+                COUNT(CASE WHEN TrangThai = 0 THEN 1 END) as remaining 
+            FROM TP_ChiTietXuatHang 
+            WHERE MaXuatHang = :maXuatHang";
             $stmtProgress = $pdo->prepare($sqlProgress);
             $stmtProgress->execute([':maXuatHang' => $maXuatHang]);
             $progress = $stmtProgress->fetch(PDO::FETCH_ASSOC);
 
-            header('Content-Type: application/json');
+            // Nếu tất cả chi tiết đã quét, tự động cập nhật trạng thái đơn hàng
+            if ($progress['remaining'] == 0) {
+                $sqlUpdateOrder = "UPDATE TP_XuatHang 
+                                  SET TrangThai = 1 
+                                  WHERE MaXuatHang = :maXuatHang AND TrangThai = 0";
+                $stmtUpdateOrder = $pdo->prepare($sqlUpdateOrder);
+                $stmtUpdateOrder->execute([':maXuatHang' => $maXuatHang]);
+
+                if ($stmtUpdateOrder->rowCount() === 0) {
+                    $pdo->rollBack();
+                    echo json_encode(['success' => false, 'message' => 'Lỗi khi cập nhật trạng thái đơn hàng']);
+                    exit;
+                }
+            }
+
+            $pdo->commit();
+
             echo json_encode([
                 'success' => true,
-                'remaining' => $progress['remaining'],
-                'tongSoLuongXuat' => $progress['TongSoLuongXuat'],
-                'soLuongDaXuat' => $progress['SoLuongDaXuat'],
-                'message' => $progress['remaining'] == 0 ? 'Đã quét thành công toàn bộ đơn xuất hàng!' : 'Cập nhật trạng thái thành công'
+                'remaining' => (int)$progress['remaining'],
+                'tongSoLuongXuat' => (float)$progress['TongSoLuongXuat'],
+                'soLuongDaXuat' => (float)$progress['SoLuongDaXuat'],
+                'soLuongConLai' => (float)$progress['SoLuongConLai'],
+                'message' => $progress['remaining'] == 0 ? 'Đã quét hết chi tiết và hoàn tất đơn hàng!' : 'Cập nhật trạng thái chi tiết thành công'
             ]);
             exit;
-        } elseif ($_POST['action'] === 'updateOrderStatus') {
-            $maXuatHang = $_POST['maXuatHang'] ?? '';
-            $status = $_POST['status'] ?? '1';
-
-            if (empty($maXuatHang)) {
-                header('Content-Type: application/json');
-                echo json_encode(['success' => false, 'message' => 'Thiếu mã đơn hàng']);
+        } elseif ($_POST['action'] === 'updateDonSanXuat') {
+            $maCTXHTP = $_POST['maCTXHTP'] ?? '';
+            if (empty($maCTXHTP)) {
+                echo json_encode(['success' => false, 'message' => 'Thiếu mã chi tiết xuất hàng']);
                 exit;
             }
 
-            $sql = "UPDATE TP_XuatHang SET TrangThai = :status WHERE MaXuatHang = :maXuatHang";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([':status' => $status, ':maXuatHang' => $maXuatHang]);
+            $pdo->beginTransaction();
 
-            header('Content-Type: application/json');
-            echo json_encode(['success' => true, 'message' => 'Cập nhật trạng thái đơn hàng thành công']);
+            // Lấy thông tin SoLuong và MaCTNHTP
+            $sqlGetChiTiet = "SELECT SoLuong, MaCTNHTP FROM TP_ChiTietXuatHang WHERE MaCTXHTP = :maCTXHTP";
+            $stmtGetChiTiet = $pdo->prepare($sqlGetChiTiet);
+            $stmtGetChiTiet->execute([':maCTXHTP' => $maCTXHTP]);
+            $chiTiet = $stmtGetChiTiet->fetch(PDO::FETCH_ASSOC);
+
+            if (!$chiTiet) {
+                $pdo->rollBack();
+                echo json_encode(['success' => false, 'message' => 'Không tìm thấy chi tiết xuất hàng']);
+                exit;
+            }
+
+            $soLuong = $chiTiet['SoLuong'];
+            $maCTNHTP = $chiTiet['MaCTNHTP'];
+
+            // Lấy MaSoMe
+            $sqlGetMaSoMe = "SELECT MaSoMe FROM TP_ChiTietDonSanXuat WHERE MaCTNHTP = :maCTNHTP";
+            $stmtGetMaSoMe = $pdo->prepare($sqlGetMaSoMe);
+            $stmtGetMaSoMe->execute([':maCTNHTP' => $maCTNHTP]);
+            $resultMaSoMe = $stmtGetMaSoMe->fetch(PDO::FETCH_ASSOC);
+
+            if (!$resultMaSoMe) {
+                $pdo->rollBack();
+                echo json_encode(['success' => false, 'message' => 'Không tìm thấy mã mẻ sản xuất']);
+                exit;
+            }
+
+            $maSoMe = $resultMaSoMe['MaSoMe'];
+
+            // Cập nhật DaGiao
+            $sqlUpdateDaGiao = "UPDATE TP_DonSanXuat 
+                               SET DaGiao = COALESCE(DaGiao, 0) + :soLuong 
+                               WHERE MaSoMe = :maSoMe";
+            $stmtUpdateDaGiao = $pdo->prepare($sqlUpdateDaGiao);
+            $stmtUpdateDaGiao->execute([':soLuong' => $soLuong, ':maSoMe' => $maSoMe]);
+
+            // Cập nhật ConLai
+            $sqlUpdateConLai = "UPDATE TP_DonSanXuat 
+                               SET ConLai = TongSoLuongGiao - COALESCE(DaGiao, 0) 
+                               WHERE MaSoMe = :maSoMe";
+            $stmtUpdateConLai = $pdo->prepare($sqlUpdateConLai);
+            $stmtUpdateConLai->execute([':maSoMe' => $maSoMe]);
+
+            $pdo->commit();
+            echo json_encode(['success' => true, 'message' => 'Cập nhật đơn sản xuất thành công']);
             exit;
         }
     }
 
-    // Lấy thông tin phiếu xuất (giữ nguyên)
-    $sql = "SELECT xh.MaXuatHang, nv.TenNhanVien, xh.NgayXuat, xh.GhiChu,
-                   SUM(ct.SoLuong) as TongSoLuongXuat, 
-                   SUM(CASE WHEN ct.TrangThai = 1 THEN ct.SoLuong ELSE 0 END) as SoLuongDaXuat,
-                   dvt.TenDVT, v.MaVai, v.TenVai, m.TenMau,
-                   ct.SoLot, ct.TenThanhPhan, ct.MaDonHang, ct.MaVatTu, ct.Kho
-            FROM TP_XuatHang xh
-            LEFT JOIN TP_ChiTietXuatHang ct ON xh.MaXuatHang = ct.MaXuatHang
-            LEFT JOIN NhanVien nv ON xh.MaNhanVien = nv.MaNhanVien
-            LEFT JOIN TP_DonViTinh dvt ON ct.MaDVT = dvt.MaDVT
-            LEFT JOIN Vai v ON ct.MaVai = v.MaVai
-            LEFT JOIN TP_Mau m ON ct.MaMau = m.MaMau
-            WHERE xh.MaXuatHang = :maXuatHang
-            GROUP BY xh.MaXuatHang, nv.TenNhanVien, xh.NgayXuat, xh.GhiChu, dvt.TenDVT,
-                     v.MaVai, v.TenVai, m.TenMau, ct.SoLot, ct.TenThanhPhan, ct.MaDonHang, ct.MaVatTu, ct.Kho";
+    // Lấy thông tin phiếu xuất
+    $sql = "SELECT 
+            xh.MaXuatHang, 
+            xh.TrangThai as TrangThaiDon,
+            nv.TenNhanVien, 
+            xh.NgayXuat, 
+            xh.GhiChu,
+            COALESCE(SUM(ct.SoLuong), 0) as TongSoLuongXuat, 
+            COALESCE(SUM(CASE WHEN ct.TrangThai = 1 THEN ct.SoLuong ELSE 0 END), 0) as SoLuongDaXuat,
+            COALESCE(SUM(CASE WHEN ct.TrangThai = 0 THEN ct.SoLuong ELSE 0 END), 0) as SoLuongConLai,
+            MIN(dvt.TenDVT) as TenDVT, 
+            MIN(v.MaVai) as MaVai, 
+            MIN(v.TenVai) as TenVai, 
+            MIN(m.TenMau) as TenMau,
+            MIN(ct.SoLot) as SoLot, 
+            MIN(ct.TenThanhPhan) as TenThanhPhan, 
+            MIN(ct.MaDonHang) as MaDonHang, 
+            MIN(ct.MaVatTu) as MaVatTu, 
+            MIN(ct.Kho) as Kho,
+            kh.TenKhachHang,
+            kh.TenHoatDong,
+            kh.DiaChi,
+            nlh.TenNguoiLienHe,
+            nlh.SoDienThoai
+        FROM TP_XuatHang xh
+        LEFT JOIN TP_ChiTietXuatHang ct ON xh.MaXuatHang = ct.MaXuatHang
+        LEFT JOIN NhanVien nv ON xh.MaNhanVien = nv.MaNhanVien
+        LEFT JOIN TP_DonViTinh dvt ON ct.MaDVT = dvt.MaDVT
+        LEFT JOIN Vai v ON ct.MaVai = v.MaVai
+        LEFT JOIN TP_Mau m ON ct.MaMau = m.MaMau
+        LEFT JOIN TP_KhachHang kh ON xh.MaKhachHang = kh.MaKhachHang
+        LEFT JOIN TP_NguoiLienHe nlh ON xh.MaNguoiLienHe = nlh.MaNguoiLienHe
+        WHERE xh.MaXuatHang = :maXuatHang
+        GROUP BY xh.MaXuatHang, xh.TrangThai, nv.TenNhanVien, xh.NgayXuat, xh.GhiChu, 
+                 kh.TenKhachHang, kh.TenHoatDong, kh.DiaChi, 
+                 nlh.TenNguoiLienHe, nlh.SoDienThoai";
     $stmt = $pdo->prepare($sql);
-    $stmt->bindValue(':maXuatHang', $maXuatHang, PDO::PARAM_STR);
-    $stmt->execute();
+    $stmt->execute([':maXuatHang' => $maXuatHang]);
     $phieuXuat = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$phieuXuat) {
@@ -94,30 +193,45 @@ try {
         exit;
     }
 
-    $sqlChiTiet = "SELECT ct.MaCTXHTP, ct.SoLuong, ct.TrangThai, dvt.TenDVT,
-                          v.MaVai, v.TenVai, m.TenMau,
-                          ct.SoLot, ct.TenThanhPhan, ct.MaDonHang, ct.MaVatTu, ct.Kho, ct.MaQR
+    // Lấy chi tiết xuất hàng
+    $sqlChiTiet = "SELECT 
+                       ct.MaCTXHTP, 
+                       ct.SoLuong, 
+                       ct.TrangThai, 
+                       dvt.TenDVT,
+                       v.MaVai, 
+                       v.TenVai, 
+                       m.TenMau,
+                       ct.SoLot, 
+                       ct.TenThanhPhan, 
+                       ct.MaDonHang, 
+                       ct.MaVatTu, 
+                       ct.Kho, 
+                       ct.MaQR
                    FROM TP_ChiTietXuatHang ct
                    LEFT JOIN TP_DonViTinh dvt ON ct.MaDVT = dvt.MaDVT
                    LEFT JOIN Vai v ON ct.MaVai = v.MaVai
                    LEFT JOIN TP_Mau m ON ct.MaMau = m.MaMau
                    WHERE ct.MaXuatHang = :maXuatHang";
     $stmtChiTiet = $pdo->prepare($sqlChiTiet);
-    $stmtChiTiet->bindValue(':maXuatHang', $maXuatHang, PDO::PARAM_STR);
-    $stmtChiTiet->execute();
+    $stmtChiTiet->execute([':maXuatHang' => $maXuatHang]);
     $chiTietXuat = $stmtChiTiet->fetchAll(PDO::FETCH_ASSOC);
 
-    $tongXuat = $phieuXuat['TongSoLuongXuat'];
-    $daXuat = $phieuXuat['SoLuongDaXuat'];
-    $conLai = $tongXuat - $daXuat;
+    $tongXuat = (float)$phieuXuat['TongSoLuongXuat'];
+    $daXuat = (float)$phieuXuat['SoLuongDaXuat'];
+    $conLai = (float)$phieuXuat['SoLuongConLai'];
     $percentCompleted = $tongXuat > 0 ? round(($daXuat / $tongXuat) * 100, 1) : 0;
 
 } catch (Exception $e) {
-    echo "<p class='text-red-600 text-center'>Lỗi: " . $e->getMessage() . "</p>";
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+    echo "<p class='text-red-600 text-center'>Lỗi: " . htmlspecialchars($e->getMessage()) . "</p>";
     exit;
 }
 
 $ngayXuat = date('d/m/Y', strtotime($phieuXuat['NgayXuat']));
+$trangThaiDon = $phieuXuat['TrangThaiDon'] == 1 ? 'Hoàn tất' : 'Đang xử lý';
 
 function generateQRCodeBase64($data) {
     $qrCode = new QrCode($data);
@@ -132,7 +246,6 @@ $chiTietXuatWithQR = array_map(function($ct) {
     $ct['qrCode'] = generateQRCodeBase64($ct['MaCTXHTP']);
     return $ct;
 }, $chiTietXuat);
-
 ?>
 
 <!DOCTYPE html>
@@ -289,6 +402,11 @@ $chiTietXuatWithQR = array_map(function($ct) {
             text-align: center;
             z-index: 10;
         }
+        .wrap-text {
+            white-space: normal; 
+            word-break: break-word; 
+             max-width: 180px;
+        }
     </style>
 </head>
 <body>
@@ -306,8 +424,8 @@ $chiTietXuatWithQR = array_map(function($ct) {
 
             <div class="">
                 <!-- Info Section -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    <div class="card p-5">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 p-6">
+                    <div class="info-card bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm flex flex-col">
                         <h3 class="text-sm font-semibold text-gray-500 mb-4 flex items-center gap-2">
                             <i class="fas fa-file-invoice text-red-500"></i> Thông tin phiếu
                         </h3>
@@ -324,7 +442,7 @@ $chiTietXuatWithQR = array_map(function($ct) {
                             <span class="font-medium"><?php echo htmlspecialchars($phieuXuat['MaVatTu']); ?></span>
                         </p>
                     </div>
-                    <div class="card p-5">
+                    <div class="info-card bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm flex flex-col">
                         <h3 class="text-sm font-semibold text-gray-500 mb-4 flex items-center gap-2">
                             <i class="fas fa-tshirt text-blue-500"></i> Thông tin sản phẩm
                         </h3>
@@ -346,7 +464,7 @@ $chiTietXuatWithQR = array_map(function($ct) {
                             <span class="font-medium"><?php echo htmlspecialchars($phieuXuat['Kho']); ?></span>
                         </p>
                     </div>
-                    <div class="card p-5">
+                    <div class="info-card bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm flex flex-col">
                         <h3 class="text-sm font-semibold text-gray-500 mb-4 flex items-center gap-2">
                             <i class="fas fa-truck-loading text-green-500"></i> Thông tin xuất kho
                         </h3>
@@ -363,7 +481,34 @@ $chiTietXuatWithQR = array_map(function($ct) {
                             <span class="font-medium"><?php echo $ngayXuat; ?></span>
                         </p>
                     </div>
+
+                    <div class="info-card bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm flex flex-col">
+                        <h3 class="text-sm font-semibold text-gray-500 mb-4 flex items-center gap-2">
+                            <i class="fas fa-user-friends text-yellow-500"></i> Thông tin khách hàng
+                        </h3>
+                        <p class="flex justify-between mb-3">
+                            <span class="text-gray-600"><i class="fas fa-building text-red-400 mr-2"></i>Tên khách hàng:</span>
+                            <span class="font-medium"><?php echo htmlspecialchars($phieuXuat['TenKhachHang'] ?? 'Không xác định'); ?></span>
+                        </p>
+                        <p class="flex justify-between mb-3">
+                            <span class="text-gray-600"><i class="fas fa-briefcase text-blue-400 mr-2"></i>Tên hoạt động:</span>
+                            <span class="font-medium wrap-text"><?php echo htmlspecialchars($phieuXuat['TenHoatDong'] ?? 'Không xác định'); ?></span>
+                        </p>
+                        <p class="flex justify-between mb-3">
+                            <span class="text-gray-600"><i class="fas fa-map-marker-alt text-red-400 mr-2"></i>Địa chỉ:</span>
+                            <span class="font-medium wrap-text"><?php echo htmlspecialchars($phieuXuat['DiaChi'] ?? 'Không xác định'); ?></span>
+                        </p>
+                        <p class="flex justify-between mb-3">
+                            <span class="text-gray-600"><i class="fas fa-user text-green-400 mr-2"></i>Người liên hệ:</span>
+                            <span class="font-medium"><?php echo htmlspecialchars($phieuXuat['TenNguoiLienHe'] ?? 'Không xác định'); ?></span>
+                        </p>
+                        <p class="flex justify-between">
+                            <span class="text-gray-600"><i class="fas fa-phone text-yellow-400 mr-2"></i>Số điện thoại:</span>
+                            <span class="font-medium"><?php echo htmlspecialchars($phieuXuat['SoDienThoai'] ?? 'Không xác định'); ?></span>
+                        </p>
+                    </div>
                 </div>
+                
 
                 <!-- Progress Section -->
                 <div class="">
@@ -543,83 +688,100 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateStatus(maCTXHTP) {
-        fetch(window.location.href, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `action=updateStatus&maCTXHTP=${encodeURIComponent(maCTXHTP)}`
-        })
-        .then(response => {
-            if (!response.ok) throw new Error('Lỗi kết nối server');
-            return response.json();
-        })
-        .then(data => {
-            console.log('Dữ liệu từ server:', data); // Debug dữ liệu
-            if (data.success) {
-                // Cập nhật trạng thái trong bảng chi tiết
-                const row = document.querySelector(`tr[data-ma-ctxhtp="${maCTXHTP}"] td:nth-child(5) span`);
-                if (row) {
-                    row.className = 'text-da-xuat font-medium flex items-center gap-1 px-3 py-1 rounded-full border bg-green-50 border-green-200';
-                    row.innerHTML = '<i class="fas fa-check-circle"></i> Đã xuất';
-                }
-
-                // Lấy dữ liệu từ AJAX
-                const newDaXuat = parseInt(data.soLuongDaXuat || 0, 10);
-                const newTongXuat = parseInt(data.tongSoLuongXuat || 0, 10);
-                const newConLai = newTongXuat - newDaXuat;
-                const newPercent = newTongXuat > 0 ? (newDaXuat / newTongXuat * 100).toFixed(1) : 0;
-
-                // Cập nhật ô thống kê
-                const tongXuatElement = document.querySelector('.stat-card:nth-child(1) .text-xl');
-                const daXuatElement = document.querySelector('.stat-card:nth-child(2) .text-xl');
-                const conLaiElement = document.querySelector('.stat-card:nth-child(3) .text-xl');
-                if (tongXuatElement) tongXuatElement.textContent = newTongXuat.toLocaleString('vi-VN');
-                if (daXuatElement) daXuatElement.textContent = newDaXuat.toLocaleString('vi-VN');
-                if (conLaiElement) conLaiElement.textContent = newConLai.toLocaleString('vi-VN');
-
-                // Cập nhật thanh tiến độ
-                const progressPercent = document.getElementById('progressPercent');
-                const progressText = document.getElementById('progressText');
-                const progressValue = document.querySelector('.progress-value');
-
-                if (progressPercent) progressPercent.textContent = `${newPercent}%`;
-                if (progressText) {
-                    progressText.innerHTML = `
-                        <i class="fas fa-box-open text-indigo-400 mr-2"></i>
-                        ${newDaXuat.toLocaleString('vi-VN')} / ${newTongXuat.toLocaleString('vi-VN')} ${tenDVT}
-                    `;
-                }
-                if (progressValue) {
-                    progressValue.style.width = `${newPercent}%`;
-                    progressValue.classList.toggle('pulse', newPercent < 100);
-                }
-
-                // Thông báo thành công
-                showNotification(
-                    `Quét chi tiết thành công! Tổng: ${newTongXuat.toLocaleString('vi-VN')} ${tenDVT}, Đã xuất: ${newDaXuat.toLocaleString('vi-VN')} ${tenDVT}, Còn lại: ${newConLai.toLocaleString('vi-VN')} ${tenDVT}`,
-                    'success'
-                );
-
-                // Hoàn thành đơn hàng
-                if (data.remaining === 0) {
-                    setTimeout(() => {
-                        showNotification(
-                            `Đã quét thành công toàn bộ đơn xuất hàng! Tổng: ${newTongXuat.toLocaleString('vi-VN')} ${tenDVT}, Đã xuất: ${newDaXuat.toLocaleString('vi-VN')} ${tenDVT}, Còn lại: ${newConLai.toLocaleString('vi-VN')} ${tenDVT}`,
-                            'success'
-                        );
-                        updateOrderStatus();
-                        stopScanner();
-                        document.getElementById('scannerModal').classList.add('hidden');
-                    }, 500);
-                }
-            } else {
-                showNotification(data.message || 'Lỗi khi cập nhật trạng thái', 'error');
+    fetch(window.location.href, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `action=updateStatus&maCTXHTP=${encodeURIComponent(maCTXHTP)}`
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Lỗi kết nối server');
+        return response.json();
+    })
+    .then(data => {
+        console.log('Dữ liệu từ server:', data); // Debug dữ liệu
+        if (data.success) {
+            // Cập nhật trạng thái trong bảng chi tiết
+            const row = document.querySelector(`tr[data-ma-ctxhtp="${maCTXHTP}"] td:nth-child(5) span`);
+            if (row) {
+                row.className = 'text-da-xuat font-medium flex items-center gap-1 px-3 py-1 rounded-full border bg-green-50 border-green-200';
+                row.innerHTML = '<i class="fas fa-check-circle"></i> Đã xuất';
             }
-        })
-        .catch(err => {
-            console.error('Lỗi fetch:', err);
-            showNotification('Lỗi: ' + err.message, 'error');
-        });
-    }
+
+            // Lấy dữ liệu từ AJAX
+            const newDaXuat = parseInt(data.soLuongDaXuat || 0, 10);
+            const newTongXuat = parseInt(data.tongSoLuongXuat || 0, 10);
+            const newConLai = parseInt(data.soLuongConLai || 0, 10);
+
+            // Cập nhật ô thống kê
+            const tongXuatElement = document.querySelector('.stat-card:nth-child(1) .text-xl');
+            const daXuatElement = document.querySelector('.stat-card:nth-child(2) .text-xl');
+            const conLaiElement = document.querySelector('.stat-card:nth-child(3) .text-xl');
+            if (tongXuatElement) tongXuatElement.textContent = newTongXuat.toLocaleString('vi-VN');
+            if (daXuatElement) daXuatElement.textContent = newDaXuat.toLocaleString('vi-VN');
+            if (conLaiElement) conLaiElement.textContent = newConLai.toLocaleString('vi-VN');
+
+            // Cập nhật thanh tiến độ
+            const progressPercent = document.getElementById('progressPercent');
+            const progressText = document.getElementById('progressText');
+            const progressValue = document.querySelector('.progress-value');
+
+            const newPercent = newTongXuat > 0 ? (newDaXuat / newTongXuat * 100).toFixed(1) : 0;
+            if (progressPercent) progressPercent.textContent = `${newPercent}%`;
+            if (progressText) {
+                progressText.innerHTML = `
+                    <i class="fas fa-box-open text-indigo-400 mr-2"></i>
+                    ${newDaXuat.toLocaleString('vi-VN')} / ${newTongXuat.toLocaleString('vi-VN')} ${tenDVT}
+                `;
+            }
+            if (progressValue) {
+                progressValue.style.width = `${newPercent}%`;
+                progressValue.classList.toggle('pulse', newPercent < 100);
+            }
+
+            // Gửi yêu cầu cập nhật DaGiao và ConLai trong bảng TP_DonSanXuat
+            fetch(window.location.href, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `action=updateDonSanXuat&maCTXHTP=${encodeURIComponent(maCTXHTP)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Thông báo thành công
+                    showNotification(
+                        `Quét chi tiết thành công! Tổng: ${newTongXuat.toLocaleString('vi-VN')} ${tenDVT}, Đã xuất: ${newDaXuat.toLocaleString('vi-VN')} ${tenDVT}, Còn lại: ${newConLai.toLocaleString('vi-VN')} ${tenDVT}`,
+                        'success'
+                    );
+
+                    // Hoàn thành đơn hàng
+                    if (data.remaining === 0) {
+                        setTimeout(() => {
+                            showNotification(
+                                `Đã quét thành công toàn bộ đơn xuất hàng! Tổng: ${newTongXuat.toLocaleString('vi-VN')} ${tenDVT}, Đã xuất: ${newDaXuat.toLocaleString('vi-VN')} ${tenDVT}, Còn lại: ${newConLai.toLocaleString('vi-VN')} ${tenDVT}`,
+                                'success'
+                            );
+                            updateOrderStatus();
+                            stopScanner();
+                            document.getElementById('scannerModal').classList.add('hidden');
+                        }, 500);
+                    }
+                } else {
+                    showNotification(data.message || 'Lỗi khi cập nhật đơn sản xuất', 'error');
+                }
+            })
+            .catch(err => {
+                console.error('Lỗi fetch updateDonSanXuat:', err);
+                showNotification('Lỗi khi cập nhật đơn sản xuất: ' + err.message, 'error');
+            });
+        } else {
+            showNotification(data.message || 'Lỗi khi cập nhật trạng thái', 'error');
+        }
+    })
+    .catch(err => {
+        console.error('Lỗi fetch:', err);
+        showNotification('Lỗi: ' + err.message, 'error');
+    });
+}
 
     function updateOrderStatus() {
         if (!maXuatHang) {
