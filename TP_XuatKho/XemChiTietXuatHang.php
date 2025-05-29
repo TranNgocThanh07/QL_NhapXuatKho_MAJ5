@@ -173,14 +173,10 @@ $ngayXuat = date('d/m/Y', strtotime($phieuXuat['NgayXuat']));
                         <p class="flex justify-between mb-2">
                             <span class="text-gray-600"><i class="fas fa-box" style="color: #10B981;"></i> Mã vật tư:</span>
                             <span class="font-medium"><?php echo htmlspecialchars($phieuXuat['MaVatTu']); ?></span>
-                        </p>
-                        <p class="flex justify-between mb-2">
-                            <span class="text-gray-600"><i class="fas fa-code" style="color: #3B82F6;"></i> Mã số mẹ:</span>
-                            <span class="font-medium"><?php echo htmlspecialchars($phieuXuat['MaSoMe'] ?? 'N/A'); ?></span>
-                        </p>
+                        </p>                      
                         <p class="flex justify-between mb-2">
                             <span class="text-gray-600"><i class="fas fa-info-circle" style="color: #9333EA;"></i> Trạng thái:</span>
-                            <span class="font-medium"><?php echo htmlspecialchars($phieuXuat['TrangThai'] == 1 ? 'Đang xuất' : 'Chưa xuất'); ?></span>
+                            <span class="font-medium"><?php echo htmlspecialchars($phieuXuat['TrangThai'] == 1 ? 'Đã xuất' : 'Chưa xuất'); ?></span>
                         </p>
                     </div>
 
@@ -305,9 +301,9 @@ $ngayXuat = date('d/m/Y', strtotime($phieuXuat['NgayXuat']));
                                 <?php 
                                 $stt = 1;
                                 foreach ($chiTietXuat as $ct): 
-                                    $trangThaiHienThi = ($ct['TrangThai'] == 1) ? 'Đang xuất' : 'Chưa xuất';
-                                    $trangThaiClass = ($ct['TrangThai'] == 1) ? 'text-dang-xuat' : 'text-chua-xuat';
-                                    $trangThaiIcon = ($ct['TrangThai'] == 1) ? 'fa-clock' : 'fa-times-circle';
+                                    $trangThaiHienThi = ($ct['TrangThai'] == 1) ? 'Đã xuất' : 'Chưa xuất';
+                                    $trangThaiClass = ($ct['TrangThai'] == 1) ? 'text-green-600' : 'text-red-500';
+                                    $trangThaiIcon = ($ct['TrangThai'] == 1) ? 'fa-check-circle' : 'fa-times-circle';
                                 ?>
                                     <tr class="hover:bg-red-50 transition-colors duration-200">
                                         <td class="px-6 py-4 text-sm text-gray-700"><?php echo $stt++; ?></td>                                                                                                  
@@ -335,8 +331,8 @@ $ngayXuat = date('d/m/Y', strtotime($phieuXuat['NgayXuat']));
                                 <span class="font-medium"><?php echo count($chiTietXuat); ?></span>
                             </p>
                             <p class="text-sm text-gray-600 flex justify-between mb-1">
-                                <span>Đang xuất:</span>
-                                <span class="font-medium text-yellow-600"><?php echo $phieuXuat['DangXuat']; ?> mục</span>
+                                <span>Đã xuất:</span>
+                                <span class="font-medium text-green-600"><?php echo $phieuXuat['DangXuat']; ?> mục</span>
                             </p>
                             <p class="text-sm text-gray-600 flex justify-between">
                                 <span>Chưa xuất:</span>

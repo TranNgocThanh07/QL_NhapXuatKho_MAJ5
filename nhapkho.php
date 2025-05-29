@@ -471,177 +471,203 @@ $donSanXuat = $stmt->fetchAll(PDO::FETCH_ASSOC);
             }
         }
 
-        // Gắn sự kiện cho checkbox
-        function attachCheckboxEvents() {
-            const checkboxes = document.querySelectorAll('.row-checkbox');
-            const btnXemChiTiet = document.getElementById('btnXemChiTiet');
-            const btnNhapHang = document.getElementById('btnNhapHang');
-            const btnNhapHangTon = document.getElementById('btnNhapHangTon');
-            checkboxes.forEach(checkbox => {
-                checkbox.addEventListener('change', function() {
-                    if (this.checked) {
-                        checkboxes.forEach(cb => {
-                            if (cb !== this) cb.checked = false;
-                        });
-                        btnXemChiTiet.href = `TP_NhapKho/XemChiTietDonSanXuat.php?maSoMe=${this.value}`;
-                        btnNhapHang.href = `TP_NhapKho/FormNhapKho.php?maSoMe=${this.value}`;
-                        btnNhapHangTon.href = `TP_NhapKho/FormNhapTonKho.php?maSoMe=${this.value}`;
-                    } else {
-                        btnXemChiTiet.href = '#';
-                        btnNhapHang.href = '#';
-                        btnNhapHangTon.href = '#';
-                    }
+        // Xử lý khi trang được hiển thị (bao gồm cả khi quay lại)
+window.addEventListener('pageshow', function(event) {
+    const checkboxes = document.querySelectorAll('.row-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false; // Bỏ chọn tất cả checkbox
+    });
+
+    // Đặt lại href của các nút
+    document.getElementById('btnXemChiTiet').href = '#';
+    document.getElementById('btnNhapHang').href = '#';
+    document.getElementById('btnNhapHangTon').href = '#';
+
+    // Gắn lại sự kiện cho checkbox
+    attachCheckboxEvents();
+});
+
+// Gắn sự kiện cho checkbox
+function attachCheckboxEvents() {
+    const checkboxes = document.querySelectorAll('.row-checkbox');
+    const btnXemChiTiet = document.getElementById('btnXemChiTiet');
+    const btnNhapHang = document.getElementById('btnNhapHang');
+    const btnNhapHangTon = document.getElementById('btnNhapHangTon');
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                checkboxes.forEach(cb => {
+                    if (cb !== this) cb.checked = false;
                 });
+                btnXemChiTiet.href = `TP_NhapKho/XemChiTietDonSanXuat.php?maSoMe=${this.value}`;
+                btnNhapHang.href = `TP_NhapKho/FormNhapKho.php?maSoMe=${this.value}`;
+                btnNhapHangTon.href = `TP_NhapKho/FormNhapTonKho.php?maSoMe=${this.value}`;
+            } else {
+                btnXemChiTiet.href = '#';
+                btnNhapHang.href = '#';
+                btnNhapHangTon.href = '#';
+            }
+        });
+    });
+}
+
+// Hàm để bỏ chọn tất cả checkbox
+function uncheckAllCheckboxes() {
+    const checkboxes = document.querySelectorAll('.row-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    document.getElementById('btnXemChiTiet').href = '#';
+    document.getElementById('btnNhapHang').href = '#';
+    document.getElementById('btnNhapHangTon').href = '#';
+}
+
+// Sự kiện cho nút Xem Chi Tiết
+document.getElementById('btnXemChiTiet').addEventListener('click', function(e) {
+    e.preventDefault();
+    const selected = document.querySelectorAll('.row-checkbox:checked');
+    if (selected.length === 0) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Chưa chọn dòng nào',
+            text: 'Vui lòng chọn 1 dòng để xem chi tiết!',
+        });
+        return;
+    } else if (selected.length > 1) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Chỉ được chọn 1 dòng',
+            text: 'Vui lòng chỉ chọn 1 dòng để xem chi tiết!',
+        });
+        return;
+    }
+    // Bỏ chọn tất cả checkbox trước khi chuyển hướng
+    uncheckAllCheckboxes();
+    // Chuyển hướng
+    window.location.href = `TP_NhapKho/XemChiTietDonSanXuat.php?maSoMe=${selected[0].value}`;
+});
+
+// Sự kiện cho nút Nhập Hàng
+document.getElementById('btnNhapHang').addEventListener('click', function(e) {
+    e.preventDefault();
+    const selected = document.querySelectorAll('.row-checkbox:checked');
+    if (selected.length === 0) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Chưa chọn dòng nào',
+            text: 'Vui lòng chọn 1 dòng để nhập hàng!',
+        });
+        return;
+    } else if (selected.length > 1) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Chỉ được chọn 1 dòng',
+            text: 'Vui lòng chỉ chọn 1 dòng để nhập hàng!',
+        });
+        return;
+    }
+    const maSoMe = selected[0].value;
+    const loading = document.getElementById('loading');
+    loading.style.display = 'block';
+    fetch(window.location.href, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `action=updateTrangThai&maSoMe=${encodeURIComponent(maSoMe)}`
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Network response was not ok');
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Bỏ chọn tất cả checkbox trước khi chuyển hướng
+            uncheckAllCheckboxes();
+            window.location.href = `TP_NhapKho/FormNhapKho.php?maSoMe=${maSoMe}`;
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Lỗi!',
+                text: data.error,
             });
         }
-
-        // Sự kiện cho nút Xem Chi Tiết
-        document.getElementById('btnXemChiTiet').addEventListener('click', function(e) {
-            const selected = document.querySelectorAll('.row-checkbox:checked');
-            if (selected.length === 0) {
-                e.preventDefault();
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Chưa chọn dòng nào',
-                    text: 'Vui lòng chọn 1 dòng để xem chi tiết!',
-                });
-            } else if (selected.length > 1) {
-                e.preventDefault();
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Chỉ được chọn 1 dòng',
-                    text: 'Vui lòng chỉ chọn 1 dòng để xem chi tiết!',
-                });
-            }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Lỗi!',
+            text: 'Có lỗi xảy ra: ' + error.message,
         });
+    })
+    .finally(() => {
+        loading.style.display = 'none';
+    });
+});
 
-        // Sự kiện cho nút Nhập Hàng
-        document.getElementById('btnNhapHang').addEventListener('click', function(e) {
-            e.preventDefault(); // Ngăn chuyển hướng mặc định
-            const selected = document.querySelectorAll('.row-checkbox:checked');
-
-            if (selected.length === 0) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Chưa chọn dòng nào',
-                    text: 'Vui lòng chọn 1 dòng để nhập hàng!',
-                });
-                return;
-            } else if (selected.length > 1) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Chỉ được chọn 1 dòng',
-                    text: 'Vui lòng chỉ chọn 1 dòng để nhập hàng!',
-                });
-                return;
-            }
-
-            const maSoMe = selected[0].value;
-            const loading = document.getElementById('loading');
-            loading.style.display = 'block';
-
-            // Gọi API để kiểm tra và cập nhật trạng thái
-            fetch(window.location.href, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `action=updateTrangThai&maSoMe=${encodeURIComponent(maSoMe)}`
-            })
-            .then(response => {
-                if (!response.ok) throw new Error('Network response was not ok');
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    // Chuyển hướng ngay đến FormNhapKho
-                    window.location.href = `TP_NhapKho/FormNhapKho.php?maSoMe=${maSoMe}`;
-                } else {
-                    // Hiển thị lỗi nếu thất bại
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Lỗi!',
-                        text: data.error,
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Lỗi!',
-                    text: 'Có lỗi xảy ra: ' + error.message,
-                });
-            })
-            .finally(() => {
-                loading.style.display = 'none';
+// Sự kiện cho nút Nhập Hàng Tồn
+document.getElementById('btnNhapHangTon').addEventListener('click', function(e) {
+    e.preventDefault();
+    const selected = document.querySelectorAll('.row-checkbox:checked');
+    if (selected.length === 0) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Chưa chọn dòng nào',
+            text: 'Vui lòng chọn 1 dòng để nhập hàng tồn!',
+        });
+        return;
+    } else if (selected.length > 1) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Chỉ được chọn 1 dòng',
+            text: 'Vui lòng chỉ chọn 1 dòng để nhập hàng tồn!',
+        });
+        return;
+    }
+    const maSoMe = selected[0].value;
+    const loading = document.getElementById('loading');
+    loading.style.display = 'block';
+    fetch(window.location.href, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `action=updateTrangThaiNhapTon&maSoMe=${encodeURIComponent(maSoMe)}`
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Network response was not ok');
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Bỏ chọn tất cả checkbox trước khi chuyển hướng
+            uncheckAllCheckboxes();
+            window.location.href = `TP_NhapKho/FormNhapTonKho.php?maSoMe=${maSoMe}`;
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Lỗi!',
+                text: data.error,
             });
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Lỗi!',
+            text: 'Có lỗi xảy ra: ' + error.message,
         });
+    })
+    .finally(() => {
+        loading.style.display = 'none';
+    });
+});
 
-        // Sự kiện cho nút Nhập Hàng Tồn
-        document.getElementById('btnNhapHangTon').addEventListener('click', function(e) {
-            e.preventDefault(); // Ngăn chuyển hướng mặc định
-            const selected = document.querySelectorAll('.row-checkbox:checked');
+// Các sự kiện tìm kiếm và lọc trạng thái
+document.getElementById('searchMaSoMe').addEventListener('input', debounce(() => loadPage(1), 300));
+document.getElementById('searchTenKhachHang').addEventListener('input', debounce(() => loadPage(1), 300));
+document.getElementById('filterTrangThai').addEventListener('change', () => loadPage(1));
 
-            if (selected.length === 0) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Chưa chọn dòng nào',
-                    text: 'Vui lòng chọn 1 dòng để nhập hàng tồn!',
-                });
-                return;
-            } else if (selected.length > 1) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Chỉ được chọn 1 dòng',
-                    text: 'Vui lòng chỉ chọn 1 dòng để nhập hàng tồn!',
-                });
-                return;
-            }
-
-            const maSoMe = selected[0].value;
-            const loading = document.getElementById('loading');
-            loading.style.display = 'block';
-
-            // Gọi API để kiểm tra và cập nhật trạng thái
-            fetch(window.location.href, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `action=updateTrangThaiNhapTon&maSoMe=${encodeURIComponent(maSoMe)}`
-            })
-            .then(response => {
-                if (!response.ok) throw new Error('Network response was not ok');
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    // Chuyển hướng ngay đến FormNhapTonKho
-                    window.location.href = `TP_NhapKho/FormNhapTonKho.php?maSoMe=${maSoMe}`;
-                } else {
-                    // Hiển thị lỗi nếu thất bại
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Lỗi!',
-                        text: data.error,
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Lỗi!',
-                    text: 'Có lỗi xảy ra: ' + error.message,
-                });
-            })
-            .finally(() => {
-                loading.style.display = 'none';
-            });
-        });
-
-        // Gắn sự kiện tìm kiếm, lọc trạng thái và nút
-        document.getElementById('searchMaSoMe').addEventListener('input', debounce(() => loadPage(1), 300));
-        document.getElementById('searchTenKhachHang').addEventListener('input', debounce(() => loadPage(1), 300));
-        document.getElementById('filterTrangThai').addEventListener('change', () => loadPage(1));
-        attachCheckboxEvents();
+// Gắn sự kiện ban đầu cho checkbox
+attachCheckboxEvents();
     </script>
 </body>
 </html>

@@ -1,9 +1,10 @@
 <?php
 require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../vendor/tecnickcom/tcpdf/tcpdf.php';
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
-use Mpdf\Mpdf;
 
+// Hàm gửi lỗi
 function sendError($message, $exception = null) {
     $errorMsg = $message;
     if ($exception) {
@@ -14,297 +15,430 @@ function sendError($message, $exception = null) {
     exit;
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'generatePDF') {
-    include('../db_config.php'); // Kết nối database
-
-    $pdfData = json_decode($_POST['pdfData'], true);
-    $maSoMe = $pdfData[0]['MaSoMe'] ?? '';
-
-    if (empty($pdfData) || empty($maSoMe)) {
-        sendError("Dữ liệu đầu vào không đủ hoặc rỗng (thiếu pdfData hoặc MaSoMe).");
-    }
-
-    // Get order information
+// Hàm tạo QR Code
+function generateQRCode($content, $size) {
     try {
-        $sqlDon = "SELECT ds.*, dvt.TenDVT
-                   FROM TP_DonSanXuat ds
-                   LEFT JOIN TP_DonViTinh dvt ON ds.MaDVT = dvt.MaDVT
-                   WHERE ds.MaSoMe = ?";
-        $stmtDon = $pdo->prepare($sqlDon);
-        $stmtDon->execute([$maSoMe]);
-        $don = $stmtDon->fetch(PDO::FETCH_ASSOC);
-        $tenDVT = $don['TenDVT'] ?? 'kg';
+        $qrCode = new QrCode($content);
+        $qrCode->setSize($size);
+        $qrCode->setMargin(2);
+        $writer = new PngWriter();
+        $result = $writer->write($qrCode);
+        return $result->getString();
     } catch (Exception $e) {
-        sendError("Lỗi khi truy vấn thông tin đơn hàng", $e);
-    }
-
-    if (!$don) {
-        sendError("Không tìm thấy đơn hàng với MaSoMe: " . htmlspecialchars($maSoMe));
-    }
-
-    // Get color name from TP_Mau
-    try {
-        $sqlMau = "SELECT TenMau FROM TP_Mau WHERE MaMau = ?";
-        $stmtMau = $pdo->prepare($sqlMau);
-        $stmtMau->execute([$pdfData[0]['MaMau']]);
-        $mau = $stmtMau->fetch(PDO::FETCH_ASSOC);
-        $tenMau = $mau['TenMau'] ?? 'N/A';
-    } catch (Exception $e) {
-        sendError("Lỗi khi truy vấn tên màu", $e);
-    }
-
-    // QR Code generation function
-    function generateQRCode($content, $size) {
-        try {
-            $qrCode = new QrCode($content);
-            $qrCode->setSize($size);
-            $qrCode->setMargin(5);
-            $writer = new PngWriter();
-            $result = $writer->write($qrCode);
-            return $result->getString();
-        } catch (Exception $e) {
-            sendError("Lỗi khi tạo QR Code", $e);
-        }
-    }
-
-    try {
-        $mpdf = new Mpdf([
-            'mode' => 'utf-8',
-            'format' => [105, 148], // A6 size in mm
-            'margin_left' => 5,
-            'margin_right' => 5,
-            'margin_top' => 5,
-            'margin_bottom' => 5,
-            'default_font' => 'arial'
-        ]);
-
-        // CSS matching C# layout
-        $css = '
-            body { font-family: Arial, sans-serif; font-size: 6pt; margin: 0; padding: 0; }
-            .main-table { width: 100%; border-collapse: collapse; }
-            .main-table td { border: none; padding: 0; }
-            .sub-table { width: 100%; border-collapse: collapse; }
-            .sub-table td { border: 1px solid black; vertical-align: middle; padding: 2mm; }
-            .qr-cell { text-align: center; }
-            .info-cell { text-align: center; }
-            .label-cell { text-align: center; }
-            .data-cell { text-align: center; font-weight: bold; }
-            .footer-info { text-align: left; font-size: 6pt; }
-            .footer-qr { text-align: center; }
-            .header-text { font-size: 11pt; font-weight: bold; margin-bottom: 2mm; }
-            .subheader-text { font-size: 8pt; font-weight: bold; }
-            .label-text { font-size: 8pt; font-weight: bold; }
-            .sublabel-text { font-size: 6pt; }
-            .qr-img { width: 20mm; height: 20mm; margin: auto; }
-            .row-height-1 { height: 40mm; }
-            .row-height-2 { height: 15mm; }
-            .row-height-3 { height: 40mm; }
-            .footer-info div { margin-bottom: 1mm; }
-            .footer-info strong { font-weight: bold; }
-            .footer-info span { font-weight: normal; }
-        ';
-
-        $html = '<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><style>' . $css . '</style></head><body>';
-
-        foreach ($pdfData as $index => $item) {
-            if (!isset($item['SoLot'], $item['SoLuong'], $item['ThanhPhan'])) {
-                continue;
-            }
-
-            if ($index > 0) {
-                $html .= '<pagebreak />';
-            }
-
-            $qrContent = "Mã đơn hàng: " . htmlspecialchars($don['MaDonHang'] ?? 'N/A') . "\n" .
-                        "Số Lot: " . htmlspecialchars($item['SoLot']) . "\n" .
-                        "Số lượng: " . number_format((float)$item['SoLuong'], 1) . " " . htmlspecialchars($tenDVT);
-            $qrCodeBinary = generateQRCode($qrContent, 100);
-            $qrCodeUrl = 'data:image/png;base64,' . base64_encode($qrCodeBinary);
-
-            $html .= '
-                <table class="main-table">
-                    <tr class="row-height-1">
-                        <td>
-                            <table class="sub-table">
-                                <tr>
-                                    <td style="width: 25%;">
-                                        <div class="qr-cell">
-                                            <img src="' . $qrCodeUrl . '" class="qr-img" alt="QR Code">
-                                        </div>
-                                    </td>
-                                    <td style="width: 75%;">
-                                        <div class="info-cell">
-                                            <div class="header-text">CÔNG TY TNHH DỆT KIM MINH ANH</div>
-                                            <div class="subheader-text">MINH ANH KNITTING CO.,LTD</div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                    <tr class="row-height-2">
-                        <td>
-                            <table class="sub-table">
-                                <tr>
-                                    <td style="width: 25%;">
-                                        <div class="label-cell"><span class="label-text">MẶT HÀNG</span><br><span class="sublabel-text">(PRODUCT NAME)</span></div>
-                                    </td>
-                                    <td style="width: 75%;">
-                                        <div class="data-cell">' . htmlspecialchars($don['MaVai'] ?? 'N/A') . ' (' . htmlspecialchars($don['TenVai'] ?? 'N/A') . ')</div>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                    <tr class="row-height-2">
-                        <td>
-                            <table class="sub-table">
-                                <tr>
-                                    <td style="width: 25%;">
-                                        <div class="label-cell"><span class="label-text">THÀNH PHẦN</span><br><span class="sublabel-text">(INGREDIENTS)</span></div>
-                                    </td>
-                                    <td style="width: 75%;">
-                                        <div class="data-cell">' . htmlspecialchars($item['ThanhPhan']) . '</div>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                    <tr class="row-height-2">
-                        <td>
-                            <table class="sub-table">
-                                <tr>
-                                    <td style="width: 25%;">
-                                        <div class="label-cell"><span class="label-text">MÀU</span><br><span class="sublabel-text">(COLOR)</span></div>
-                                    </td>
-                                    <td style="width: 75%;">
-                                        <div class="data-cell">' . htmlspecialchars($tenMau) . '</div>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                    <tr class="row-height-2">
-                        <td>
-                            <table class="sub-table">
-                                <tr>
-                                    <td style="width: 25%;">
-                                        <div class="label-cell"><span class="label-text">KHỔ</span><br><span class="sublabel-text">(SIZE)</span></div>
-                                    </td>
-                                    <td style="width: 75%;">
-                                        <div class="data-cell">' . htmlspecialchars($don['Kho'] ?? 'N/A') . '</div>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                    <tr class="row-height-2">
-                        <td>
-                            <table class="sub-table">
-                                <tr>
-                                    <td style="width: 25%;">
-                                        <div class="label-cell"><span class="label-text">MÃ VẬT TƯ</span><br><span class="sublabel-text">(SAP CODE)</span></div>
-                                    </td>
-                                    <td style="width: 75%;">
-                                        <div class="data-cell">' . htmlspecialchars($don['MaVatTu'] ?? 'N/A') . '</div>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                    <tr class="row-height-2">
-                        <td>
-                            <table class="sub-table">
-                                <tr>
-                                    <td style="width: 25%;">
-                                        <div class="label-cell"><span class="label-text">MÃ ĐƠN HÀNG</span><br><span class="sublabel-text">(ORDER CODE)</span></div>
-                                    </td>
-                                    <td style="width: 75%;">
-                                        <div class="data-cell">' . htmlspecialchars($don['MaDonHang'] ?? 'N/A') . '</div>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                    <tr class="row-height-2">
-                        <td>
-                            <table class="sub-table">
-                                <tr>
-                                    <td style="width: 25%;">
-                                        <div class="label-cell"><span class="label-text">SỐ LOT</span><br><span class="sublabel-text">(LOT NO.)</span></div>
-                                    </td>
-                                    <td style="width: 75%;">
-                                        <div class="data-cell">' . htmlspecialchars($item['SoLot']) . '</div>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                    <tr class="row-height-2">
-                        <td>
-                            <table class="sub-table">
-                                <tr>
-                                    <td style="width: 25%;">
-                                        <div class="label-cell"><span class="label-text">SỐ LƯỢNG</span><br><span class="sublabel-text">(QUANTITY)</span></div>
-                                    </td>
-                                    <td style="width: 75%;">
-                                        <div class="data-cell" style="font-size: 10pt;">' . number_format((float)$item['SoLuong'], 1) . ' ' . htmlspecialchars($tenDVT) . '</div>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                    <tr class="row-height-3">
-                        <td>
-                            <table class="sub-table">
-                                <tr>
-                                    <td style="width: 75%;">
-                                        <div class="footer-info">
-                                            <div><strong>Website:</strong> <span>www.detkimminhanh.vn</span></div>
-                                            <div><strong>Điện thoại:</strong> <span>0283 7662 408 - 083 766 3329</span></div>
-                                            <div><strong>Email:</strong> <span>td@detkimminhanh.vn; detkimminhanh@yahoo.com</span></div>
-                                            <div><strong>Địa chỉ:</strong> <span>Lô J4-J5, đường số 3, KCN Lê Minh Xuân, Bình Chánh, TP.HCM</span></div>
-                                        </div>
-                                    </td>
-                                    <td style="width: 25%;">
-                                        <div class="footer-qr">
-                                            <img src="' . $qrCodeUrl . '" class="qr-img" alt="QR Code">
-                                        </div>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                </table>';
-        }
-
-        $html .= '</body></html>';
-
-        $mpdf->WriteHTML($html);
-
-        // Add watermark
-        $watermarkPath = __DIR__ . '/../assets/LogoMinhAnh.png';
-        if (file_exists($watermarkPath)) {
-            $mpdf->SetWatermarkImage($watermarkPath, 0.2, 'P', 'P');
-            $mpdf->showWatermarkImage = true;
-        }
-
-        // Output PDF
-        $timestamp = date('YmdHis');
-        $safeMaSoMe = preg_replace('/[^A-Za-z0-9_-]/', '_', $maSoMe);
-        $pdfFileName = "Tem_NhapKho_{$safeMaSoMe}_{$timestamp}.pdf";
-
-        ob_end_clean();
-        header('Content-Type: application/pdf');
-        header('Content-Disposition: inline; filename="' . $pdfFileName . '"');
-        header('Cache-Control: private, max-age=0, must-revalidate');
-        header('Pragma: public');
-
-        $mpdf->Output($pdfFileName, 'I');
-        exit;
-
-    } catch (Throwable $e) {
-        sendError("Lỗi nghiêm trọng khi tạo hoặc xuất PDF", $e);
+        sendError("Lỗi khi tạo QR Code", $e);
     }
 }
+
+// Hàm tạo PDF Tem Hệ Thống
+function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
+    $font = 'arial';
+    $pdf->AddFont($font, '', 'arial.php');
+    $pdf->SetFont($font, '', 6);
+    $pdf->SetFont($font, 'B', 6);
+
+    foreach ($pdfData as $item) {
+        if (!isset($item['SoLot'], $item['SoLuong'], $item['TenThanhPhan'])) {
+            continue;
+        }
+
+        $pdf->AddPage();
+        $pdf->SetMargins(0, 0, 0);
+
+        $margin = 10;
+        $tableTop = $margin;
+        $tableWidth = 297.63 - 2 * $margin;
+        $tableHeight = 419.53 - 2 * $margin;
+
+        $rowHeights = array(40, 15, 15, 15, 15, 15, 15, 15, 15, 40);
+        $totalRowHeight = array_sum($rowHeights);
+        if ($totalRowHeight < $tableHeight) {
+            $heightDifference = $tableHeight - $totalRowHeight;
+            $heightIncreasePerRow = $heightDifference / count($rowHeights);
+            for ($i = 0; $i < count($rowHeights); $i++) {
+                $rowHeights[$i] += $heightIncreasePerRow;
+            }
+        }
+        $columnWidthsPerRow = array_fill(0, 8, array($tableWidth * 0.25, $tableWidth * 0.75));
+        $columnWidthsPerRow[8] = array($tableWidth * 0.25, $tableWidth * 0.50, $tableWidth * 0.25);
+        $columnWidthsPerRow[9] = array($tableWidth * 0.75, $tableWidth * 0.25);
+
+        $watermarkPath = __DIR__ . '/../assets/LogoMinhAnh.png';
+        if (file_exists($watermarkPath)) {
+            $centerX = 297.63 / 2;
+            $centerY = 419.53 / 2;
+            $watermarkWidth = 297.63 * 0.6;
+            $imgInfo = getimagesize($watermarkPath);
+            $watermarkHeight = $watermarkWidth * $imgInfo[1] / $imgInfo[0];
+            $x = $centerX - $watermarkWidth / 2;
+            $y = $centerY - $watermarkHeight / 2;
+            $pdf->SetAlpha(0.05);
+            $pdf->Image($watermarkPath, $x, $y, $watermarkWidth, $watermarkHeight);
+            $pdf->SetAlpha(1);
+        }
+
+        $currentY = $tableTop;
+        $padding = 4;
+        $paddingCell = 5.5;
+        $paddingInfo = 5;
+        $QRpadding = 2;
+
+        for ($row = 0; $row < 10; $row++) {
+            $rowHeight = $rowHeights[$row];
+            $y = $currentY;
+            $currentX = $margin;
+            $currentColumnWidths = $columnWidthsPerRow[$row];
+
+            $pdf->SetLineWidth(1);
+            $pdf->Line($margin, $y, $margin + $tableWidth, $y);
+
+            for ($col = 0; $col < count($currentColumnWidths); $col++) {
+                $colWidth = $currentColumnWidths[$col];
+                $cellX = $currentX;
+                $cellY = $y;
+                $cellWidth = $colWidth;
+                $cellHeight = $rowHeight;
+
+                $pdf->SetLineWidth(1);
+                $pdf->Rect($cellX, $cellY, $cellWidth, $cellHeight, 'D');
+
+                switch ($row) {
+                    case 0:
+                        if ($col == 0) {
+                            $qrContent = $item['MaQR'] ?? ($don['MaDonHang'] . "\nSố Lot: " . $item['SoLot'] . "\nSố lượng: " . number_format((float)$item['SoLuong'], 1) . " " . $tenDVT);
+                            $qrCodeBinary = generateQRCode($qrContent, 100);
+                            $qrPath = __DIR__ . '/temp_qr_' . uniqid() . '.png';
+                            file_put_contents($qrPath, $qrCodeBinary);
+                            $qrSize = min($cellWidth, $cellHeight) - 2 * $QRpadding;
+                            $qrX = $cellX + ($cellWidth - $qrSize) / 2;
+                            $qrY = $cellY + ($cellHeight - $qrSize) / 2;
+                            $pdf->Image($qrPath, $qrX, $qrY, $qrSize, $qrSize);
+                            unlink($qrPath);
+                        } elseif ($col == 1) {
+                            $pdf->SetFont($font, 'B', 10);
+                            $pdf->Text($cellX, $cellY + $paddingInfo + 12, 'CÔNG TY TNHH DỆT KIM MINH ANH', false, false, true, 0, 0, 'C');
+                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->Text($cellX, $cellY + $paddingInfo + 28, 'MINH ANH KNITTING CO.,LTD', false, false, true, 0, 0, 'C');
+                        }
+                        break;
+                    case 1:
+                        if ($col == 0) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, 'MẶT HÀNG', 0, 'C', false, 1, $cellX, $cellY + $paddingCell);
+                            $pdf->SetFont($font, 'B', 6);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, '(PRODUCT NAME)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
+                        } elseif ($col == 1) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $tenVai = $don['TenVai'];
+                            if (strpos($tenVai, $don['MaVai'] . ' (') === 0) {
+                                $tenVai = preg_replace('/^' . preg_quote($don['MaVai'], '/') . '\s*\(/', '(', $tenVai);
+                            }
+                            $tenVai = preg_match('/\((.*?)\)/', $tenVai, $matches) ? $matches[1] : $tenVai;
+                            $output = ($tenVai !== $don['MaVai']) ? $don['MaVai'] . " (" . $tenVai . ")" : $don['MaVai'];
+                            $pdf->MultiCell($cellWidth, $cellHeight, $output, 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
+                        }
+                        break;
+                    case 2:
+                        if ($col == 0) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, 'THÀNH PHẦN', 0, 'C', false, 1, $cellX, $cellY + $paddingCell);
+                            $pdf->SetFont($font, 'B', 6);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, '(INGREDIENTS)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
+                        } elseif ($col == 1) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->MultiCell($cellWidth, $cellHeight, $item['TenThanhPhan'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
+                        }
+                        break;
+                    case 3:
+                        if ($col == 0) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, 'MÀU', 0, 'C', false, 1, $cellX, $cellY + $paddingCell);
+                            $pdf->SetFont($font, 'B', 6);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, '(COLOR)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
+                        } elseif ($col == 1) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $displayTenMau = strpos($tenMau, '*') !== false ? substr($tenMau, 0, strpos($tenMau, '*')) : $tenMau;
+                            $pdf->MultiCell($cellWidth, $cellHeight, trim($displayTenMau), 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
+                        }
+                        break;
+                    case 4:
+                        if ($col == 0) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, 'KHỔ', 0, 'C', false, 1, $cellX, $cellY + $paddingCell);
+                            $pdf->SetFont($font, 'B', 6);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, '(SIZE)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
+                        } elseif ($col == 1) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->MultiCell($cellWidth, $cellHeight, $item['Kho'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
+                        }
+                        break;
+                    case 5:
+                        if ($col == 0) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, 'MÃ VẬT TƯ', 0, 'C', false, 1, $cellX, $cellY + $paddingCell);
+                            $pdf->SetFont($font, 'B', 6);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, '(SAP CODE)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
+                        } elseif ($col == 1) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->MultiCell($cellWidth, $cellHeight, $item['MaVatTu'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
+                        }
+                        break;
+                    case 6:
+                        if ($col == 0) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, 'MÃ ĐƠN HÀNG', 0, 'C', false, 1, $cellX, $cellY + $paddingCell);
+                            $pdf->SetFont($font, 'B', 6);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, '(ORDER CODE)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
+                        } elseif ($col == 1) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->MultiCell($cellWidth, $cellHeight, $item['MaDonHang'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
+                        }
+                        break;
+                    case 7:
+                        if ($col == 0) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, 'SỐ LOT', 0, 'C', false, 1, $cellX, $cellY + $paddingCell);
+                            $pdf->SetFont($font, 'B', 6);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, '(LOT NO.)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
+                        } elseif ($col == 1) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->MultiCell($cellWidth, $cellHeight, $item['SoLot'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
+                        }
+                        break;
+                    case 8:
+                        if ($col == 0) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, 'SỐ LƯỢNG', 0, 'C', false, 1, $cellX, $cellY + $paddingCell);
+                            $pdf->SetFont($font, 'B', 6);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, '(QUANTITY)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
+                        } elseif ($col == 1) {
+                            $pdf->SetFont($font, 'B', 10);
+                            $pdf->MultiCell($cellWidth, $cellHeight, number_format((float)$item['SoLuong'], 1) . " " . $tenDVT, 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
+                        } elseif ($col == 2) {
+                            $pdf->SetFont($font, 'B', 10);
+                            $soKgCanDisplay = isset($item['SoKgCan']) && $item['SoKgCan'] !== null ? "≈" . " " . number_format((float)$item['SoKgCan'], 1) . " KG" : '';
+                            $pdf->MultiCell($cellWidth, $cellHeight, $soKgCanDisplay, 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
+                        }
+                        break;
+                    case 9:
+                        if ($col == 0) {
+                            $pdf->SetFont($font, 'B', 6);
+                            $pdf->MultiCell($cellWidth, 0, "Website: ", 0, 'L', false, 0, $cellX + $padding, $cellY + $padding);
+                            $pdf->SetFont($font, '', 6);
+                            $pdf->MultiCell($cellWidth - 20, 0, "www.detkimminhanh.vn", 0, 'L', false, 1, $cellX + $padding + 25, $cellY + $padding);
+                            $pdf->SetFont($font, 'B', 6);
+                            $pdf->MultiCell($cellWidth, 0, "Điện thoại: ", 0, 'L', false, 0, $cellX + $padding, $cellY + $padding + 10);
+                            $pdf->SetFont($font, '', 6);
+                            $pdf->MultiCell($cellWidth - 20, 0, "0283 7662 408 - 083 766 3329", 0, 'L', false, 1, $cellX + $padding + 30, $cellY + $padding + 10);
+                            $pdf->SetFont($font, 'B', 6);
+                            $pdf->MultiCell($cellWidth, 0, "Email: ", 0, 'L', false, 0, $cellX + $padding, $cellY + $padding + 20);
+                            $pdf->SetFont($font, '', 6);
+                            $pdf->MultiCell($cellWidth - 20, 0, "td@detkimminhanh.vn; detkimminhanh@yahoo.com", 0, 'L', false, 1, $cellX + $padding + 20, $cellY + $padding + 20);
+                            $pdf->SetFont($font, 'B', 6);
+                            $pdf->MultiCell($cellWidth, 0, "Địa chỉ: ", 0, 'L', false, 0, $cellX + $padding, $cellY + $padding + 30);
+                            $pdf->SetFont($font, '', 6);
+                            $pdf->MultiCell($cellWidth - 20, 0, "Lô J4-J5, đường số 3, KCN Lê Minh Xuân, Bình Chánh, TP.HCM", 0, 'L', false, 1, $cellX + $padding + 22, $cellY + $padding + 30);
+                        } elseif ($col == 1) {
+                            $qrContent = $item['MaQR'] ?? ($don['MaDonHang'] . "\nSố Lot: " . $item['SoLot'] . "\nSố lượng: " . number_format((float)$item['SoLuong'], 1) . " " . $tenDVT);
+                            $qrCodeBinary = generateQRCode($qrContent, 100);
+                            $qrPath = __DIR__ . '/temp_qr_' . uniqid() . '.png';
+                            file_put_contents($qrPath, $qrCodeBinary);
+                            $qrSize = min($cellWidth, $cellHeight) - 2 * $QRpadding;
+                            $qrX = $cellX + ($cellWidth - $qrSize) / 2;
+                            $qrY = $cellY + ($cellHeight - $qrSize) / 2;
+                            $pdf->Image($qrPath, $qrX, $qrY, $qrSize, $qrSize);
+                            unlink($qrPath);
+                        }
+                        break;
+                }
+
+                $currentX += $colWidth;
+            }
+
+            $pdf->SetLineWidth(1);
+            $pdf->Line($margin, $currentY + $rowHeight, $margin + $tableWidth, $currentY + $rowHeight);
+            $currentY += $rowHeight;
+        }
+    }
+}
+
+// Hàm tạo PDF Tem Khách Lẻ
+function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
+    $font = 'timesbd';
+    $pdf->AddFont($font, '', 'timesbd.php');
+    $pdf->SetFont($font, '', 6);
+    $pdf->SetFont($font, 'B', 6);
+
+    foreach ($pdfData as $item) {
+        if (!isset($item['SoLot'], $item['SoLuong'], $item['TenThanhPhan'])) {
+            continue;
+        }
+
+        $pdf->AddPage();
+        $margin = 10;
+        $tableTop = $margin;
+        $tableWidth = 297.63 - 2 * $margin;
+        $tableHeight = 419.53 - 2 * $margin;
+
+        $rowHeights = array(40, 15, 15, 15, 15, 15, 15, 40);
+        $totalRowHeight = array_sum($rowHeights);
+        if ($totalRowHeight < $tableHeight) {
+            $heightDifference = $tableHeight - $totalRowHeight;
+            $heightIncreasePerRow = $heightDifference / count($rowHeights);
+            for ($i = 0; $i < count($rowHeights); $i++) {
+                $rowHeights[$i] += $heightIncreasePerRow;
+            }
+        }
+
+        $columnWidthsPerRow = array(
+            array($tableWidth * 0.25, $tableWidth * 0.5, $tableWidth * 0.25),
+            array($tableWidth * 0.25, $tableWidth * 0.75),
+            array($tableWidth * 0.25, $tableWidth * 0.75),
+            array($tableWidth * 0.25, $tableWidth * 0.75),
+            array($tableWidth * 0.25, $tableWidth * 0.75),
+            array($tableWidth * 0.25, $tableWidth * 0.75),
+            array($tableWidth * 0.25, $tableWidth * 0.50, $tableWidth * 0.25),
+            array($tableWidth * 0.75, $tableWidth * 0.25)
+        );
+
+        $currentY = $tableTop;
+        $padding = 4;
+        $paddingCell = 5.5;
+        $paddingInfo = 5;
+        $QRpadding = 2;
+
+        for ($row = 0; $row < 8; $row++) {
+            $rowHeight = $rowHeights[$row];
+            $y = $currentY;
+            $currentX = $margin;
+            $currentColumnWidths = $columnWidthsPerRow[$row];
+
+            $pdf->SetLineWidth(1);
+            $pdf->Line($margin, $y, $margin + $tableWidth, $y);
+
+            for ($col = 0; $col < count($currentColumnWidths); $col++) {
+                $colWidth = $currentColumnWidths[$col];
+                $cellX = $currentX;
+                $cellY = $y;
+                $cellWidth = $colWidth;
+                $cellHeight = $rowHeight;
+
+                $pdf->SetLineWidth(1);
+                $pdf->Rect($cellX, $cellY, $cellWidth, $cellHeight, 'D');
+
+                switch ($row) {
+                    case 0:
+                        if ($col == 0 || $col == 2) {
+                            $qrContent = $item['MaQR'] ?? ($don['MaDonHang'] . "\nSố Lot: " . $item['SoLot'] . "\nSố lượng: " . number_format((float)$item['SoLuong'], 1) . " " . $tenDVT);
+                            $qrCodeBinary = generateQRCode($qrContent, 100);
+                            $qrPath = __DIR__ . '/temp_qr_' . uniqid() . '.png';
+                            file_put_contents($qrPath, $qrCodeBinary);
+                            $qrSize = min($cellWidth, $cellHeight) - 2 * $QRpadding;
+                            $qrX = $cellX + ($cellWidth - $qrSize) / 2;
+                            $qrY = $cellY + ($cellHeight - $qrSize) / 2;
+                            $pdf->Image($qrPath, $qrX, $qrY, $qrSize, $qrSize);
+                            unlink($qrPath);
+                        }
+                        break;
+                    case 1:
+                        if ($col == 0) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, 'MẶT HÀNG', 0, 'C', false, 1, $cellX, $cellY + $paddingCell);
+                            $pdf->SetFont($font, 'B', 6);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, '(PRODUCT NAME)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
+                        } elseif ($col == 1) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $tenVai = $don['TenVai'];
+                            if (strpos($tenVai, $don['MaVai'] . ' (') === 0) {
+                                $tenVai = preg_replace('/^' . preg_quote($don['MaVai'], '/') . '\s*\(/', '(', $tenVai);
+                            }
+                            $tenVai = preg_match('/\((.*?)\)/', $tenVai, $matches) ? $matches[1] : $tenVai;
+                            $output = ($tenVai !== $don['MaVai']) ? $don['MaVai'] . " (" . $tenVai . ")" : $don['MaVai'];
+                            $pdf->MultiCell($cellWidth, $cellHeight, $output, 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
+                        }
+                        break;
+                    case 2:
+                        if ($col == 0) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, 'THÀNH PHẦN', 0, 'C', false, 1, $cellX, $cellY + $paddingCell);
+                            $pdf->SetFont($font, 'B', 6);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, '(INGREDIENTS)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
+                        } elseif ($col == 1) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->MultiCell($cellWidth, $cellHeight, $item['TenThanhPhan'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
+                        }
+                        break;
+                    case 3:
+                        if ($col == 0) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, 'MÀU', 0, 'C', false, 1, $cellX, $cellY + $paddingCell);
+                            $pdf->SetFont($font, 'B', 6);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, '(COLOR)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
+                        } elseif ($col == 1) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $displayTenMau = strpos($tenMau, '*') !== false ? substr($tenMau, 0, strpos($tenMau, '*')) : $tenMau;
+                            $pdf->MultiCell($cellWidth, $cellHeight, trim($displayTenMau), 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
+                        }
+                        break;
+                    case 4:
+                        if ($col == 0) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, 'KHỔ', 0, 'C', false, 1, $cellX, $cellY + $paddingCell);
+                            $pdf->SetFont($font, 'B', 6);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, '(SIZE)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
+                        } elseif ($col == 1) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->MultiCell($cellWidth, $cellHeight, $item['Kho'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
+                        }
+                        break;
+                    case 5:
+                        if ($col == 0) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, 'SỐ LOT', 0, 'C', false, 1, $cellX, $cellY + $paddingCell);
+                            $pdf->SetFont($font, 'B', 6);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, '(LOT NO.)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
+                        } elseif ($col == 1) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->MultiCell($cellWidth, $cellHeight, $item['SoLot'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
+                        }
+                        break;
+                    case 6:
+                        if ($col == 0) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, 'SỐ LƯỢNG', 0, 'C', false, 1, $cellX, $cellY + $paddingCell);
+                            $pdf->SetFont($font, 'B', 6);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, '(QUANTITY)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
+                        } elseif ($col == 1) {
+                            $pdf->SetFont($font, 'B', 10);
+                            $pdf->MultiCell($cellWidth, $cellHeight, number_format((float)$item['SoLuong'], 1) . " " . $tenDVT, 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
+                        } elseif ($col == 2) {
+                            $pdf->SetFont($font, 'B', 10);
+                            $soKgCanDisplay = isset($item['SoKgCan']) && $item['SoKgCan'] !== null ? "≈" . " " . number_format((float)$item['SoKgCan'], 1) . " KG" : '';
+                            $pdf->MultiCell($cellWidth, $cellHeight, $soKgCanDisplay, 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
+                        }
+                        break;
+                    case 7:
+                        if ($col == 1) {
+                            $qrContent = $item['MaQR'] ?? ($don['MaDonHang'] . "\nSố Lot: " . $item['SoLot'] . "\nSố lượng: " . number_format((float)$item['SoLuong'], 1) . " " . $tenDVT);
+                            $qrCodeBinary = generateQRCode($qrContent, 100);
+                            $qrPath = __DIR__ . '/temp_qr_' . uniqid() . '.png';
+                            file_put_contents($qrPath, $qrCodeBinary);
+                            $qrSize = min($cellWidth, $cellHeight) - 2 * $QRpadding;
+                            $qrX = $cellX + ($cellWidth - $qrSize) / 2;
+                            $qrY = $cellY + ($cellHeight - $qrSize) / 2;
+                            $pdf->Image($qrPath, $qrX, $qrY, $qrSize, $qrSize);
+                            unlink($qrPath);
+                        }
+                        break;
+                }
+
+                $currentX += $colWidth;
+            }
+
+            $pdf->SetLineWidth(1);
+            $pdf->Line($margin, $currentY + $rowHeight, $margin + $tableWidth, $currentY + $rowHeight);
+            $currentY += $rowHeight;
+        }
+    }
+}
+
 ?>

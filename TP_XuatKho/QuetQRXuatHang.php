@@ -18,6 +18,7 @@ try {
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         header('Content-Type: application/json');
 
+        
         if ($_POST['action'] === 'updateStatus') {
             $maCTXHTP = $_POST['maCTXHTP'] ?? '';
             if (empty($maCTXHTP)) {
@@ -367,16 +368,12 @@ $chiTietXuatWithQR = array_map(function($ct) {
             font-size: 0.75rem;
             font-weight: 500;
         }
-        .scan-button {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
+        .scan-button {                      
             background: var(--success-color);
             color: white;
-            padding: 0.75rem 1.5rem;
+            padding: 0.75rem 1rem;
             border-radius: 9999px;
-            box-shadow: 0 6px 15px rgba(52, 199, 89, 0.3);
-            z-index:10;
+            box-shadow: 0 6px 15px rgba(52, 199, 89, 0.3);       
             transition: all 0.2s ease;
         }
         .scan-button:hover {
@@ -508,8 +505,7 @@ $chiTietXuatWithQR = array_map(function($ct) {
                         </p>
                     </div>
                 </div>
-                
-
+            
                 <!-- Progress Section -->
                 <div class="">
                     <h3 class="section-title text-lg font-bold text-gray-800 flex items-center ml-5">
@@ -555,10 +551,15 @@ $chiTietXuatWithQR = array_map(function($ct) {
 
                 <!-- Details Table -->
                 <div class="card ">
-                    <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 mt-5">
-                        <i class="fas fa-list text-red-500 ml-5"></i> Chi Tiết Xuất Hàng
-                        <span class="badge bg-red-100 text-red-700"><?php echo count($chiTietXuat); ?> cây</span>
-                    </h3>
+                   <div class="flex justify-between items-center mb-4 mt-5 px-5">
+                        <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                            <i class="fas fa-list text-red-500"></i> Chi Tiết Xuất Hàng
+                            <!-- <span class="badge bg-red-100 text-red-700"><?php echo count($chiTietXuat); ?> cây</span> -->
+                        </h3>
+                        <button id="btnQuetMa" class="scan-button flex items-center gap-2">
+                            <i class="fas fa-qrcode"></i> Quét Mã QR
+                        </button>
+                    </div>                   
                     <div class="data-table-container card-shadow">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead>
@@ -647,16 +648,14 @@ $chiTietXuatWithQR = array_map(function($ct) {
     </div>
 
     <!-- Scan Button -->
-    <button id="btnQuetMa" class="scan-button flex items-center gap-2">
-        <i class="fas fa-qrcode"></i> Quét Mã QR
-    </button>
+    
 
     <!-- <div id="logArea" class="fixed bottom-0 left-0 w-full bg-gray-900 text-white p-4 max-h-40 overflow-y-auto z-50 hidden">
         <h4 class="text-sm font-bold mb-2">Log Debug:</h4>
         <div id="logContent" class="text-xs"></div>
     </div> -->
 
-    <script>
+<script>
 document.addEventListener('DOMContentLoaded', function() {
     let html5QrCode = null;
     let currentCameraId = null;
@@ -688,100 +687,88 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateStatus(maCTXHTP) {
-    fetch(window.location.href, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `action=updateStatus&maCTXHTP=${encodeURIComponent(maCTXHTP)}`
-    })
-    .then(response => {
-        if (!response.ok) throw new Error('Lỗi kết nối server');
-        return response.json();
-    })
-    .then(data => {
-        console.log('Dữ liệu từ server:', data); // Debug dữ liệu
-        if (data.success) {
-            // Cập nhật trạng thái trong bảng chi tiết
-            const row = document.querySelector(`tr[data-ma-ctxhtp="${maCTXHTP}"] td:nth-child(5) span`);
-            if (row) {
-                row.className = 'text-da-xuat font-medium flex items-center gap-1 px-3 py-1 rounded-full border bg-green-50 border-green-200';
-                row.innerHTML = '<i class="fas fa-check-circle"></i> Đã xuất';
-            }
+        fetch(window.location.href, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `action=updateStatus&maCTXHTP=${encodeURIComponent(maCTXHTP)}`
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Lỗi kết nối server');
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                const row = document.querySelector(`tr[data-ma-ctxhtp="${maCTXHTP}"] td:nth-child(5) span`);
+                if (row) {
+                    row.className = 'text-da-xuat font-medium flex items-center gap-1 px-3 py-1 rounded-full border bg-green-50 border-green-200';
+                    row.innerHTML = '<i class="fas fa-check-circle"></i> Đã xuất';
+                }
 
-            // Lấy dữ liệu từ AJAX
-            const newDaXuat = parseInt(data.soLuongDaXuat || 0, 10);
-            const newTongXuat = parseInt(data.tongSoLuongXuat || 0, 10);
-            const newConLai = parseInt(data.soLuongConLai || 0, 10);
+                const newDaXuat = parseInt(data.soLuongDaXuat || 0, 10);
+                const newTongXuat = parseInt(data.tongSoLuongXuat || 0, 10);
+                const newConLai = parseInt(data.soLuongConLai || 0, 10);
 
-            // Cập nhật ô thống kê
-            const tongXuatElement = document.querySelector('.stat-card:nth-child(1) .text-xl');
-            const daXuatElement = document.querySelector('.stat-card:nth-child(2) .text-xl');
-            const conLaiElement = document.querySelector('.stat-card:nth-child(3) .text-xl');
-            if (tongXuatElement) tongXuatElement.textContent = newTongXuat.toLocaleString('vi-VN');
-            if (daXuatElement) daXuatElement.textContent = newDaXuat.toLocaleString('vi-VN');
-            if (conLaiElement) conLaiElement.textContent = newConLai.toLocaleString('vi-VN');
+                const tongXuatElement = document.querySelector('.stat-card:nth-child(1) .text-xl');
+                const daXuatElement = document.querySelector('.stat-card:nth-child(2) .text-xl');
+                const conLaiElement = document.querySelector('.stat-card:nth-child(3) .text-xl');
+                if (tongXuatElement) tongXuatElement.textContent = newTongXuat.toLocaleString('vi-VN');
+                if (daXuatElement) daXuatElement.textContent = newDaXuat.toLocaleString('vi-VN');
+                if (conLaiElement) conLaiElement.textContent = newConLai.toLocaleString('vi-VN');
 
-            // Cập nhật thanh tiến độ
-            const progressPercent = document.getElementById('progressPercent');
-            const progressText = document.getElementById('progressText');
-            const progressValue = document.querySelector('.progress-value');
+                const progressPercent = document.getElementById('progressPercent');
+                const progressText = document.getElementById('progressText');
+                const progressValue = document.querySelector('.progress-value');
 
-            const newPercent = newTongXuat > 0 ? (newDaXuat / newTongXuat * 100).toFixed(1) : 0;
-            if (progressPercent) progressPercent.textContent = `${newPercent}%`;
-            if (progressText) {
-                progressText.innerHTML = `
-                    <i class="fas fa-box-open text-indigo-400 mr-2"></i>
-                    ${newDaXuat.toLocaleString('vi-VN')} / ${newTongXuat.toLocaleString('vi-VN')} ${tenDVT}
-                `;
-            }
-            if (progressValue) {
-                progressValue.style.width = `${newPercent}%`;
-                progressValue.classList.toggle('pulse', newPercent < 100);
-            }
+                const newPercent = newTongXuat > 0 ? (newDaXuat / newTongXuat * 100).toFixed(1) : 0;
+                if (progressPercent) progressPercent.textContent = `${newPercent}%`;
+                if (progressText) {
+                    progressText.innerHTML = `
+                        <i class="fas fa-box-open text-indigo-400 mr-2"></i>
+                        ${newDaXuat.toLocaleString('vi-VN')} / ${newTongXuat.toLocaleString('vi-VN')} ${tenDVT}
+                    `;
+                }
+                if (progressValue) {
+                    progressValue.style.width = `${newPercent}%`;
+                    progressValue.classList.toggle('pulse', newPercent < 100);
+                }
 
-            // Gửi yêu cầu cập nhật DaGiao và ConLai trong bảng TP_DonSanXuat
-            fetch(window.location.href, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `action=updateDonSanXuat&maCTXHTP=${encodeURIComponent(maCTXHTP)}`
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Thông báo thành công
-                    showNotification(
-                        `Quét chi tiết thành công! Tổng: ${newTongXuat.toLocaleString('vi-VN')} ${tenDVT}, Đã xuất: ${newDaXuat.toLocaleString('vi-VN')} ${tenDVT}, Còn lại: ${newConLai.toLocaleString('vi-VN')} ${tenDVT}`,
-                        'success'
-                    );
+                fetch(window.location.href, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `action=updateDonSanXuat&maCTXHTP=${encodeURIComponent(maCTXHTP)}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification(
+                            `Quét chi tiết thành công! Tổng: ${newTongXuat.toLocaleString('vi-VN')} ${tenDVT}, Đã xuất: ${newDaXuat.toLocaleString('vi-VN')} ${tenDVT}, Còn lại: ${newConLai.toLocaleString('vi-VN')} ${tenDVT}`,
+                            'success'
+                        );
 
-                    // Hoàn thành đơn hàng
-                    if (data.remaining === 0) {
-                        setTimeout(() => {
+                        if (data.remaining === 0) {
                             showNotification(
-                                `Đã quét thành công toàn bộ đơn xuất hàng! Tổng: ${newTongXuat.toLocaleString('vi-VN')} ${tenDVT}, Đã xuất: ${newDaXuat.toLocaleString('vi-VN')} ${tenDVT}, Còn lại: ${newConLai.toLocaleString('vi-VN')} ${tenDVT}`,
+                                `Đã quét thành công toàn bộ đơn xuất hàng!`,
                                 'success'
                             );
                             updateOrderStatus();
                             stopScanner();
                             document.getElementById('scannerModal').classList.add('hidden');
-                        }, 500);
+                        }
+                    } else {
+                        showNotification(data.message || 'Lỗi khi cập nhật đơn sản xuất', 'error');
                     }
-                } else {
-                    showNotification(data.message || 'Lỗi khi cập nhật đơn sản xuất', 'error');
-                }
-            })
-            .catch(err => {
-                console.error('Lỗi fetch updateDonSanXuat:', err);
-                showNotification('Lỗi khi cập nhật đơn sản xuất: ' + err.message, 'error');
-            });
-        } else {
-            showNotification(data.message || 'Lỗi khi cập nhật trạng thái', 'error');
-        }
-    })
-    .catch(err => {
-        console.error('Lỗi fetch:', err);
-        showNotification('Lỗi: ' + err.message, 'error');
-    });
-}
+                })
+                .catch(err => {
+                    showNotification('Lỗi khi cập nhật đơn sản xuất: ' + err.message, 'error');
+                });
+            } else {
+                showNotification(data.message || 'Lỗi khi cập nhật trạng thái', 'error');
+            }
+        })
+        .catch(err => {
+            showNotification('Lỗi: ' + err.message, 'error');
+        });
+    }
 
     function updateOrderStatus() {
         if (!maXuatHang) {
@@ -806,7 +793,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.getElementById('btnQuetMa').addEventListener('click', function() {
         if (isOrderCompleted()) {
-            showNotification('Đơn đã hoàn thành!', 'error');
+            showNotification('Đơn đã hoàn thành!', 'success');
             return;
         }
         document.getElementById('scannerModal').classList.remove('hidden');
@@ -862,10 +849,17 @@ document.addEventListener('DOMContentLoaded', function() {
             const qrGuide = document.getElementById('qrGuide');
             if (qrGuide) qrGuide.innerHTML = '<p>Camera đã sẵn sàng. Nhấn "Quét" để bắt đầu quét mã QR</p>';
             document.getElementById('scanButton').disabled = false;
+            document.getElementById('scanButton').classList.remove('bg-gray-500');
+            document.getElementById('scanButton').classList.add('bg-green-600', 'hover:bg-green-700');
         }).catch(err => {
             const qrGuide = document.getElementById('qrGuide');
             if (qrGuide) qrGuide.innerHTML = '<p>Lỗi khởi động camera: ' + err + '</p>';
             showNotification('Không thể khởi động camera: ' + err, 'error');
+            // Đảm bảo nút Quét được kích hoạt lại ngay cả khi khởi động camera thất bại
+            isScanning = false;
+            document.getElementById('scanButton').disabled = false;
+            document.getElementById('scanButton').classList.remove('bg-gray-500');
+            document.getElementById('scanButton').classList.add('bg-green-600', 'hover:bg-green-700');
         });
     }
 
@@ -878,7 +872,20 @@ document.addEventListener('DOMContentLoaded', function() {
                     document.getElementById('scanButton').classList.remove('bg-gray-500');
                     document.getElementById('scanButton').classList.add('bg-green-600', 'hover:bg-green-700');
                 })
-                .catch(() => {});
+                .catch(err => {
+                    showNotification('Lỗi khi dừng scanner: ' + err.message, 'error');
+                    // Đảm bảo trạng thái được đặt lại ngay cả khi dừng scanner thất bại
+                    isScanning = false;
+                    document.getElementById('scanButton').disabled = false;
+                    document.getElementById('scanButton').classList.remove('bg-gray-500');
+                    document.getElementById('scanButton').classList.add('bg-green-600', 'hover:bg-green-700');
+                });
+        } else {
+            // Nếu scanner không hoạt động, vẫn đặt lại trạng thái
+            isScanning = false;
+            document.getElementById('scanButton').disabled = false;
+            document.getElementById('scanButton').classList.remove('bg-gray-500');
+            document.getElementById('scanButton').classList.add('bg-green-600', 'hover:bg-green-700');
         }
     }
 
@@ -896,7 +903,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function startScanOnce() {
         if (isScanning) return;
         if (isOrderCompleted()) {
-            showNotification('Đơn đã hoàn thành!', 'error');
+            showNotification('Đơn đã hoàn thành!', 'success');
             return;
         }
         const qrGuide = document.getElementById('qrGuide');
@@ -920,21 +927,38 @@ document.addEventListener('DOMContentLoaded', function() {
             (decodedText) => {
                 html5QrCode.stop().then(() => onScanSuccess(decodedText));
             },
-            () => {}
+            (errorMessage) => {
+                // Xử lý lỗi quét (ví dụ: không nhận diện được mã QR)
+                isScanning = false;
+                document.getElementById('scanButton').disabled = false;
+                document.getElementById('scanButton').classList.remove('bg-gray-500');
+                document.getElementById('scanButton').classList.add('bg-green-600', 'hover:bg-green-700');
+                const qrGuide = document.getElementById('qrGuide');
+                if (qrGuide) qrGuide.innerHTML = '<p>Không nhận diện được mã QR! Nhấn "Quét" để thử lại.</p>';
+                showNotification('Vui lòng quét một mã QR hợp lệ!', 'error');
+                startCameraPreview(); // Khởi động lại preview
+            }
         ).catch(err => {
             const qrGuide = document.getElementById('qrGuide');
             if (qrGuide) qrGuide.innerHTML = '<p>Lỗi bắt đầu quét: ' + err + '</p>';
+            showNotification('Không thể bắt đầu quét: ' + err, 'error');
             isScanning = false;
             document.getElementById('scanButton').disabled = false;
             document.getElementById('scanButton').classList.remove('bg-gray-500');
             document.getElementById('scanButton').classList.add('bg-green-600', 'hover:bg-green-700');
-            showNotification('Không thể bắt đầu quét: ' + err, 'error');
+            startCameraPreview();
         });
     }
 
     function onScanSuccess(decodedText) {
         decodedText = decodedText.trim();
         const qrGuide = document.getElementById('qrGuide');
+        // Đặt lại trạng thái nút Quét
+        isScanning = false;
+        document.getElementById('scanButton').disabled = false;
+        document.getElementById('scanButton').classList.remove('bg-gray-500');
+        document.getElementById('scanButton').classList.add('bg-green-600', 'hover:bg-green-700');
+
         if (decodedText.length > 0) {
             const matchingIndices = [];
             chiTietList.forEach((maQR, index) => {
@@ -961,13 +985,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (qrGuide) qrGuide.innerHTML = '<p>QR không khớp! Nhấn "Quét" để thử lại.</p>';
             }
         } else {
-            showNotification('Vui lòng đưa vào mã QR để quét', 'error');
+            showNotification('Vui lòng quét một mã QR hợp lệ!', 'error');
             if (qrGuide) qrGuide.innerHTML = '<p>Không phải mã QR! Nhấn "Quét" để thử lại.</p>';
         }
-        isScanning = false;
-        document.getElementById('scanButton').disabled = false;
-        document.getElementById('scanButton').classList.remove('bg-gray-500');
-        document.getElementById('scanButton').classList.add('bg-green-600', 'hover:bg-green-700');
         startCameraPreview();
     }
 });

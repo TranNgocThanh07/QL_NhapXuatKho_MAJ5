@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
         $tenNhanVien = isset($_POST['tenNhanVien']) ? "%" . $_POST['tenNhanVien'] . "%" : "%";
         $tenKhachHang = isset($_POST['tenKhachHang']) ? "%" . $_POST['tenKhachHang'] . "%" : "%";
-        $trangThaiFilter = isset($_POST['trangThai']) && in_array($_POST['trangThai'], ['chua_xuat', 'dang_xuat']) ? $_POST['trangThai'] : 'chua_xuat';
+        $trangThaiFilter = isset($_POST['trangThai']) && in_array($_POST['trangThai'], ['chua_xuat', 'dang_xuat', 'hoan_tat']) ? $_POST['trangThai'] : 'chua_xuat';
 
         // Đếm tổng số bản ghi
         $sqlCount = "SELECT COUNT(DISTINCT xh.MaXuatHang) as total 
@@ -20,18 +20,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     LEFT JOIN TP_ChiTietXuatHang ct ON xh.MaXuatHang = ct.MaXuatHang
                     LEFT JOIN NhanVien nv ON xh.MaNhanVien = nv.MaNhanVien
                     LEFT JOIN TP_KhachHang kh ON xh.MaKhachHang = kh.MaKhachHang
-                    WHERE xh.TrangThai = 0 
-                    AND nv.TenNhanVien LIKE :tenNhanVien
+                    WHERE nv.TenNhanVien LIKE :tenNhanVien
                     AND kh.TenKhachHang LIKE :tenKhachHang";
         if ($trangThaiFilter === 'chua_xuat') {
-            $sqlCount .= " AND NOT EXISTS (
+            $sqlCount .= " AND xh.TrangThai = 0 AND NOT EXISTS (
                             SELECT 1 
                             FROM TP_ChiTietXuatHang ct2 
                             WHERE ct2.MaXuatHang = xh.MaXuatHang 
                             AND ct2.TrangThai = 1
                           )";
         } elseif ($trangThaiFilter === 'dang_xuat') {
-            $sqlCount .= " AND EXISTS (
+            $sqlCount .= " AND xh.TrangThai = 0 AND EXISTS (
                             SELECT 1 
                             FROM TP_ChiTietXuatHang ct2 
                             WHERE ct2.MaXuatHang = xh.MaXuatHang 
@@ -43,6 +42,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             WHERE ct3.MaXuatHang = xh.MaXuatHang 
                             AND ct3.TrangThai = 0
                           )";
+        } elseif ($trangThaiFilter === 'hoan_tat') {
+            $sqlCount .= " AND xh.TrangThai = 1";
         }
         $stmtCount = $pdo->prepare($sqlCount);
         $stmtCount->bindValue(':tenNhanVien', $tenNhanVien, PDO::PARAM_STR);
@@ -62,18 +63,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 LEFT JOIN NhanVien nv ON xh.MaNhanVien = nv.MaNhanVien
                 LEFT JOIN TP_KhachHang kh ON xh.MaKhachHang = kh.MaKhachHang
                 LEFT JOIN TP_DonViTinh dvt ON ct.MaDVT = dvt.MaDVT
-                WHERE xh.TrangThai = 0 
-                AND nv.TenNhanVien LIKE :tenNhanVien
+                WHERE nv.TenNhanVien LIKE :tenNhanVien
                 AND kh.TenKhachHang LIKE :tenKhachHang";
         if ($trangThaiFilter === 'chua_xuat') {
-            $sql .= " AND NOT EXISTS (
+            $sql .= " AND xh.TrangThai = 0 AND NOT EXISTS (
                         SELECT 1 
                         FROM TP_ChiTietXuatHang ct2 
                         WHERE ct2.MaXuatHang = xh.MaXuatHang 
                         AND ct2.TrangThai = 1
                     )";
         } elseif ($trangThaiFilter === 'dang_xuat') {
-            $sql .= " AND EXISTS (
+            $sql .= " AND xh.TrangThai = 0 AND EXISTS (
                         SELECT 1 
                         FROM TP_ChiTietXuatHang ct2 
                         WHERE ct2.MaXuatHang = xh.MaXuatHang 
@@ -85,6 +85,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         WHERE ct3.MaXuatHang = xh.MaXuatHang 
                         AND ct3.TrangThai = 0
                     )";
+        } elseif ($trangThaiFilter === 'hoan_tat') {
+            $sql .= " AND xh.TrangThai = 1";
         }
         $sql .= " GROUP BY xh.MaXuatHang, nv.TenNhanVien, kh.TenKhachHang, xh.NgayXuat, xh.TrangThai, xh.GhiChu, dvt.TenDVT
                 ORDER BY xh.NgayXuat DESC
@@ -118,7 +120,7 @@ include 'header.php';
 $recordsPerPage = 10;
 $page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
 $offset = ($page - 1) * $recordsPerPage;
-$trangThaiFilter = isset($_GET['trangThai']) && in_array($_GET['trangThai'], ['chua_xuat', 'dang_xuat']) ? $_GET['trangThai'] : 'chua_xuat';
+$trangThaiFilter = isset($_GET['trangThai']) && in_array($_GET['trangThai'], ['chua_xuat', 'dang_xuat', 'hoan_tat']) ? $_GET['trangThai'] : 'chua_xuat';
 $tenKhachHang = isset($_GET['tenKhachHang']) ? "%" . $_GET['tenKhachHang'] . "%" : "%";
 
 // Lấy dữ liệu ban đầu
@@ -127,17 +129,17 @@ $sqlCount = "SELECT COUNT(DISTINCT xh.MaXuatHang) as total
              LEFT JOIN TP_ChiTietXuatHang ct ON xh.MaXuatHang = ct.MaXuatHang
              LEFT JOIN NhanVien nv ON xh.MaNhanVien = nv.MaNhanVien
              LEFT JOIN TP_KhachHang kh ON xh.MaKhachHang = kh.MaKhachHang
-             WHERE xh.TrangThai = 0
+             WHERE nv.TenNhanVien LIKE :tenNhanVien
              AND kh.TenKhachHang LIKE :tenKhachHang";
 if ($trangThaiFilter === 'chua_xuat') {
-    $sqlCount .= " AND NOT EXISTS (
+    $sqlCount .= " AND xh.TrangThai = 0 AND NOT EXISTS (
                     SELECT 1 
                     FROM TP_ChiTietXuatHang ct2 
                     WHERE ct2.MaXuatHang = xh.MaXuatHang 
                     AND ct2.TrangThai = 1
                   )";
 } elseif ($trangThaiFilter === 'dang_xuat') {
-    $sqlCount .= " AND EXISTS (
+    $sqlCount .= " AND xh.TrangThai = 0 AND EXISTS (
                     SELECT 1 
                     FROM TP_ChiTietXuatHang ct2 
                     WHERE ct2.MaXuatHang = xh.MaXuatHang 
@@ -149,8 +151,11 @@ if ($trangThaiFilter === 'chua_xuat') {
                     WHERE ct3.MaXuatHang = xh.MaXuatHang 
                     AND ct3.TrangThai = 0
                   )";
+} elseif ($trangThaiFilter === 'hoan_tat') {
+    $sqlCount .= " AND xh.TrangThai = 1";
 }
 $stmtCount = $pdo->prepare($sqlCount);
+$stmtCount->bindValue(':tenNhanVien', '%', PDO::PARAM_STR); // Mặc định tìm tất cả nhân viên
 $stmtCount->bindValue(':tenKhachHang', $tenKhachHang, PDO::PARAM_STR);
 $stmtCount->execute();
 $totalRecords = $stmtCount->fetch(PDO::FETCH_ASSOC)['total'];
@@ -166,17 +171,17 @@ $sql = "SELECT xh.MaXuatHang, nv.TenNhanVien, kh.TenKhachHang, xh.NgayXuat, xh.T
         LEFT JOIN NhanVien nv ON xh.MaNhanVien = nv.MaNhanVien
         LEFT JOIN TP_KhachHang kh ON xh.MaKhachHang = kh.MaKhachHang
         LEFT JOIN TP_DonViTinh dvt ON ct.MaDVT = dvt.MaDVT
-        WHERE xh.TrangThai = 0
+        WHERE nv.TenNhanVien LIKE :tenNhanVien
         AND kh.TenKhachHang LIKE :tenKhachHang";
 if ($trangThaiFilter === 'chua_xuat') {
-    $sql .= " AND NOT EXISTS (
+    $sql .= " AND xh.TrangThai = 0 AND NOT EXISTS (
                 SELECT 1 
                 FROM TP_ChiTietXuatHang ct2 
                 WHERE ct2.MaXuatHang = xh.MaXuatHang 
                 AND ct2.TrangThai = 1
               )";
 } elseif ($trangThaiFilter === 'dang_xuat') {
-    $sql .= " AND EXISTS (
+    $sql .= " AND xh.TrangThai = 0 AND EXISTS (
                 SELECT 1 
                 FROM TP_ChiTietXuatHang ct2 
                 WHERE ct2.MaXuatHang = xh.MaXuatHang 
@@ -188,12 +193,15 @@ if ($trangThaiFilter === 'chua_xuat') {
                 WHERE ct3.MaXuatHang = xh.MaXuatHang 
                 AND ct3.TrangThai = 0
               )";
+} elseif ($trangThaiFilter === 'hoan_tat') {
+    $sql .= " AND xh.TrangThai = 1";
 }
 $sql .= " GROUP BY xh.MaXuatHang, nv.TenNhanVien, kh.TenKhachHang, xh.NgayXuat, xh.TrangThai, xh.GhiChu, dvt.TenDVT
           ORDER BY xh.NgayXuat DESC
           OFFSET :offset ROWS 
           FETCH NEXT :limit ROWS ONLY";
 $stmt = $pdo->prepare($sql);
+$stmt->bindValue(':tenNhanVien', '%', PDO::PARAM_STR); // Mặc định tìm tất cả nhân viên
 $stmt->bindValue(':tenKhachHang', $tenKhachHang, PDO::PARAM_STR);
 $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
 $stmt->bindValue(':limit', $recordsPerPage, PDO::PARAM_INT);
@@ -279,6 +287,7 @@ $xuatHang = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <select id="filterTrangThai" class="p-3 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-300 shadow-sm">
                             <option value="chua_xuat" <?php echo $trangThaiFilter === 'chua_xuat' ? 'selected' : ''; ?>>Đơn Hàng Chưa Xuất</option>
                             <option value="dang_xuat" <?php echo $trangThaiFilter === 'dang_xuat' ? 'selected' : ''; ?>>Đơn Hàng Đang Xuất</option>
+                            <option value="hoan_tat" <?php echo $trangThaiFilter === 'hoan_tat' ? 'selected' : ''; ?>>Đơn Hàng Đã Hoàn Tất</option>
                         </select>
                     </div>
                 </div>
@@ -290,7 +299,7 @@ $xuatHang = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </a>
                     <a id="btnXuatHang" href="#" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-full shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-300">
                         <i class="fas fa-arrow-circle-up mr-2"></i> Xuất Hàng
-                    </a>                  
+                    </a>
                 </div>
 
                 <!-- Danh sách phiếu xuất -->
@@ -318,7 +327,7 @@ $xuatHang = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             ?>
                                 <tr class="hover:bg-red-50 transition-colors duration-200">
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                                        <input type="checkbox" class="row-checkbox" value="<?php echo htmlspecialchars($xh['MaXuatHang']); ?>">
+                                        <input type="checkbox" class="row-checkbox" style="width: 20px; height: 20px;" value="<?php echo htmlspecialchars($xh['MaXuatHang']); ?>">
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><?php echo $stt++; ?></td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><?php echo htmlspecialchars($xh['MaXuatHang']); ?></td>
@@ -367,158 +376,222 @@ $xuatHang = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <?php include 'footer.php'; ?>
 
     <script>
-        let currentPage = <?php echo $page; ?>;
+       let currentPage = <?php echo $page; ?>;
 
-        function debounce(func, wait) {
-            let timeout;
-            return function (...args) {
-                clearTimeout(timeout);
-                timeout = setTimeout(() => func.apply(this, args), wait);
-            };
-        }
+// Hàm debounce để tránh gọi API quá nhanh
+function debounce(func, wait) {
+    let timeout;
+    return function (...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}
 
-        function loadPage(page) {
-            const tenNhanVien = document.getElementById('searchTenNhanVien').value;
-            const tenKhachHang = document.getElementById('searchTenKhachHang').value;
-            const trangThai = document.getElementById('filterTrangThai').value;
-            const loading = document.getElementById('loading');
+// Ẩn/hiện nút Xuất Hàng dựa trên bộ lọc trạng thái
+function toggleButtonsBasedOnFilter() {
+    const trangThai = document.getElementById('filterTrangThai').value;
+    const btnXuatHang = document.getElementById('btnXuatHang');
+    if (trangThai === 'hoan_tat') {
+        btnXuatHang.style.display = 'none';
+    } else {
+        btnXuatHang.style.display = 'inline-flex';
+    }
+}
 
-            loading.style.display = 'block';
+// Hàm để bỏ chọn tất cả checkbox
+function uncheckAllCheckboxes() {
+    const checkboxes = document.querySelectorAll('.row-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    document.getElementById('btnXemChiTiet').href = '#';
+    document.getElementById('btnXuatHang').href = '#';
+}
 
-            fetch(window.location.href, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `action=getData&page=${page}&tenNhanVien=${encodeURIComponent(tenNhanVien)}&tenKhachHang=${encodeURIComponent(tenKhachHang)}&trangThai=${trangThai}`
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (!data.success) throw new Error(data.error);
-                updateTable(data.data, data.offset);
-                updatePagination(data.totalPages, data.currentPage);
-                currentPage = data.currentPage;
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Có lỗi xảy ra: ' + error.message);
-            })
-            .finally(() => {
-                loading.style.display = 'none';
-            });
-        }
+// Xử lý khi trang được hiển thị (bao gồm cả khi quay lại)
+window.addEventListener('pageshow', function(event) {
+    uncheckAllCheckboxes();
+    attachCheckboxEvents();
+});
 
-        function updateTable(data, offset) {
-            const tbody = document.getElementById('xuatHangTable');
-            tbody.innerHTML = '';
-            let stt = offset + 1;
-            data.forEach(xh => {
-                const trangThaiHienThi = (xh.DangXuat > 0) ? 'Đang xuất' : 'Chưa xuất';
-                const trangThaiClass = (xh.DangXuat > 0) ? 'text-amber-600' : 'text-red-600';
-                const row = document.createElement('tr');
-                row.className = 'hover:bg-red-50 transition-colors duration-200';
-                row.innerHTML = `
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                        <input type="checkbox" class="row-checkbox" value="${xh.MaXuatHang}">
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${stt++}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${xh.MaXuatHang}</td>
-                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${xh.TenKhachHang}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${xh.TenNhanVien}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${xh.NgayXuat}</td>
-                    <td class="px-6 py-4 text-sm ${trangThaiClass} whitespace-nowrap">${trangThaiHienThi}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${Number(xh.TongSoLuongXuat).toLocaleString('vi-VN')} ${xh.TenDVT}</td>
-                `;
-                tbody.appendChild(row);
-            });
-            attachCheckboxEvents();
-        }
+// Gọi API để tải dữ liệu
+function loadPage(page) {
+    const tenNhanVien = document.getElementById('searchTenNhanVien').value;
+    const tenKhachHang = document.getElementById('searchTenKhachHang').value;
+    const trangThai = document.getElementById('filterTrangThai').value;
+    const loading = document.getElementById('loading');
 
-        function updatePagination(totalPages, currentPage) {
-            const pagination = document.getElementById('pagination');
-            pagination.innerHTML = '';
+    loading.style.display = 'block';
 
-            if (currentPage > 1) {
-                const prevButton = document.createElement('button');
-                prevButton.className = 'px-4 py-2 bg-gray-200 text-gray-700 rounded-full hover:bg-gray-300 transition-all duration-300';
-                prevButton.innerHTML = '<i class="fas fa-chevron-left"></i>';
-                prevButton.onclick = () => loadPage(currentPage - 1);
-                pagination.appendChild(prevButton);
-            }
+    fetch(window.location.href, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `action=getData&page=${page}&tenNhanVien=${encodeURIComponent(tenNhanVien)}&tenKhachHang=${encodeURIComponent(tenKhachHang)}&trangThai=${trangThai}`
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Network response was not ok');
+        return response.json();
+    })
+    .then(data => {
+        if (!data.success) throw new Error(data.error || 'Unknown error');
+        updateTable(data.data, data.offset);
+        updatePagination(data.totalPages, data.currentPage);
+        currentPage = data.currentPage;
+        toggleButtonsBasedOnFilter();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Lỗi!',
+            text: 'Có lỗi xảy ra: ' + error.message,
+        });
+    })
+    .finally(() => {
+        loading.style.display = 'none';
+    });
+}
 
-            for (let i = 1; i <= totalPages; i++) {
-                const pageButton = document.createElement('button');
-                pageButton.className = `px-4 py-2 ${i === currentPage ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700'} rounded-full hover:bg-red-500 hover:text-white transition-all duration-300`;
-                pageButton.textContent = i;
-                pageButton.onclick = () => loadPage(i);
-                pagination.appendChild(pageButton);
-            }
+// Cập nhật bảng dữ liệu
+function updateTable(data, offset) {
+    const tbody = document.getElementById('xuatHangTable');
+    tbody.innerHTML = '';
+    let stt = offset + 1;
+    data.forEach(xh => {
+        const trangThaiHienThi = xh.TrangThai == 1 ? 'Hoàn tất' : (xh.DangXuat > 0 ? 'Đang xuất' : 'Chưa xuất');
+        const trangThaiClass = xh.TrangThai == 1 ? 'text-green-600' : (xh.DangXuat > 0 ? 'text-amber-600' : 'text-red-600');
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-red-50 transition-colors duration-200';
+        row.innerHTML = `
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                <input type="checkbox" class="row-checkbox" style="width: 20px; height: 20px;" value="${xh.MaXuatHang}">
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${stt++}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${xh.MaXuatHang}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${xh.TenKhachHang}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${xh.TenNhanVien}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${new Date(xh.NgayXuat).toLocaleDateString('vi-VN')}</td>
+            <td class="px-6 py-4 text-sm ${trangThaiClass} whitespace-nowrap">${trangThaiHienThi}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${Number(xh.TongSoLuongXuat).toLocaleString('vi-VN')} ${xh.TenDVT}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${xh.GhiChu}</td>
+        `;
+        tbody.appendChild(row);
+    });
+    attachCheckboxEvents();
+}
 
-            if (currentPage < totalPages) {
-                const nextButton = document.createElement('button');
-                nextButton.className = 'px-4 py-2 bg-gray-200 text-gray-700 rounded-full hover:bg-gray-300 transition-all duration-300';
-                nextButton.innerHTML = '<i class="fas fa-chevron-right"></i>';
-                nextButton.onclick = () => loadPage(currentPage + 1);
-                pagination.appendChild(nextButton);
-            }
-        }
+// Cập nhật phân trang
+function updatePagination(totalPages, currentPage) {
+    const pagination = document.getElementById('pagination');
+    pagination.innerHTML = '';
 
-        function attachCheckboxEvents() {
-            const checkboxes = document.querySelectorAll('.row-checkbox');
-            const btnXemChiTiet = document.getElementById('btnXemChiTiet');
-            const btnXuatHang = document.getElementById('btnXuatHang');
-            checkboxes.forEach(checkbox => {
-                checkbox.addEventListener('change', function() {
-                    if (this.checked) {
-                        checkboxes.forEach(cb => {
-                            if (cb !== this) cb.checked = false;
-                        });
-                        btnXemChiTiet.href = `TP_XuatKho/XemChiTietXuatHang.php?maXuatHang=${this.value}`;                       
-                        btnXuatHang.href = `TP_XuatKho/QuetQRXuatHang.php?maXuatHang=${this.value}`;                     
-                    } else {
-                        btnXemChiTiet.href = '#';                 
-                        btnXuatHang.href = '#';                   
-                    }
+    if (currentPage > 1) {
+        const prevButton = document.createElement('button');
+        prevButton.className = 'px-4 py-2 bg-gray-200 text-gray-700 rounded-full hover:bg-gray-300 transition-all duration-300';
+        prevButton.innerHTML = '<i class="fas fa-chevron-left"></i>';
+        prevButton.onclick = () => loadPage(currentPage - 1);
+        pagination.appendChild(prevButton);
+    }
+
+    for (let i = 1; i <= totalPages; i++) {
+        const pageButton = document.createElement('button');
+        pageButton.className = `px-4 py-2 ${i === currentPage ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700'} rounded-full hover:bg-red-500 hover:text-white transition-all duration-300`;
+        pageButton.textContent = i;
+        pageButton.onclick = () => loadPage(i);
+        pagination.appendChild(pageButton);
+    }
+
+    if (currentPage < totalPages) {
+        const nextButton = document.createElement('button');
+        nextButton.className = 'px-4 py-2 bg-gray-200 text-gray-700 rounded-full hover:bg-gray-300 transition-all duration-300';
+        nextButton.innerHTML = '<i class="fas fa-chevron-right"></i>';
+        nextButton.onclick = () => loadPage(currentPage + 1);
+        pagination.appendChild(nextButton);
+    }
+}
+
+// Gắn sự kiện cho checkbox
+function attachCheckboxEvents() {
+    const checkboxes = document.querySelectorAll('.row-checkbox');
+    const btnXemChiTiet = document.getElementById('btnXemChiTiet');
+    const btnXuatHang = document.getElementById('btnXuatHang');
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                checkboxes.forEach(cb => {
+                    if (cb !== this) cb.checked = false;
                 });
-            });
-        }
-
-        document.getElementById('searchTenNhanVien').addEventListener('input', debounce(() => loadPage(1), 300));
-        document.getElementById('searchTenKhachHang').addEventListener('input', debounce(() => loadPage(1), 300));
-        document.getElementById('filterTrangThai').addEventListener('change', () => loadPage(1));
-        attachCheckboxEvents();
-
-        document.getElementById('btnXemChiTiet').addEventListener('click', function() {
-            const selected = document.querySelectorAll('.row-checkbox:checked');
-            if (selected.length === 0) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Chưa chọn dòng nào',
-                    text: 'Vui lòng chọn 1 dòng để xem chi tiết!',
-                });
-            } else if (selected.length > 1) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Chỉ được chọn 1 dòng',
-                    text: 'Vui lòng chỉ chọn 1 dòng để xem chi tiết!',
-                });
+                btnXemChiTiet.href = `TP_XuatKho/XemChiTietXuatHang.php?maXuatHang=${this.value}`;
+                btnXuatHang.href = `TP_XuatKho/QuetQRXuatHang.php?maXuatHang=${this.value}`;
+            } else {
+                btnXemChiTiet.href = '#';
+                btnXuatHang.href = '#';
             }
         });
+    });
+}
 
-        document.getElementById('btnXuatHang').addEventListener('click', function() {
-            const selected = document.querySelectorAll('.row-checkbox:checked');
-            if (selected.length === 0) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Chưa chọn dòng nào',
-                    text: 'Vui lòng chọn 1 dòng để xuất hàng!',
-                });
-            } else if (selected.length > 1) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Chỉ được chọn 1 dòng',
-                    text: 'Vui lòng chỉ chọn 1 dòng để xuất hàng!',
-                });
-            }
+// Sự kiện cho nút Xem Chi Tiết
+document.getElementById('btnXemChiTiet').addEventListener('click', function(e) {
+    e.preventDefault();
+    const selected = document.querySelectorAll('.row-checkbox:checked');
+    if (selected.length === 0) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Chưa chọn dòng nào',
+            text: 'Vui lòng chọn 1 dòng để xem chi tiết!',
         });
+        return;
+    } else if (selected.length > 1) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Chỉ được chọn 1 dòng',
+            text: 'Vui lòng chỉ chọn 1 dòng để xem chi tiết!',
+        });
+        return;
+    }
+    // Bỏ chọn tất cả checkbox trước khi chuyển hướng
+    uncheckAllCheckboxes();
+    // Chuyển hướng
+    window.location.href = `TP_XuatKho/XemChiTietXuatHang.php?maXuatHang=${selected[0].value}`;
+});
+
+// Sự kiện cho nút Xuất Hàng
+document.getElementById('btnXuatHang').addEventListener('click', function(e) {
+    e.preventDefault();
+    const selected = document.querySelectorAll('.row-checkbox:checked');
+    if (selected.length === 0) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Chưa chọn dòng nào',
+            text: 'Vui lòng chọn 1 dòng để xuất hàng!',
+        });
+        return;
+    } else if (selected.length > 1) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Chỉ được chọn 1 dòng',
+            text: 'Vui lòng chỉ chọn 1 dòng để xuất hàng!',
+        });
+        return;
+    }
+    // Bỏ chọn tất cả checkbox trước khi chuyển hướng
+    uncheckAllCheckboxes();
+    // Chuyển hướng
+    window.location.href = `TP_XuatKho/QuetQRXuatHang.php?maXuatHang=${selected[0].value}`;
+});
+
+// Gắn sự kiện tìm kiếm và lọc trạng thái
+document.getElementById('searchTenNhanVien').addEventListener('input', debounce(() => loadPage(1), 300));
+document.getElementById('searchTenKhachHang').addEventListener('input', debounce(() => loadPage(1), 300));
+document.getElementById('filterTrangThai').addEventListener('change', () => {
+    loadPage(1);
+    toggleButtonsBasedOnFilter();
+});
+
+// Gắn sự kiện ban đầu cho checkbox và cập nhật trạng thái nút
+attachCheckboxEvents();
+toggleButtonsBasedOnFilter();
     </script>
 </body>
 </html>

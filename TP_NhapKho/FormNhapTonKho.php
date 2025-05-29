@@ -43,7 +43,7 @@ function generateQRCode($content, $size) {
     }
 }
 
-// Hàm tạo PDF Tem Hệ Thống (giữ nguyên từ code cũ)
+// Hàm tạo PDF Tem Hệ Thống
 function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
     $font = 'arial';
     $pdf->AddFont($font, '', 'arial.php');
@@ -56,6 +56,8 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
         }
 
         $pdf->AddPage();
+        $pdf->SetMargins(0, 0, 0);
+
         $margin = 10;
         $tableTop = $margin;
         $tableWidth = 297.63 - 2 * $margin;
@@ -70,8 +72,8 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                 $rowHeights[$i] += $heightIncreasePerRow;
             }
         }
-        $columnWidthsPerRow = array_fill(0, 10, array($tableWidth * 0.25, $tableWidth * 0.75));
-        $columnWidthsPerRow[8] = array($tableWidth * 0.25, $tableWidth * 0.50, $tableWidth * 0.25); // Hàng 8: 25% cho tiêu đề, 37.5% cho SoLuong, 37.5% cho SoKgCan
+        $columnWidthsPerRow = array_fill(0, 8, array($tableWidth * 0.25, $tableWidth * 0.75));
+        $columnWidthsPerRow[8] = array($tableWidth * 0.25, $tableWidth * 0.50, $tableWidth * 0.25);
         $columnWidthsPerRow[9] = array($tableWidth * 0.75, $tableWidth * 0.25);
 
         $watermarkPath = __DIR__ . '/../assets/LogoMinhAnh.png';
@@ -83,7 +85,7 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
             $watermarkHeight = $watermarkWidth * $imgInfo[1] / $imgInfo[0];
             $x = $centerX - $watermarkWidth / 2;
             $y = $centerY - $watermarkHeight / 2;
-            $pdf->SetAlpha(0.6);
+            $pdf->SetAlpha(0.05);
             $pdf->Image($watermarkPath, $x, $y, $watermarkWidth, $watermarkHeight);
             $pdf->SetAlpha(1);
         }
@@ -100,16 +102,18 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
             $currentX = $margin;
             $currentColumnWidths = $columnWidthsPerRow[$row];
 
+            $pdf->SetLineWidth(1);
             $pdf->Line($margin, $y, $margin + $tableWidth, $y);
 
             for ($col = 0; $col < count($currentColumnWidths); $col++) {
                 $colWidth = $currentColumnWidths[$col];
-                $pdf->Line($currentX, $y, $currentX, $y + $rowHeight);
-
                 $cellX = $currentX;
                 $cellY = $y;
                 $cellWidth = $colWidth;
                 $cellHeight = $rowHeight;
+
+                $pdf->SetLineWidth(1);
+                $pdf->Rect($cellX, $cellY, $cellWidth, $cellHeight, 'D');
 
                 switch ($row) {
                     case 0:
@@ -131,25 +135,21 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                         }
                         break;
                     case 1:
-                            if ($col == 0) {
-                                $pdf->SetFont($font, 'B', 8);
-                                $pdf->MultiCell($cellWidth, $cellHeight / 2, 'MẶT HÀNG', 0, 'C', false, 1, $cellX, $cellY + $paddingCell);
-                                $pdf->SetFont($font, 'B', 6);
-                                $pdf->MultiCell($cellWidth, $cellHeight / 2, '(PRODUCT NAME)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
-                            } elseif ($col == 1) {
-                                $pdf->SetFont($font, 'B', 8);
-                                // Xử lý tên sản phẩm
-                                $tenVai = $don['TenVai'];
-                                // Trường hợp 1: Loại bỏ mã lặp trong tên nếu có
-                                if (strpos($tenVai, $don['MaVai'] . ' (') === 0) {
-                                    $tenVai = preg_replace('/^' . preg_quote($don['MaVai'], '/') . '\s*\(/', '(', $tenVai);
-                                }
-                                // Lấy phần trong ngoặc nếu có, hoặc giữ nguyên tên
-                                $tenVai = preg_match('/\((.*?)\)/', $tenVai, $matches) ? $matches[1] : $tenVai;
-                                // Nếu tên khác mã, thêm ngoặc; nếu giống mã, chỉ giữ mã
-                                $output = ($tenVai !== $don['MaVai']) ? $don['MaVai'] . " (" . $tenVai . ")" : $don['MaVai'];
-                                $pdf->MultiCell($cellWidth, $cellHeight, $output, 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
+                        if ($col == 0) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, 'MẶT HÀNG', 0, 'C', false, 1, $cellX, $cellY + $paddingCell);
+                            $pdf->SetFont($font, 'B', 6);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, '(PRODUCT NAME)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
+                        } elseif ($col == 1) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $tenVai = $don['TenVai'];
+                            if (strpos($tenVai, $don['MaVai'] . ' (') === 0) {
+                                $tenVai = preg_replace('/^' . preg_quote($don['MaVai'], '/') . '\s*\(/', '(', $tenVai);
                             }
+                            $tenVai = preg_match('/\((.*?)\)/', $tenVai, $matches) ? $matches[1] : $tenVai;
+                            $output = ($tenVai !== $don['MaVai']) ? $don['MaVai'] . " (" . $tenVai . ")" : $don['MaVai'];
+                            $pdf->MultiCell($cellWidth, $cellHeight, $output, 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
+                        }
                         break;
                     case 2:
                         if ($col == 0) {
@@ -170,7 +170,6 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->MultiCell($cellWidth, $cellHeight / 2, '(COLOR)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
                         } elseif ($col == 1) {
                             $pdf->SetFont($font, 'B', 8);
-                            // Lấy dữ liệu trước (*)
                             $displayTenMau = strpos($tenMau, '*') !== false ? substr($tenMau, 0, strpos($tenMau, '*')) : $tenMau;
                             $pdf->MultiCell($cellWidth, $cellHeight, trim($displayTenMau), 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         }
@@ -216,24 +215,23 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->MultiCell($cellWidth, $cellHeight / 2, '(LOT NO.)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
                         } elseif ($col == 1) {
                             $pdf->SetFont($font, 'B', 8);
-                            $pdf->MultiCell($cellWidth, $cellHeight, $item['SoLot'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);                        
+                            $pdf->MultiCell($cellWidth, $cellHeight, $item['SoLot'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         }
                         break;
-                        case 8:
-                            if ($col == 0) {
-                                $pdf->SetFont($font, 'B', 8);
-                                $pdf->MultiCell($cellWidth, $cellHeight / 2, 'SỐ LƯỢNG', 0, 'C', false, 1, $cellX, $cellY + $paddingCell);
-                                $pdf->SetFont($font, 'B', 6);
-                                $pdf->MultiCell($cellWidth, $cellHeight / 2, '(QUANTITY)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
-                            } elseif ($col == 1) {
-                                $pdf->SetFont($font, 'B', 10);
-                                $pdf->MultiCell($cellWidth, $cellHeight, number_format((float)$item['SoLuong'], 1) . " " . $tenDVT, 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
-                            } elseif ($col == 2) {
-                                // Thêm cột SoKgCan vào đây, hiển thị với 2 chữ số thập phân hoặc N/A nếu NULL
-                                $pdf->SetFont($font, 'B', 10);
-                                $soKgCanDisplay = isset($item['SoKgCan']) && $item['SoKgCan'] !== null ? "≈" . " " . number_format((float)$item['SoKgCan'], 1) . " KG" : '';
-                                $pdf->MultiCell($cellWidth, $cellHeight, $soKgCanDisplay, 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
-                            }
+                    case 8:
+                        if ($col == 0) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, 'SỐ LƯỢNG', 0, 'C', false, 1, $cellX, $cellY + $paddingCell);
+                            $pdf->SetFont($font, 'B', 6);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, '(QUANTITY)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
+                        } elseif ($col == 1) {
+                            $pdf->SetFont($font, 'B', 10);
+                            $pdf->MultiCell($cellWidth, $cellHeight, number_format((float)$item['SoLuong'], 1) . " " . $tenDVT, 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
+                        } elseif ($col == 2) {
+                            $pdf->SetFont($font, 'B', 10);
+                            $soKgCanDisplay = isset($item['SoKgCan']) && $item['SoKgCan'] !== null ? "≈" . " " . number_format((float)$item['SoKgCan'], 1) . " KG" : '';
+                            $pdf->MultiCell($cellWidth, $cellHeight, $soKgCanDisplay, 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
+                        }
                         break;
                     case 9:
                         if ($col == 0) {
@@ -270,15 +268,14 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                 $currentX += $colWidth;
             }
 
-            $pdf->Line($currentX, $y, $currentX, $y + $rowHeight);
+            $pdf->SetLineWidth(1);
+            $pdf->Line($margin, $currentY + $rowHeight, $margin + $tableWidth, $currentY + $rowHeight);
             $currentY += $rowHeight;
         }
-
-        $pdf->Line($margin, $currentY, $margin + $tableWidth, $currentY);
     }
 }
 
-// Hàm tạo PDF Tem Khách Lẻ (dựa trên thiết kế C#)
+// Hàm tạo PDF Tem Khách Lẻ
 function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
     $font = 'arial';
     $pdf->AddFont($font, '', 'arial.php');
@@ -296,7 +293,7 @@ function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
         $tableWidth = 297.63 - 2 * $margin;
         $tableHeight = 419.53 - 2 * $margin;
 
-        $rowHeights = array(40, 15, 15, 15, 15, 15, 15, 40); // 8 hàng
+        $rowHeights = array(40, 15, 15, 15, 15, 15, 15, 40);
         $totalRowHeight = array_sum($rowHeights);
         if ($totalRowHeight < $tableHeight) {
             $heightDifference = $tableHeight - $totalRowHeight;
@@ -306,16 +303,15 @@ function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
             }
         }
 
-        // Cập nhật cấu trúc cột: Thêm 3 cột cho hàng 6 để chứa SoKgCan
         $columnWidthsPerRow = array(
-            array($tableWidth * 0.25, $tableWidth * 0.5, $tableWidth * 0.25), // Hàng 0: 3 cột cho QR trái, giữa, QR phải
-            array($tableWidth * 0.25, $tableWidth * 0.75), // Hàng 1
-            array($tableWidth * 0.25, $tableWidth * 0.75), // Hàng 2
-            array($tableWidth * 0.25, $tableWidth * 0.75), // Hàng 3
-            array($tableWidth * 0.25, $tableWidth * 0.75), // Hàng 4
-            array($tableWidth * 0.25, $tableWidth * 0.75), // Hàng 5
-            array($tableWidth * 0.25, $tableWidth * 0.50, $tableWidth * 0.25), // Hàng 6: 3 cột (25% tiêu đề, 37.5% SoLuong, 37.5% SoKgCan)
-            array($tableWidth * 0.75, $tableWidth * 0.25)  // Hàng 7
+            array($tableWidth * 0.25, $tableWidth * 0.5, $tableWidth * 0.25),
+            array($tableWidth * 0.25, $tableWidth * 0.75),
+            array($tableWidth * 0.25, $tableWidth * 0.75),
+            array($tableWidth * 0.25, $tableWidth * 0.75),
+            array($tableWidth * 0.25, $tableWidth * 0.75),
+            array($tableWidth * 0.25, $tableWidth * 0.75),
+            array($tableWidth * 0.25, $tableWidth * 0.50, $tableWidth * 0.25),
+            array($tableWidth * 0.75, $tableWidth * 0.25)
         );
 
         $currentY = $tableTop;
@@ -330,20 +326,22 @@ function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
             $currentX = $margin;
             $currentColumnWidths = $columnWidthsPerRow[$row];
 
+            $pdf->SetLineWidth(1);
             $pdf->Line($margin, $y, $margin + $tableWidth, $y);
 
             for ($col = 0; $col < count($currentColumnWidths); $col++) {
                 $colWidth = $currentColumnWidths[$col];
-                $pdf->Line($currentX, $y, $currentX, $y + $rowHeight);
-
                 $cellX = $currentX;
                 $cellY = $y;
                 $cellWidth = $colWidth;
                 $cellHeight = $rowHeight;
 
+                $pdf->SetLineWidth(1);
+                $pdf->Rect($cellX, $cellY, $cellWidth, $cellHeight, 'D');
+
                 switch ($row) {
                     case 0:
-                        if ($col == 0 || $col == 2) { // QR ở góc trên bên trái và trên bên phải
+                        if ($col == 0 || $col == 2) {
                             $qrContent = $item['MaQR'] ?? ($don['MaDonHang'] . "\nSố Lot: " . $item['SoLot'] . "\nSố lượng: " . number_format((float)$item['SoLuong'], 1) . " " . $tenDVT);
                             $qrCodeBinary = generateQRCode($qrContent, 100);
                             $qrPath = __DIR__ . '/temp_qr_' . uniqid() . '.png';
@@ -355,26 +353,22 @@ function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             unlink($qrPath);
                         }
                         break;
-                     case 1:
-                            if ($col == 0) {
-                                $pdf->SetFont($font, 'B', 8);
-                                $pdf->MultiCell($cellWidth, $cellHeight / 2, 'MẶT HÀNG', 0, 'C', false, 1, $cellX, $cellY + $paddingCell);
-                                $pdf->SetFont($font, 'B', 6);
-                                $pdf->MultiCell($cellWidth, $cellHeight / 2, '(PRODUCT NAME)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
-                            } elseif ($col == 1) {
-                                $pdf->SetFont($font, 'B', 8);
-                                // Xử lý tên sản phẩm
-                                $tenVai = $don['TenVai'];
-                                // Trường hợp 1: Loại bỏ mã lặp trong tên nếu có
-                                if (strpos($tenVai, $don['MaVai'] . ' (') === 0) {
-                                    $tenVai = preg_replace('/^' . preg_quote($don['MaVai'], '/') . '\s*\(/', '(', $tenVai);
-                                }
-                                // Lấy phần trong ngoặc nếu có, hoặc giữ nguyên tên
-                                $tenVai = preg_match('/\((.*?)\)/', $tenVai, $matches) ? $matches[1] : $tenVai;
-                                // Nếu tên khác mã, thêm ngoặc; nếu giống mã, chỉ giữ mã
-                                $output = ($tenVai !== $don['MaVai']) ? $don['MaVai'] . " (" . $tenVai . ")" : $don['MaVai'];
-                                $pdf->MultiCell($cellWidth, $cellHeight, $output, 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
+                    case 1:
+                        if ($col == 0) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, 'MẶT HÀNG', 0, 'C', false, 1, $cellX, $cellY + $paddingCell);
+                            $pdf->SetFont($font, 'B', 6);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, '(PRODUCT NAME)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
+                        } elseif ($col == 1) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $tenVai = $don['TenVai'];
+                            if (strpos($tenVai, $don['MaVai'] . ' (') === 0) {
+                                $tenVai = preg_replace('/^' . preg_quote($don['MaVai'], '/') . '\s*\(/', '(', $tenVai);
                             }
+                            $tenVai = preg_match('/\((.*?)\)/', $tenVai, $matches) ? $matches[1] : $tenVai;
+                            $output = ($tenVai !== $don['MaVai']) ? $don['MaVai'] . " (" . $tenVai . ")" : $don['MaVai'];
+                            $pdf->MultiCell($cellWidth, $cellHeight, $output, 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
+                        }
                         break;
                     case 2:
                         if ($col == 0) {
@@ -395,7 +389,6 @@ function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->MultiCell($cellWidth, $cellHeight / 2, '(COLOR)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
                         } elseif ($col == 1) {
                             $pdf->SetFont($font, 'B', 8);
-                            // Lấy dữ liệu trước (*)
                             $displayTenMau = strpos($tenMau, '*') !== false ? substr($tenMau, 0, strpos($tenMau, '*')) : $tenMau;
                             $pdf->MultiCell($cellWidth, $cellHeight, trim($displayTenMau), 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         }
@@ -429,11 +422,9 @@ function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->SetFont($font, 'B', 6);
                             $pdf->MultiCell($cellWidth, $cellHeight / 2, '(QUANTITY)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
                         } elseif ($col == 1) {
-                            // Hiển thị giá trị SoLuong
                             $pdf->SetFont($font, 'B', 10);
                             $pdf->MultiCell($cellWidth, $cellHeight, number_format((float)$item['SoLuong'], 1) . " " . $tenDVT, 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         } elseif ($col == 2) {
-                            // Thêm cột SoKgCan vào đây, hiển thị với 2 chữ số thập phân hoặc N/A nếu NULL
                             $pdf->SetFont($font, 'B', 10);
                             $soKgCanDisplay = isset($item['SoKgCan']) && $item['SoKgCan'] !== null ? "≈" . " " . number_format((float)$item['SoKgCan'], 1) . " KG" : '';
                             $pdf->MultiCell($cellWidth, $cellHeight, $soKgCanDisplay, 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
@@ -457,11 +448,10 @@ function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                 $currentX += $colWidth;
             }
 
-            $pdf->Line($currentX, $y, $currentX, $y + $rowHeight);
+            $pdf->SetLineWidth(1);
+            $pdf->Line($margin, $currentY + $rowHeight, $margin + $tableWidth, $currentY + $rowHeight);
             $currentY += $rowHeight;
         }
-
-        $pdf->Line($margin, $currentY, $margin + $tableWidth, $currentY);
     }
 }
 
@@ -613,10 +603,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
         $pdo->commit();
 
-        $message = "Nhập kho tồn thành công!\n" .
-                   "Số lượng nhập hàng: <span style=\"color: red;\">" . number_format($tongSoLuongNhapHang, 2) . "</span> $tenDVT\n" .
-                   "Số lượng nhập tồn: <span style=\"color: red;\">" . number_format($tongSoLuongNhapTonMoi, 2) . "</span> $tenDVT\n" .
-                   "Tổng số lượng: <span style=\"color: red;\">" . number_format($tongSoLuongMoi, 2) . "</span> $tenDVT";
+        $message = "<div style=\"font-size: 14px;\">" .
+                    "Nhập kho tồn thành công!<br>" .
+                    "Số lượng nhập hàng: <span style=\"color: red;\">" . number_format($tongSoLuongNhapHang, 2) . "</span> $tenDVT<br>" .
+                    "Số lượng nhập tồn: <span style=\"color: red;\">" . number_format($tongSoLuongNhapTonMoi, 2) . "</span> $tenDVT<br>" .
+                    "Tổng số lượng: <span style=\"color: red;\">" . number_format($tongSoLuongMoi, 2) . "</span> $tenDVT" .
+                    "</div>";
+
 
         echo json_encode([
             'success' => true,
@@ -986,12 +979,7 @@ $MaKhuVucList = $stmtKhuVuc->fetchAll(PDO::FETCH_ASSOC);
                         <input type="number" step="0.01" name="SoLuong" id="soLuong" 
                             class="input-field w-full p-2.5 rounded-lg">
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Số Cây</label>
-                        <input type="number" name="SoCay" id="soCay" min="1" value=""
-                            class="input-field w-full p-2.5 rounded-lg">
-                    </div>
-                    <?php if ($don['MaDVT'] !== '1' && $tenDVT !== 'KG'): ?>
+                     <?php if ($don['MaDVT'] !== '1' && $tenDVT !== 'KG'): ?>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Số KG Cân</label>
                         <input type="number" step="0.01" name="SoKgCan" id="soKGCan" 
@@ -1000,6 +988,12 @@ $MaKhuVucList = $stmtKhuVuc->fetchAll(PDO::FETCH_ASSOC);
                     <?php else: ?>
                     <input type="hidden" name="SoKgCan" id="soKGCan" >
                     <?php endif; ?>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Số Cây</label>
+                        <input type="number" name="SoCay" id="soCay" min="1" value=""
+                            class="input-field w-full p-2.5 rounded-lg">
+                    </div>
+                   
                 </div>                       
 
                 <!-- Khuvuc Và Ghi Chú -->
@@ -1203,7 +1197,7 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
     document.getElementById('soLuong').value = '';
     document.getElementById('soCay').value = '';
     document.getElementById('soKGCan').value = '';
-    document.getElementById('soLot').value = '';
+    //document.getElementById('soLot').value = '';
     document.getElementById('MaKhuVuc').value = ''; 
     document.getElementById('GhiChu').value = '';
 
