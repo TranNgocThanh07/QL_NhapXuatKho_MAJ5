@@ -1453,7 +1453,7 @@ function printWithBitmap($socket, $file, $labelType)
 
         // Khởi tạo connection checker
         updateConnectionStatus();
-        setInterval(updateConnectionStatus, 15000);
+        setInterval(updateConnectionStatus, 30000);
 
         // Show success/error messages với animation
         function showMessage(message, type = 'success') {
