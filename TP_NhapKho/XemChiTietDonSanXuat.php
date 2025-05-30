@@ -1,6 +1,8 @@
 <?php
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../vendor/tecnickcom/tcpdf/tcpdf.php';
+
+include '../convert.php';
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
 
@@ -499,15 +501,18 @@ $tongSoLuong = $soLuongNhapHang + $soLuongNhapTon;
 
 // Xử lý yêu cầu in PDF
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'generatePDF') {
+    // Lấy dữ liệu từ POST
     $pdfData = json_decode($_POST['pdfData'], true);
     $maSoMe = $pdfData[0]['MaSoMe'] ?? '';
     $labelType = $_POST['labelType'] ?? 'system';
 
+    // Kiểm tra dữ liệu đầu vào
     if (empty($pdfData) || empty($maSoMe)) {
         sendError("Dữ liệu đầu vào không đủ hoặc rỗng (thiếu pdfData hoặc MaSoMe).");
     }
 
     try {
+        // Truy vấn thông tin đơn hàng
         $sqlDon = "SELECT ds.*, dvt.TenDVT
                    FROM TP_DonSanXuat ds
                    LEFT JOIN TP_DonViTinh dvt ON ds.MaDVT = dvt.MaDVT
@@ -525,6 +530,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 
     try {
+        // Truy vấn tên màu
         $sqlMau = "SELECT TenMau FROM TP_Mau WHERE MaMau = ?";
         $stmtMau = $pdo->prepare($sqlMau);
         $stmtMau->execute([$pdfData[0]['MaMau']]);
@@ -535,31 +541,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 
     try {
+        // Tạo file PDF
         $pdf = new TCPDF('P', 'pt', array(297.63, 419.53), true, 'UTF-8', false);
         $pdf->SetMargins(10, 10, 10);
         $pdf->SetAutoPageBreak(false);
         $pdf->setFontSubsetting(true);
 
+        // Chọn hàm tạo tem dựa trên labelType
         if ($labelType === 'khachle') {
             generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe);
         } else {
             generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe);
         }
 
+        // Tạo tên file PDF và BMP
         $timestamp = date('YmdHis');
         $safeMaSoMe = preg_replace('/[^A-Za-z0-9_-]/', '_', $maSoMe);
         $pdfFileName = "Tem_NhapKho_" . ($labelType === 'khachle' ? 'KhachLe_' : 'HeThong_') . "{$safeMaSoMe}_{$timestamp}.pdf";
+        $bmpFileName = str_replace('.pdf', '.bmp', $pdfFileName);
 
+        // Lưu file PDF tạm thời
+        $uploadDir = __DIR__ . '/uploads/';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+        $pdfPath = $uploadDir . $pdfFileName;
+        $pdf->Output($pdfPath, 'F');
+
+        // Chuyển đổi PDF sang BMP
+        $bmpPath = convertPdfToBmp($pdfPath);
+        if (!$bmpPath || !file_exists($bmpPath)) {
+            unlink($pdfPath); // Xóa file PDF tạm
+            sendError("Không thể chuyển đổi PDF sang BMP");
+        }
+
+        // Gửi file BMP về client
         ob_end_clean();
-        header('Content-Type: application/pdf');
-        header('Content-Disposition: inline; filename="' . $pdfFileName . '"');
+        header('Content-Type: image/bmp');
+        header('Content-Disposition: attachment; filename="' . $bmpFileName . '"');
         header('Cache-Control: private, max-age=0, must-revalidate');
         header('Pragma: public');
+        readfile($bmpPath);
 
-        $pdf->Output($pdfFileName, 'I');
+        // Xóa file tạm
+        unlink($pdfPath);
+        unlink($bmpPath);
         exit;
     } catch (Throwable $e) {
-        sendError("Lỗi nghiêm trọng khi tạo hoặc xuất PDF", $e);
+        // Xóa file PDF tạm nếu tồn tại
+        if (isset($pdfPath) && file_exists($pdfPath)) {
+            unlink($pdfPath);
+        }
+        // Xóa file BMP tạm nếu tồn tại
+        if (isset($bmpPath) && file_exists($bmpPath)) {
+            unlink($bmpPath);
+        }
+        sendError("Lỗi nghiêm trọng khi tạo hoặc xuất BMP", $e);
     }
 }
 
@@ -880,10 +917,17 @@ $percentCompleted = $don && $don['SoLuongDatHang'] > 0 ? min(100, round(($don['D
                             <div class="icon-circle bg-red-100 text-red-500">
                                 <i class="fas fa-calendar-alt"></i>
                             </div>
-                            <div>
-                                <p class="text-xs text-gray-500">Ngày Nhận</p>
-                                <p class="font-semibold"><?php echo safeHtml($don['NgayNhan']); ?></p>
-                            </div>
+                            <?php
+                                $ngayNhan = safeHtml($don['NgayNhan']);
+                                if ($ngayNhan && strtotime($ngayNhan)) 
+                                    {
+                                    echo date('d/m/Y', strtotime($ngayNhan));
+                                    } 
+                                else
+                                {
+                                        echo $ngayNhan;
+                                    }
+                            ?>
                         </div>
                         <div class="flex bg-gray-50 p-2 rounded-lg items-center gap-2">
                             <div class="icon-circle bg-red-100 text-red-500">
@@ -891,7 +935,16 @@ $percentCompleted = $don && $don['SoLuongDatHang'] > 0 ? min(100, round(($don['D
                             </div>
                             <div>
                                 <p class="text-xs text-gray-500">Ngày Giao</p>
-                                <p class="font-semibold"><?php echo safeHtml($don['NgayGiao']); ?></p>
+                                <p class="font-semibold">
+                                    <?php
+                                        $ngayGiao = safeHtml($don['NgayGiao']);
+                                        if ($ngayGiao && strtotime($ngayGiao)) {
+                                            echo date('d/m/Y', strtotime($ngayGiao));
+                                        } else {
+                                            echo $ngayGiao;
+                                        }
+                                    ?>
+                                </p>
                             </div>
                         </div>
                         <div class="flex bg-gray-50 p-2 rounded-lg items-center gap-2">
@@ -909,7 +962,23 @@ $percentCompleted = $don && $don['SoLuongDatHang'] > 0 ? min(100, round(($don['D
                             </div>
                             <div>
                                 <p class="text-xs text-gray-500">Loại Đơn</p>
-                                <p class="font-semibold"><?php echo safeHtml($don['LoaiDon']); ?></p>
+                                <p class="font-semibold">
+                                    <?php
+                                        switch ($don['LoaiDon']) {
+                                            case '0':
+                                                echo 'QTSX';
+                                                break;
+                                            case '1':
+                                                echo 'HT';
+                                                break;
+                                            case '2':
+                                                echo 'QTSX+HT';
+                                                break;
+                                            default:
+                                                echo safeHtml($don['LoaiDon']);
+                                        }
+                                    ?>
+                                </p>
                             </div>
                         </div>
                         <div class="flex bg-gray-50 p-2 rounded-lg items-center gap-2">
@@ -1024,14 +1093,14 @@ $percentCompleted = $don && $don['SoLuongDatHang'] > 0 ? min(100, round(($don['D
                             <span><?php echo safeHtml($don['GhiChu']) ?: 'Không có ghi chú.'; ?></span>
                         </p>
                     </div>
-                    <span>Ghi Chú</span>
+                    <!-- <span>Ghi Chú</span> -->
                 </h3>
-                <div class="bg-white p-3 rounded-lg shadow-sm">
+                <!-- <div class="bg-white p-3 rounded-lg shadow-sm">
                     <p class="text-sm text-gray-700 flex items-start">
                         <i class="fas fa-quote-left text-amber-500 mr-2 mt-1"></i>
                         <span><?php echo safeHtml($don['GhiChu']) ?: 'Không có ghi chú.'; ?></span>
                     </p>
-                </div>
+                </div> -->
 
                 <!-- Chi tiết nhập kho -->
                 <div class="bg-white rounded-xl shadow-sm p-4 card-hover border border-gray-100">
@@ -1071,7 +1140,16 @@ $percentCompleted = $don && $don['SoLuongDatHang'] > 0 ? min(100, round(($don['D
                                                     <?php echo getStatusTextChiTiet($chiTiet['TrangThai']); ?>
                                                 </span>
                                             </td>
-                                            <td class="text-gray-600 p-3"><?php echo safeHtml($chiTiet['NgayTao']); ?></td>
+                                            <td class="text-gray-600 p-3">
+                                                <?php
+                                                    $ngayTao = safeHtml($chiTiet['NgayTao']);
+                                                    if ($ngayTao && strtotime($ngayTao)) {
+                                                        echo date('d/m/Y', strtotime($ngayTao));
+                                                    } else {
+                                                        echo $ngayTao;
+                                                    }
+                                                ?>
+                                            </td>
                                             <td class="text-gray-600 p-3"><?php echo safeHtml($chiTiet['MaKhuVuc']); ?></td>
                                             <td class="text-gray-600 p-3"><?php echo safeHtml($chiTiet['GhiChu']); ?></td>
                                             <td class="p-3">
@@ -1137,113 +1215,185 @@ $percentCompleted = $don && $don['SoLuongDatHang'] > 0 ? min(100, round(($don['D
 
         // Hàm generatePDF
         window.generatePDF = async function(data) {
-            logToScreen('[generatePDF] Bắt đầu hàm generatePDF với dữ liệu: ' + JSON.stringify(data));
-            if (!data || data.length === 0) {
-                logToScreen('[generatePDF] Dữ liệu rỗng.', 'error');
-                Swal.fire({ icon: 'warning', title: 'Dữ liệu không hợp lệ', text: 'Không có dữ liệu để tạo PDF.' });
-                return;
-            }
+    logToScreen('[generatePDF] Bắt đầu hàm generatePDF với dữ liệu: ' + JSON.stringify(data));
+    if (!data || data.length === 0) {
+        logToScreen('[generatePDF] Dữ liệu rỗng.', 'error');
+        Swal.fire({
+            icon: 'warning',
+            title: 'Dữ liệu không hợp lệ',
+            text: 'Không có dữ liệu để tạo BMP.'
+        });
+        return;
+    }
 
-            if (typeof cordova !== 'undefined') {
-                await new Promise((resolve) => {
-                    if (typeof cordova.plugins !== 'undefined') {
-                        resolve();
-                    } else {
-                        document.addEventListener('deviceready', resolve, { once: true });
-                    }
-                });
-                logToScreen('[generatePDF] deviceready đã sẵn sàng.');
+    if (typeof cordova !== 'undefined') {
+        await new Promise((resolve) => {
+            if (typeof cordova.plugins !== 'undefined') {
+                resolve();
             } else {
-                logToScreen('[generatePDF] Chạy trong môi trường trình duyệt.');
+                document.addEventListener('deviceready', resolve, { once: true });
             }
+        });
+        logToScreen('[generatePDF] deviceready đã sẵn sàng.');
+    } else {
+        logToScreen('[generatePDF] Chạy trong môi trường trình duyệt.');
+    }
 
-            const { value: labelType } = await Swal.fire({
-                title: 'Chọn loại tem',
-                text: 'Vui lòng chọn loại tem bạn muốn in:',
-                icon: 'question',
-                input: 'select',
-                inputOptions: { 'system': 'Tem Hệ Thống', 'khachle': 'Tem Khách Lẻ' },
-                inputPlaceholder: 'Chọn loại tem',
-                showCancelButton: true,
-                confirmButtonText: 'In Tem',
-                cancelButtonText: 'Hủy',
-                inputValidator: (value) => !value && 'Bạn phải chọn một loại tem!'
+    const { value: labelType } = await Swal.fire({
+        title: 'Chọn loại tem',
+        text: 'Vui lòng chọn loại tem bạn muốn in:',
+        icon: 'question',
+        input: 'select',
+        inputOptions: {
+            'system': 'Tem Hệ Thống',
+            'khachle': 'Tem Khách Lẻ'
+        },
+        inputPlaceholder: 'Chọn loại tem',
+        showCancelButton: true,
+        confirmButtonText: 'In Tem',
+        cancelButtonText: 'Hủy',
+        inputValidator: (value) => !value && 'Bạn phải chọn một loại tem!'
+    });
+
+    if (!labelType) {
+        logToScreen('[generatePDF] Người dùng hủy chọn.');
+        return;
+    }
+
+    Swal.fire({
+        title: 'Đang tạo BMP...',
+        text: 'Vui lòng chờ.',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+
+    const formData = new FormData();
+    formData.append('action', 'generatePDF');
+    formData.append('pdfData', JSON.stringify(data));
+    formData.append('labelType', labelType);
+
+    try {
+        logToScreen('[generatePDF] Gửi request POST tới: ' + window.location.href);
+        const response = await fetch(window.location.href, {
+            method: 'POST',
+            body: formData
+        });
+        logToScreen('[generatePDF] Phản hồi từ server, trạng thái: ' + response.status);
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => response.text());
+            throw new Error(errorData.error || `Lỗi Server: ${response.status}`);
+        }
+
+        const contentType = response.headers.get('Content-Type');
+        if (!contentType.includes('image/bmp')) {
+            throw new Error('Phản hồi không phải file BMP: ' + contentType);
+        }
+
+        const bmpBlob = await response.blob();
+        const contentDisposition = response.headers.get('Content-Disposition');
+        let fileName = contentDisposition?.match(/filename="(.+)"/)?.[1] ||
+            `Tem_${new Date().toISOString().replace(/[:.]/g, '-')}.bmp`;
+
+        logToScreen('[generatePDF] Tên file BMP: ' + fileName);
+
+        if (typeof cordova !== 'undefined') {
+            // Môi trường Cordova: Lưu file BMP tạm thời và chuyển hướng
+            const directory = cordova.file.externalDataDirectory || cordova.file.dataDirectory;
+            const filePath = directory + fileName;
+
+            await new Promise((resolve, reject) => {
+                window.resolveLocalFileSystemURL(directory, function(dirEntry) {
+                    dirEntry.getFile(fileName, { create: true, exclusive: false }, function(fileEntry) {
+                        fileEntry.createWriter(function(fileWriter) {
+                            fileWriter.onwriteend = function() {
+                                logToScreen('[generatePDF] Đã lưu file BMP tạm thời tại: ' + filePath);
+                                sessionStorage.setItem('labelType', labelType);
+                                window.location.href = `printer_interface.php?filePath=${encodeURIComponent(filePath)}&labelType=${encodeURIComponent(labelType)}`;
+                                resolve();
+                            };
+                            fileWriter.onerror = function(e) {
+                                logToScreen('[generatePDF] Lỗi khi ghi file BMP: ' + e.toString(), 'error');
+                                reject(new Error('Không thể lưu file BMP.'));
+                            };
+                            fileWriter.write(bmpBlob);
+                        }, reject);
+                    }, reject);
+                }, reject);
             });
-
-            if (!labelType) {
-                logToScreen('[generatePDF] Người dùng hủy chọn.');
-                return;
-            }
-
-            Swal.fire({ title: 'Đang tạo PDF...', text: 'Vui lòng chờ.', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
-            const formData = new FormData();
-            formData.append('action', 'generatePDF');
-            formData.append('pdfData', JSON.stringify(data));
-            formData.append('labelType', labelType);
-
-            try {
-                logToScreen('[generatePDF] Gửi request POST tới: ' + window.location.href);
-                const response = await fetch(window.location.href, { method: 'POST', body: formData });
-                logToScreen('[generatePDF] Phản hồi từ server, trạng thái: ' + response.status);
-
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => response.text());
-                    throw new Error(errorData.error || `Lỗi Server: ${response.status}`);
+        } else {
+            // Môi trường trình duyệt: Lưu file BMP vào sessionStorage và chuyển hướng
+            const reader = new FileReader();
+            reader.onload = function() {
+                if (!reader.result.startsWith('data:image/bmp;base64,')) {
+                    logToScreen('[generatePDF] Dữ liệu không phải BMP hợp lệ.', 'error');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Lỗi',
+                        text: 'Dữ liệu trả về không phải BMP.'
+                    });
+                    return;
                 }
+                sessionStorage.setItem('bmpFile', reader.result);
+                sessionStorage.setItem('bmpFileName', fileName);
+                sessionStorage.setItem('labelType', labelType);
+                window.location.href = 'printer_interface.php';
+            };
+            reader.readAsDataURL(bmpBlob);
+        }
+        Swal.close();
+    } catch (error) {
+        logToScreen('[generatePDF] Lỗi: ' + error.message, 'error');
+        Swal.fire({
+            icon: 'error',
+            title: 'Lỗi',
+            text: 'Không thể tạo file BMP: ' + error.message
+        });
+    }
+};
+       // Hàm lưu và mở PDF trên Android (Cordova)
+async function saveAndOpenPDF(pdfBlob, fileName) {
+    logToScreen('[saveAndOpenPDF] Bắt đầu lưu và mở PDF...');
+    if (!cordova.file || !cordova.plugins.fileOpener2) {
+        throw new Error('Plugin Cordova không sẵn sàng (file hoặc fileOpener2).');
+    }
 
-                const pdfBlob = await response.blob();
-                const fileName = response.headers.get('Content-Disposition')?.match(/filename="(.+)"/)?.[1] || `Tem_NhapKho_${labelType}_${Date.now()}.pdf`;
-                logToScreen('[generatePDF] Đã nhận Blob PDF, tên file: ' + fileName);
+    await requestPermissions();
 
-                const isCordova = checkCordovaEnvironment();
-                logToScreen('[generatePDF] Xác định môi trường: ' + (isCordova ? 'Cordova' : 'Trình duyệt'));
+    return new Promise((resolve, reject) => {
+        const directory = cordova.file.externalDataDirectory || cordova.file.documentsDirectory || cordova.file.dataDirectory;
+        logToScreen('[saveAndOpenPDF] Thư mục lưu trữ: ' + directory);
 
-                if (isCordova) {
-                    logToScreen('[generatePDF] Chạy logic Cordova...');
-                    await saveAndOpenPDF(pdfBlob, fileName);
-                } else {
-                    logToScreen('[generatePDF] Chạy logic trình duyệt...');
-                    const pdfUrl = URL.createObjectURL(pdfBlob);
-                    logToScreen('[generatePDF] Đã tạo URL cho PDF: ' + pdfUrl);
-                    const newWindow = window.open(pdfUrl, '_blank');
-                    if (!newWindow) {
-                        logToScreen('[generatePDF] Popup bị chặn, hiển thị tùy chọn tải.');
-                        Swal.fire({
-                            icon: 'warning',
-                            title: 'Popup bị chặn',
-                            text: 'Trình duyệt đã chặn mở tab mới. Nhấn OK để tải file.',
-                            showCancelButton: true,
-                            confirmButtonText: 'Tải file',
-                            cancelButtonText: 'Hủy'
-                        }).then((result) => {
-                            if (result.isConfirmed) {
-                                const link = document.createElement('a');
-                                link.href = pdfUrl;
-                                link.download = fileName;
-                                document.body.appendChild(link);
-                                link.click();
-                                document.body.removeChild(link);
-                                logToScreen('[generatePDF] Đã tải file xuống: ' + fileName);
+        window.resolveLocalFileSystemURL(directory, function(dirEntry) {
+            dirEntry.getFile(fileName, { create: true, exclusive: false }, function(fileEntry) {
+                fileEntry.createWriter(function(fileWriter) {
+                    fileWriter.onwriteend = function() {
+                        logToScreen('[saveAndOpenPDF] Đã lưu file tại: ' + fileEntry.nativeURL);
+                        cordova.plugins.fileOpener2.open(
+                            fileEntry.nativeURL,
+                            'application/pdf',
+                            {
+                                error: function(e) {
+                                    logToScreen('[saveAndOpenPDF] Lỗi khi mở file: ' + JSON.stringify(e), 'error');
+                                    reject(new Error('Không thể mở file: ' + e.message));
+                                },
+                                success: function() {
+                                    logToScreen('[saveAndOpenPDF] Đã mở file thành công.');
+                                    resolve();
+                                }
                             }
-                        });
-                    } else {
-                        logToScreen('[generatePDF] Đã mở PDF trong tab mới.');
-                    }
-                    setTimeout(() => {
-                        URL.revokeObjectURL(pdfUrl);
-                        logToScreen('[generatePDF] Đã giải phóng URL: ' + pdfUrl);
-                    }, 10000);
-                }
-
-                Swal.fire({ icon: 'success', title: 'Thành công!', text: 'File PDF đã được xử lý.' });
-            } catch (error) {
-                logToScreen('[generatePDF] Lỗi: ' + error.message, 'error');
-                Swal.fire({ icon: 'error', title: 'Lỗi!', text: `Lỗi khi tạo PDF: ${error.message}` });
-            } finally {
-                if (Swal.isLoading()) Swal.close();
-            }
-        };
+                        );
+                    };
+                    fileWriter.onerror = function(e) {
+                        logToScreen('[saveAndOpenPDF] Lỗi khi ghi file: ' + e.toString(), 'error');
+                        reject(new Error('Không thể ghi file: ' + e.toString()));
+                    };
+                    fileWriter.write(pdfBlob);
+                }, reject);
+            }, reject);
+        }, reject);
+    });
+}
 
        // Hàm lưu và mở PDF trên Android (Cordova)
 async function saveAndOpenPDF(pdfBlob, fileName) {

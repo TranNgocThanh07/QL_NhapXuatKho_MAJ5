@@ -178,3 +178,201 @@
 [2025-05-28 22:57:11] Imagick không được cài đặt, chuyển sang Ghostscript
 [2025-05-28 22:57:11] Chạy lệnh Ghostscript
 [2025-05-28 22:57:11] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-29 17:36:17] Imagick không được cài đặt, chuyển sang Ghostscript | {"file":"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\/Tem_NhapKho_HeThong_P0525_001_20250529173617.pdf"}
+[2025-05-29 17:36:17] Chạy lệnh Ghostscript | {"command":"\"C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe\" -dSAFER -dBATCH -dNOPAUSE -dQUIET -dFirstPage=1 -dLastPage=1 -sDEVICE=bmpgray -r150 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -dColorConversionStrategy=\/LeaveColorUnchanged -dDownScaleFactor=1 -sOutputFile=\"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\/pdf_to_bmp_gs_68387ef1690d5.bmp\" \"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\/Tem_NhapKho_HeThong_P0525_001_20250529173617.pdf\" 2>&1","return_code":0,"execution_time":0.4202239513397217,"output":""}
+[2025-05-29 17:36:17] Lưu cache thành công | {"cache_file":"D:\\QL_NhapXuatKho_MAJ5\/cache\/pdf_to_bmp\/pdf_bmp_3661489391b47ed24ff4d26d2e4a199d.bmp"}
+[2025-05-29 17:36:17] Chuyển đổi PDF sang BMP thành công với Ghostscript | {"bmp_file":"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\/pdf_to_bmp_gs_68387ef1690d5.bmp","size":542958,"execution_time":0.4202239513397217,"dpi":150}
+[2025-05-29 17:38:09] Imagick không được cài đặt, chuyển sang Ghostscript | {"file":"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\/Tem_NhapKho_HeThong_P0525_001_20250529173809.pdf"}
+[2025-05-29 17:38:10] Chạy lệnh Ghostscript | {"command":"\"C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe\" -dSAFER -dBATCH -dNOPAUSE -dQUIET -dFirstPage=1 -dLastPage=1 -sDEVICE=bmpgray -r150 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -dColorConversionStrategy=\/LeaveColorUnchanged -dDownScaleFactor=1 -sOutputFile=\"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\/pdf_to_bmp_gs_68387f61b8bb7.bmp\" \"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\/Tem_NhapKho_HeThong_P0525_001_20250529173809.pdf\" 2>&1","return_code":0,"execution_time":0.31492114067077637,"output":""}
+[2025-05-29 17:38:10] Lưu cache thành công | {"cache_file":"D:\\QL_NhapXuatKho_MAJ5\/cache\/pdf_to_bmp\/pdf_bmp_2c2cb47d38e34e3fcc51163641855a39.bmp"}
+[2025-05-29 17:38:10] Chuyển đổi PDF sang BMP thành công với Ghostscript | {"bmp_file":"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\/pdf_to_bmp_gs_68387f61b8bb7.bmp","size":542958,"execution_time":0.31492114067077637,"dpi":150}
+[2025-05-29 17:42:08] Imagick không được cài đặt, chuyển sang Ghostscript | {"file":"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\/Tem_NhapKho_HeThong_P0525_001_20250529174208.pdf"}
+[2025-05-29 17:42:08] Chạy lệnh Ghostscript | {"command":"\"C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe\" -dSAFER -dBATCH -dNOPAUSE -dQUIET -dFirstPage=1 -dLastPage=1 -sDEVICE=bmpgray -r150 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -dColorConversionStrategy=\/LeaveColorUnchanged -dDownScaleFactor=1 -sOutputFile=\"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\/pdf_to_bmp_gs_683880500f28f.bmp\" \"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\/Tem_NhapKho_HeThong_P0525_001_20250529174208.pdf\" 2>&1","return_code":0,"execution_time":0.319242000579834,"output":""}
+[2025-05-29 17:42:08] Lưu cache thành công | {"cache_file":"D:\\QL_NhapXuatKho_MAJ5\/cache\/pdf_to_bmp\/pdf_bmp_ee81c2c48da074aec06d449258a1125e.bmp"}
+[2025-05-29 17:42:08] Chuyển đổi PDF sang BMP thành công với Ghostscript | {"bmp_file":"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\/pdf_to_bmp_gs_683880500f28f.bmp","size":542958,"execution_time":0.319242000579834,"dpi":150}
+[2025-05-29 18:13:10] Imagick không được cài đặt, chuyển sang Ghostscript | {"file":"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\/Tem_NhapKho_HeThong_T0525_001_20250529181310.pdf"}
+[2025-05-29 18:13:10] Chạy lệnh Ghostscript | {"command":"\"C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe\" -dSAFER -dBATCH -dNOPAUSE -dQUIET -dFirstPage=1 -dLastPage=1 -sDEVICE=bmpgray -r150 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -dColorConversionStrategy=\/LeaveColorUnchanged -dDownScaleFactor=1 -sOutputFile=\"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\/pdf_to_bmp_gs_683887964abf3.bmp\" \"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\/Tem_NhapKho_HeThong_T0525_001_20250529181310.pdf\" 2>&1","return_code":0,"execution_time":0.4174787998199463,"output":""}
+[2025-05-29 18:13:10] Lưu cache thành công | {"cache_file":"D:\\QL_NhapXuatKho_MAJ5\/cache\/pdf_to_bmp\/pdf_bmp_f582b541acf3982236060e135d1c2a46.bmp"}
+[2025-05-29 18:13:10] Chuyển đổi PDF sang BMP thành công với Ghostscript | {"bmp_file":"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\/pdf_to_bmp_gs_683887964abf3.bmp","size":542958,"execution_time":0.4174787998199463,"dpi":150}
+[2025-05-29 18:28:47] Imagick không được cài đặt, chuyển sang Ghostscript | {"file":"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\/Tem_NhapKho_HeThong_P0525_001_20250529182847.pdf"}
+[2025-05-29 18:28:47] Chạy lệnh Ghostscript | {"command":"\"C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe\" -dSAFER -dBATCH -dNOPAUSE -dQUIET -dFirstPage=1 -dLastPage=1 -sDEVICE=bmpgray -r150 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -dColorConversionStrategy=\/LeaveColorUnchanged -dDownScaleFactor=1 -sOutputFile=\"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\/pdf_to_bmp_gs_68388b3f9fadc.bmp\" \"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\/Tem_NhapKho_HeThong_P0525_001_20250529182847.pdf\" 2>&1","return_code":0,"execution_time":0.3054511547088623,"output":""}
+[2025-05-29 18:28:47] Lưu cache thành công | {"cache_file":"D:\\QL_NhapXuatKho_MAJ5\/cache\/pdf_to_bmp\/pdf_bmp_b7021526bc2c8e61a11790b72eda5183.bmp"}
+[2025-05-29 18:28:47] Chuyển đổi PDF sang BMP thành công với Ghostscript | {"bmp_file":"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\/pdf_to_bmp_gs_68388b3f9fadc.bmp","size":542958,"execution_time":0.3054511547088623,"dpi":150}
+[2025-05-29 18:43:07] Imagick không được cài đặt, chuyển sang Ghostscript | {"file":"D:\\QL_NhapXuatKho_MAJ5\\TP_NhapKho\/uploads\/Tem_NhapKho_HeThong_P0525_001_20250529184307.pdf"}
+[2025-05-29 18:43:08] Chạy lệnh Ghostscript | {"command":"\"C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe\" -dSAFER -dBATCH -dNOPAUSE -dQUIET -dFirstPage=1 -dLastPage=1 -sDEVICE=bmpgray -r150 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -dColorConversionStrategy=\/LeaveColorUnchanged -dDownScaleFactor=1 -sOutputFile=\"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\/pdf_to_bmp_gs_68388e9bf1bff.bmp\" \"D:\\QL_NhapXuatKho_MAJ5\\TP_NhapKho\/uploads\/Tem_NhapKho_HeThong_P0525_001_20250529184307.pdf\" 2>&1","return_code":0,"execution_time":0.3060619831085205,"output":""}
+[2025-05-29 18:43:08] Lưu cache thành công | {"cache_file":"D:\\QL_NhapXuatKho_MAJ5\/cache\/pdf_to_bmp\/pdf_bmp_dc410945fb2121b5d3115b1726bf3f89.bmp"}
+[2025-05-29 18:43:08] Chuyển đổi PDF sang BMP thành công với Ghostscript | {"bmp_file":"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\/pdf_to_bmp_gs_68388e9bf1bff.bmp","size":542958,"execution_time":0.3060619831085205,"dpi":150}
+[2025-05-29 18:43:56] Imagick không được cài đặt, chuyển sang Ghostscript | {"file":"D:\\QL_NhapXuatKho_MAJ5\\TP_NhapKho\/uploads\/Tem_NhapKho_KhachLe_P0525_001_20250529184356.pdf"}
+[2025-05-29 18:43:56] Chạy lệnh Ghostscript | {"command":"\"C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe\" -dSAFER -dBATCH -dNOPAUSE -dQUIET -dFirstPage=1 -dLastPage=1 -sDEVICE=bmpgray -r150 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -dColorConversionStrategy=\/LeaveColorUnchanged -dDownScaleFactor=1 -sOutputFile=\"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\/pdf_to_bmp_gs_68388ecc9daef.bmp\" \"D:\\QL_NhapXuatKho_MAJ5\\TP_NhapKho\/uploads\/Tem_NhapKho_KhachLe_P0525_001_20250529184356.pdf\" 2>&1","return_code":0,"execution_time":0.24232006072998047,"output":""}
+[2025-05-29 18:43:56] Lưu cache thành công | {"cache_file":"D:\\QL_NhapXuatKho_MAJ5\/cache\/pdf_to_bmp\/pdf_bmp_989a7b22fa78cf96ae15d2bf02a47466.bmp"}
+[2025-05-29 18:43:56] Chuyển đổi PDF sang BMP thành công với Ghostscript | {"bmp_file":"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\/pdf_to_bmp_gs_68388ecc9daef.bmp","size":542958,"execution_time":0.24232006072998047,"dpi":150}
+[2025-05-29 18:44:16] Imagick không được cài đặt, chuyển sang Ghostscript | {"file":"D:\\QL_NhapXuatKho_MAJ5\\TP_NhapKho\/uploads\/Tem_NhapKho_HeThong_P0525_001_20250529184416.pdf"}
+[2025-05-29 18:44:16] Chạy lệnh Ghostscript | {"command":"\"C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe\" -dSAFER -dBATCH -dNOPAUSE -dQUIET -dFirstPage=1 -dLastPage=1 -sDEVICE=bmpgray -r150 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -dColorConversionStrategy=\/LeaveColorUnchanged -dDownScaleFactor=1 -sOutputFile=\"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\/pdf_to_bmp_gs_68388ee06fc2e.bmp\" \"D:\\QL_NhapXuatKho_MAJ5\\TP_NhapKho\/uploads\/Tem_NhapKho_HeThong_P0525_001_20250529184416.pdf\" 2>&1","return_code":0,"execution_time":0.31292200088500977,"output":""}
+[2025-05-29 18:44:16] Lưu cache thành công | {"cache_file":"D:\\QL_NhapXuatKho_MAJ5\/cache\/pdf_to_bmp\/pdf_bmp_c5dbdbf34d0ee507938a4cc8b4086284.bmp"}
+[2025-05-29 18:44:16] Chuyển đổi PDF sang BMP thành công với Ghostscript | {"bmp_file":"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\/pdf_to_bmp_gs_68388ee06fc2e.bmp","size":542958,"execution_time":0.31292200088500977,"dpi":150}
+[2025-05-29 18:44:29] Imagick không được cài đặt, chuyển sang Ghostscript | {"file":"D:\\QL_NhapXuatKho_MAJ5\\TP_NhapKho\/uploads\/Tem_NhapKho_HeThong_P0525_001_20250529184429.pdf"}
+[2025-05-29 18:44:29] Chạy lệnh Ghostscript | {"command":"\"C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe\" -dSAFER -dBATCH -dNOPAUSE -dQUIET -dFirstPage=1 -dLastPage=1 -sDEVICE=bmpgray -r150 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -dColorConversionStrategy=\/LeaveColorUnchanged -dDownScaleFactor=1 -sOutputFile=\"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\/pdf_to_bmp_gs_68388eeda5d1f.bmp\" \"D:\\QL_NhapXuatKho_MAJ5\\TP_NhapKho\/uploads\/Tem_NhapKho_HeThong_P0525_001_20250529184429.pdf\" 2>&1","return_code":0,"execution_time":0.3114449977874756,"output":""}
+[2025-05-29 18:44:29] Lưu cache thành công | {"cache_file":"D:\\QL_NhapXuatKho_MAJ5\/cache\/pdf_to_bmp\/pdf_bmp_d149b91c269f6c1a854ee8dad39616b5.bmp"}
+[2025-05-29 18:44:29] Chuyển đổi PDF sang BMP thành công với Ghostscript | {"bmp_file":"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\/pdf_to_bmp_gs_68388eeda5d1f.bmp","size":542958,"execution_time":0.3114449977874756,"dpi":150}
+[2025-05-29 18:45:49] Imagick không được cài đặt, chuyển sang Ghostscript | {"file":"D:\\QL_NhapXuatKho_MAJ5\\TP_NhapKho\/uploads\/Tem_NhapKho_HeThong_P0525_001_20250529184549.pdf"}
+[2025-05-29 18:45:50] Chạy lệnh Ghostscript | {"command":"\"C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe\" -dSAFER -dBATCH -dNOPAUSE -dQUIET -dFirstPage=1 -dLastPage=1 -sDEVICE=bmpgray -r150 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -dColorConversionStrategy=\/LeaveColorUnchanged -dDownScaleFactor=1 -sOutputFile=\"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\/pdf_to_bmp_gs_68388f3dce276.bmp\" \"D:\\QL_NhapXuatKho_MAJ5\\TP_NhapKho\/uploads\/Tem_NhapKho_HeThong_P0525_001_20250529184549.pdf\" 2>&1","return_code":0,"execution_time":0.42097902297973633,"output":""}
+[2025-05-29 18:45:50] Lưu cache thành công | {"cache_file":"D:\\QL_NhapXuatKho_MAJ5\/cache\/pdf_to_bmp\/pdf_bmp_50510bf5634a60d9c60de1713601d4c5.bmp"}
+[2025-05-29 18:45:50] Chuyển đổi PDF sang BMP thành công với Ghostscript | {"bmp_file":"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\/pdf_to_bmp_gs_68388f3dce276.bmp","size":542958,"execution_time":0.42097902297973633,"dpi":150}
+[2025-05-29 18:46:46] Imagick không được cài đặt, chuyển sang Ghostscript | {"file":"D:\\QL_NhapXuatKho_MAJ5\\TP_NhapKho\/uploads\/Tem_NhapKho_HeThong_P0525_001_20250529184645.pdf"}
+[2025-05-29 18:46:46] Chạy lệnh Ghostscript | {"command":"\"C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe\" -dSAFER -dBATCH -dNOPAUSE -dQUIET -dFirstPage=1 -dLastPage=1 -sDEVICE=bmpgray -r150 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -dColorConversionStrategy=\/LeaveColorUnchanged -dDownScaleFactor=1 -sOutputFile=\"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\/pdf_to_bmp_gs_68388f760820d.bmp\" \"D:\\QL_NhapXuatKho_MAJ5\\TP_NhapKho\/uploads\/Tem_NhapKho_HeThong_P0525_001_20250529184645.pdf\" 2>&1","return_code":0,"execution_time":0.39798688888549805,"output":""}
+[2025-05-29 18:46:46] Lưu cache thành công | {"cache_file":"D:\\QL_NhapXuatKho_MAJ5\/cache\/pdf_to_bmp\/pdf_bmp_08ea70cf8f4daf9c68507e7bfe950f44.bmp"}
+[2025-05-29 18:46:46] Chuyển đổi PDF sang BMP thành công với Ghostscript | {"bmp_file":"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\/pdf_to_bmp_gs_68388f760820d.bmp","size":542958,"execution_time":0.39798688888549805,"dpi":150}
+[2025-05-29 18:48:14] Imagick không được cài đặt, chuyển sang Ghostscript | {"file":"D:\\QL_NhapXuatKho_MAJ5\\TP_NhapKho\/uploads\/Tem_NhapKho_KhachLe_P0525_001_20250529184814.pdf"}
+[2025-05-29 18:48:15] Chạy lệnh Ghostscript | {"command":"\"C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe\" -dSAFER -dBATCH -dNOPAUSE -dQUIET -dFirstPage=1 -dLastPage=1 -sDEVICE=bmpgray -r150 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -dColorConversionStrategy=\/LeaveColorUnchanged -dDownScaleFactor=1 -sOutputFile=\"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\/pdf_to_bmp_gs_68388fceef2b9.bmp\" \"D:\\QL_NhapXuatKho_MAJ5\\TP_NhapKho\/uploads\/Tem_NhapKho_KhachLe_P0525_001_20250529184814.pdf\" 2>&1","return_code":0,"execution_time":0.24687600135803223,"output":""}
+[2025-05-29 18:48:15] Lưu cache thành công | {"cache_file":"D:\\QL_NhapXuatKho_MAJ5\/cache\/pdf_to_bmp\/pdf_bmp_38e3ad55702e3184b1faf7f529d0e089.bmp"}
+[2025-05-29 18:48:15] Chuyển đổi PDF sang BMP thành công với Ghostscript | {"bmp_file":"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\/pdf_to_bmp_gs_68388fceef2b9.bmp","size":542958,"execution_time":0.24687600135803223,"dpi":150}
+[2025-05-29 18:49:23] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-29 18:49:23] Chạy lệnh Ghostscript
+[2025-05-29 18:49:23] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-29 18:52:03] Chạy lệnh Ghostscript {"command":"\"C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe\" -dSAFER -dBATCH -dNOPAUSE -dFirstPage=1 -dLastPage=1 -sDEVICE=bmp16m -r150 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sOutputFile=\"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp/pdf_to_bmp_gs_683890b3793d56.39759409.bmp\" \"D:\\QL_NhapXuatKho_MAJ5\\TP_NhapKho/uploads/Tem_NhapKho_HeThong_P0525_001_20250529185203.pdf\" 2>&1","return_code":0}
+[2025-05-29 18:52:03] Chuyển đổi thành công với Ghostscript {"bmp_file":"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp/pdf_to_bmp_gs_683890b3793d56.39759409.bmp","size":1625694}
+[2025-05-29 18:54:08] WARNING: Phương thức convertWithImagick thất bại {"error":"Extension Imagick không khả dụng","file":"D:\\QL_NhapXuatKho_MAJ5\\TP_NhapKho\/uploads\/Tem_NhapKho_HeThong_P0525_001_20250529185408.pdf"}
+[2025-05-29 18:54:08] DEBUG: Thực thi lệnh Ghostscript: "C:\Program Files\gs\gs10.05.1\bin\gswin64c.exe" -dSAFER -dBATCH -dNOPAUSE -dFirstPage=1 -dLastPage=1 -sDEVICE=bmp16m -r150 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sOutputFile="C:\Users\DUYDUO~1\AppData\Local\Temp\pdf_to_bmp_ghostscript_683891301d394.bmp" "D:\QL_NhapXuatKho_MAJ5\TP_NhapKho/uploads/Tem_NhapKho_HeThong_P0525_001_20250529185408.pdf" 2>&1
+[2025-05-29 18:54:08] INFO: Chuyển đổi thành công với phương thức: convertWithGhostscript {"input":"D:\\QL_NhapXuatKho_MAJ5\\TP_NhapKho\/uploads\/Tem_NhapKho_HeThong_P0525_001_20250529185408.pdf","output":"C:\\Users\\DUYDUO~1\\AppData\\Local\\Temp\\pdf_to_bmp_ghostscript_683891301d394.bmp","method":"convertWithGhostscript"}
+[2025-05-29 18:54:28] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-29 18:54:29] Chạy lệnh Ghostscript
+[2025-05-29 18:54:29] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-29 19:20:44] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-29 19:20:44] Chạy lệnh Ghostscript
+[2025-05-29 19:20:44] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-29 19:30:23] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-29 19:30:23] Chạy lệnh Ghostscript
+[2025-05-29 19:30:23] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-29 19:48:09] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-29 19:48:09] Chạy lệnh Ghostscript
+[2025-05-29 19:48:09] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-29 19:56:02] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-29 19:56:02] Chạy lệnh Ghostscript
+[2025-05-29 19:56:02] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-29 20:01:40] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-29 20:01:40] Chạy lệnh Ghostscript
+[2025-05-29 20:01:40] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-29 20:01:55] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-29 20:01:55] Chạy lệnh Ghostscript
+[2025-05-29 20:01:55] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 05:06:34] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 05:06:34] Chạy lệnh Ghostscript
+[2025-05-30 05:06:34] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 05:14:06] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 05:14:07] Chạy lệnh Ghostscript
+[2025-05-30 05:14:07] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 05:26:19] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 05:26:19] Chạy lệnh Ghostscript
+[2025-05-30 05:26:19] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 05:26:31] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 05:26:31] Chạy lệnh Ghostscript
+[2025-05-30 05:26:31] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 05:28:43] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 05:28:44] Chạy lệnh Ghostscript
+[2025-05-30 05:28:44] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 05:30:13] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 05:30:13] Chạy lệnh Ghostscript
+[2025-05-30 05:30:13] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 05:46:58] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 05:46:59] Chạy lệnh Ghostscript
+[2025-05-30 05:46:59] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 05:47:45] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 05:47:46] Chạy lệnh Ghostscript
+[2025-05-30 05:47:46] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 05:53:56] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 05:53:57] Chạy lệnh Ghostscript
+[2025-05-30 05:53:57] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 05:56:14] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 05:56:15] Chạy lệnh Ghostscript
+[2025-05-30 05:56:15] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 05:58:36] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 05:58:37] Chạy lệnh Ghostscript
+[2025-05-30 05:58:37] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 06:04:20] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 06:04:20] Chạy lệnh Ghostscript
+[2025-05-30 06:04:20] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 06:05:21] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 06:05:21] Chạy lệnh Ghostscript
+[2025-05-30 06:05:21] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 06:07:47] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 06:07:47] Chạy lệnh Ghostscript
+[2025-05-30 06:07:47] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 06:15:05] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 06:15:05] Chạy lệnh Ghostscript
+[2025-05-30 06:15:05] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 06:22:15] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 06:22:15] Chạy lệnh Ghostscript
+[2025-05-30 06:22:15] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 06:29:33] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 06:29:34] Chạy lệnh Ghostscript
+[2025-05-30 06:29:34] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 06:33:19] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 06:33:19] Chạy lệnh Ghostscript
+[2025-05-30 06:33:19] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 06:35:49] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 06:35:49] Chạy lệnh Ghostscript
+[2025-05-30 06:35:49] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 06:39:27] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 06:39:27] Chạy lệnh Ghostscript
+[2025-05-30 06:39:27] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 07:23:03] Imagick không khả dụng, chuyển sang Ghostscript | file: D:\QL_NhapXuatKho_MAJ5\TP_NhapKho/uploads/Tem_NhapKho_HeThong_P0525_001_20250530072303.pdf
+[2025-05-30 07:23:04] Chạy lệnh Ghostscript | command: "C:\Program Files\gs\gs10.05.1\bin\gswin64c.exe" -dSAFER -dBATCH -dNOPAUSE -dFirstPage=1 -dLastPage=1 -sDEVICE=bmpmono -r100 -sOutputFile="C:\Users\DUYDUO~1\AppData\Local\Temp/pdf_to_bmp_e49257b3e6db0a4d384ba5fa60b64317.bmp" "D:\QL_NhapXuatKho_MAJ5\TP_NhapKho/uploads/Tem_NhapKho_HeThong_P0525_001_20250530072303.pdf" 2>&1 | return_code: 0
+[2025-05-30 07:23:04] Chuyển đổi PDF sang BMP thành công với Ghostscript | bmp_file: C:\Users\DUYDUO~1\AppData\Local\Temp/pdf_to_bmp_e49257b3e6db0a4d384ba5fa60b64317.bmp | size: 30378 | execution_time: 274.15ms
+[2025-05-30 07:23:24] Imagick không khả dụng, chuyển sang Ghostscript | file: D:\QL_NhapXuatKho_MAJ5\TP_NhapKho/uploads/Tem_NhapKho_HeThong_P0525_001_20250530072324.pdf
+[2025-05-30 07:23:24] Chạy lệnh Ghostscript | command: "C:\Program Files\gs\gs10.05.1\bin\gswin64c.exe" -dSAFER -dBATCH -dNOPAUSE -dFirstPage=1 -dLastPage=1 -sDEVICE=bmpmono -r150 -sOutputFile="C:\Users\DUYDUO~1\AppData\Local\Temp/pdf_to_bmp_19e09d0a1b221b67d755670be1598a59.bmp" "D:\QL_NhapXuatKho_MAJ5\TP_NhapKho/uploads/Tem_NhapKho_HeThong_P0525_001_20250530072324.pdf" 2>&1 | return_code: 0
+[2025-05-30 07:23:24] Chuyển đổi PDF sang BMP thành công với Ghostscript | bmp_file: C:\Users\DUYDUO~1\AppData\Local\Temp/pdf_to_bmp_19e09d0a1b221b67d755670be1598a59.bmp | size: 69982 | execution_time: 289.19ms
+[2025-05-30 07:34:56] Không thể khởi động Ghostscript bằng proc_open
+[2025-05-30 07:34:56] Imagick không được cài đặt | {"file":"D:\\QL_NhapXuatKho_MAJ5\\TP_NhapKho\/uploads\/Tem_NhapKho_HeThong_P0525_001_20250530073456.pdf"}
+[2025-05-30 07:35:01] Không thể khởi động Ghostscript bằng proc_open
+[2025-05-30 07:35:01] Imagick không được cài đặt | {"file":"D:\\QL_NhapXuatKho_MAJ5\\TP_NhapKho\/uploads\/Tem_NhapKho_HeThong_P0525_001_20250530073501.pdf"}
+[2025-05-30 07:35:09] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 07:35:10] Chạy lệnh Ghostscript
+[2025-05-30 07:35:10] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 07:36:34] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 07:36:34] Chạy lệnh Ghostscript
+[2025-05-30 07:36:34] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 07:37:07] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 07:37:07] Chạy lệnh Ghostscript
+[2025-05-30 07:37:07] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 07:38:10] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 07:38:11] Chạy lệnh Ghostscript
+[2025-05-30 07:38:11] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 07:38:31] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 07:38:31] Chạy lệnh Ghostscript
+[2025-05-30 07:38:31] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 07:39:58] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 07:39:58] Chạy lệnh Ghostscript
+[2025-05-30 07:39:58] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 07:42:07] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 07:42:08] Chạy lệnh Ghostscript
+[2025-05-30 07:42:08] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 07:43:18] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 07:43:18] Chạy lệnh Ghostscript
+[2025-05-30 07:43:18] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 07:46:42] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 07:46:42] Chạy lệnh Ghostscript
+[2025-05-30 07:46:42] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 07:48:06] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 07:48:07] Chạy lệnh Ghostscript
+[2025-05-30 07:48:07] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 07:48:48] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 07:48:48] Chạy lệnh Ghostscript
+[2025-05-30 07:48:48] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 07:49:56] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 07:49:56] Chạy lệnh Ghostscript
+[2025-05-30 07:49:56] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 08:35:13] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 08:35:13] Chạy lệnh Ghostscript
+[2025-05-30 08:35:13] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 08:40:36] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 08:40:36] Chạy lệnh Ghostscript
+[2025-05-30 08:40:36] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 08:45:34] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 08:45:34] Chạy lệnh Ghostscript
+[2025-05-30 08:45:34] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 08:48:56] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 08:48:56] Chạy lệnh Ghostscript
+[2025-05-30 08:48:56] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-05-30 08:54:27] Imagick không được cài đặt, chuyển sang Ghostscript
+[2025-05-30 08:54:27] Chạy lệnh Ghostscript
+[2025-05-30 08:54:27] Chuyển đổi PDF sang BMP thành công với Ghostscript
