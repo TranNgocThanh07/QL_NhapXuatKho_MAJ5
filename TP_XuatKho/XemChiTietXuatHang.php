@@ -12,7 +12,7 @@ if (!$maXuatHang) {
 try {
     // Lấy thông tin phiếu xuất và thông tin khách hàng
     $sql = "SELECT xh.MaXuatHang, xh.MaNhanVien, nv.TenNhanVien, xh.NgayXuat, xh.TrangThai, xh.GhiChu,
-                   xh.MaSoMe, xh.MaKhachHang, xh.MaNguoiLienHe,
+                   xh.MaKhachHang, xh.MaNguoiLienHe,
                    kh.TenKhachHang, kh.TenHoatDong, kh.DiaChi,
                    nl.TenNguoiLienHe, nl.SoDienThoai,
                    SUM(ct.SoLuong) as TongSoLuongXuat, dvt.TenDVT,
@@ -29,7 +29,7 @@ try {
             LEFT JOIN TP_NguoiLienHe nl ON xh.MaNguoiLienHe = nl.MaNguoiLienHe
             WHERE xh.MaXuatHang = :maXuatHang
             GROUP BY xh.MaXuatHang, xh.MaNhanVien, nv.TenNhanVien, xh.NgayXuat, xh.TrangThai, xh.GhiChu,
-                     xh.MaSoMe, xh.MaKhachHang, xh.MaNguoiLienHe,
+                    xh.MaKhachHang, xh.MaNguoiLienHe,
                      kh.TenKhachHang, kh.TenHoatDong, kh.DiaChi,
                      nl.TenNguoiLienHe, nl.SoDienThoai,
                      dvt.TenDVT, v.MaVai, v.TenVai, m.TenMau,
@@ -135,11 +135,11 @@ $ngayXuat = date('d/m/Y', strtotime($phieuXuat['NgayXuat']));
         <div class="container">
             <div class="bg-white custom-shadow overflow-hidden">
                 <!-- Header -->
-                <header class="sticky top-0 z-20 bg-gradient-to-r from-red-700 to-red-500 text-white w-full flex justify-between items-center py-3 px-6">
-                    <a href="../xuatkho.php" class="text-white text-2xl hover:scale-110 transition-transform flex items-center gap-1 hover:bg-red-600 rounded-full p-2">
+                <header class="sticky top-0 z-20 bg-gradient-to-r from-red-700 to-red-500 text-white w-full flex items-center py-3 px-6">
+                    <a href="../xuatkho.php" class="text-white text-xl hover:scale-110 transition-transform flex items-center gap-1 hover:bg-red-600 rounded-full p-2">
                         <i class="fas fa-arrow-left"></i>
                     </a>
-                    <h2 class="text-xl md:text-2xl font-bold flex items-center gap-2 mr-20">
+                    <h2 class="text-lg md:text-2xl font-bold gap-2">
                         <i class="fas fa-clipboard-list "></i> Chi Tiết Xuất Kho
                     </h2>
                 </header>
@@ -148,7 +148,7 @@ $ngayXuat = date('d/m/Y', strtotime($phieuXuat['NgayXuat']));
                 <div class="bg-blue-50 border-b border-blue-100 p-3 flex items-center justify-between">
                     <div class="flex items-center gap-2">
                         <i class="fas fa-info-circle icon-blue"></i>
-                        <span class="text-blue-700 font-medium">Ngày Tạo Đơn Xuất Hàng</span>
+                        <span class="text-blue-700 font-medium">Ngày tạo phiếu</span>
                     </div>
                     <div class="text-sm text-gray-600">
                         <i class="fas fa-calendar-alt icon-gray"></i> <?php echo $ngayXuat; ?>
@@ -158,8 +158,8 @@ $ngayXuat = date('d/m/Y', strtotime($phieuXuat['NgayXuat']));
                 <!-- Summary Cards -->       
                  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 p-6">
                     <!-- Thông tin phiếu -->
-                    <div class="info-card bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm flex flex-col">
-                        <div class="text-gray-500 text-sm mb-2 flex items-center gap-1">
+                    <div class="info-card bg-gray-50 text-xs p-4 rounded-lg border border-gray-200 shadow-sm flex flex-col">
+                        <div class="text-gray-500 mb-2 flex items-center gap-1">
                             <i class="fas fa-file-invoice" style="color: #EF4444;"></i> Thông tin phiếu
                         </div>
                         <p class="flex justify-between mb-2">
@@ -181,8 +181,8 @@ $ngayXuat = date('d/m/Y', strtotime($phieuXuat['NgayXuat']));
                     </div>
 
                     <!-- Thông tin sản phẩm -->
-                    <div class="info-card bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm flex flex-col">
-                        <div class="text-gray-500 text-sm mb-2 flex items-center gap-1">
+                    <div class="info-card bg-gray-50 text-xs p-4 rounded-lg border border-gray-200 shadow-sm flex flex-col">
+                        <div class="text-gray-500 text-xs mb-2 flex items-center gap-1">
                             <i class="fas fa-tshirt" style="color: #F43F5E;"></i> Thông tin sản phẩm
                         </div>
                         <p class="flex justify-between mb-2">
@@ -200,8 +200,8 @@ $ngayXuat = date('d/m/Y', strtotime($phieuXuat['NgayXuat']));
                     </div>
 
                     <!-- Thông tin xuất kho -->
-                    <div class="info-card bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm flex flex-col">
-                        <div class="text-gray-500 text-sm mb-2 flex items-center gap-1">
+                    <div class="info-card bg-gray-50 p-4 text-xs rounded-lg border border-gray-200 shadow-sm flex flex-col">
+                        <div class="text-gray-500 text-xs mb-2 flex items-center gap-1">
                             <i class="fas fa-cubes" style="color: #22C55E;"></i> Thông tin xuất kho
                         </div>
                         <p class="flex justify-between mb-2">
@@ -219,8 +219,8 @@ $ngayXuat = date('d/m/Y', strtotime($phieuXuat['NgayXuat']));
                     </div>
 
                     <!-- Thông tin khách hàng -->
-                    <div class="info-card bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm flex flex-col">
-                        <div class="text-gray-500 text-sm mb-2 flex items-center gap-1">
+                    <div class="info-card bg-gray-50 p-4  text-xs rounded-lg border border-gray-200 shadow-sm flex flex-col">
+                        <div class="text-gray-500 text-xs mb-2 flex items-center gap-1">
                             <i class="fas fa-user-tie" style="color: #A855F7;"></i> Thông tin khách hàng
                         </div>
                         <p class="flex justify-between mb-2">
@@ -249,7 +249,7 @@ $ngayXuat = date('d/m/Y', strtotime($phieuXuat['NgayXuat']));
                 <!-- Ghi chú -->
                 <?php if (!empty($phieuXuat['GhiChu'])): ?>
                 <div class="px-6 pb-4">
-                    <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                    <div class="bg-yellow-50 p-4 text-xs rounded-lg border border-yellow-200">
                         <h4 class="font-medium flex items-center gap-2 text-yellow-700 mb-2">
                             <i class="fas fa-sticky-note icon-yellow"></i> Ghi chú
                         </h4>
@@ -260,7 +260,7 @@ $ngayXuat = date('d/m/Y', strtotime($phieuXuat['NgayXuat']));
 
                 <!-- Danh sách chi tiết -->
                 <div class="p-6 pt-2">
-                    <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
                         <i class="fas fa-list-ul icon-red"></i> Chi Tiết Xuất Hàng
                         <span class="text-sm bg-red-100 text-red-700 px-2 py-1 rounded-full">
                             <?php echo count($chiTietXuat); ?> mục
@@ -270,27 +270,27 @@ $ngayXuat = date('d/m/Y', strtotime($phieuXuat['NgayXuat']));
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gradient-to-r from-red-50 to-red-100">
                                 <tr>
-                                    <th class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                                    <th class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                                         <div class="flex items-center gap-1">
                                             <i class="fas fa-hashtag icon-red"></i> STT
                                         </div>
                                     </th>                                                                     
-                                    <th class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                                    <th class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                                         <div class="flex items-center gap-1">
                                             <i class="fas fa-boxes icon-red"></i> Số Lượng Xuất
                                         </div>
                                     </th>
-                                    <th class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                                    <th class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                                         <div class="flex items-center gap-1">
                                             <i class="fas fa-barcode icon-red"></i> Số Lot
                                         </div>
                                     </th>
-                                    <th class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                                    <th class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                                         <div class="flex items-center gap-1">
                                             <i class="fas fa-layer-group icon-red"></i> Thành Phần
                                         </div>
                                     </th>                              
-                                    <th class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                                    <th class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                                         <div class="flex items-center gap-1">
                                             <i class="fas fa-check-circle icon-red"></i> Trạng Thái
                                         </div>
@@ -306,11 +306,11 @@ $ngayXuat = date('d/m/Y', strtotime($phieuXuat['NgayXuat']));
                                     $trangThaiIcon = ($ct['TrangThai'] == 1) ? 'fa-check-circle' : 'fa-times-circle';
                                 ?>
                                     <tr class="hover:bg-red-50 transition-colors duration-200">
-                                        <td class="px-6 py-4 text-sm text-gray-700"><?php echo $stt++; ?></td>                                                                                                  
-                                        <td class="px-6 py-4 text-sm text-gray-700 font-medium"><?php echo number_format($ct['SoLuong'], 0, ',', '.') . ' ' . htmlspecialchars($ct['TenDVT']); ?></td>
-                                        <td class="px-6 py-4 text-sm text-gray-700"><?php echo htmlspecialchars($ct['SoLot']); ?></td>
-                                        <td class="px-6 py-4 text-sm text-gray-700"><?php echo htmlspecialchars($ct['TenThanhPhan']); ?></td>                                     
-                                        <td class="px-6 py-4 text-sm <?php echo $trangThaiClass; ?> font-medium flex items-center gap-2">
+                                        <td class="px-4 py-4 text-xs text-gray-700"><?php echo $stt++; ?></td>                                                                                                  
+                                        <td class="px-4 py-4 text-xs text-gray-700 font-medium"><?php echo number_format($ct['SoLuong'], 0, ',', '.') . ' ' . htmlspecialchars($ct['TenDVT']); ?></td>
+                                        <td class="px-4 py-4 text-xs text-gray-700"><?php echo htmlspecialchars($ct['SoLot']); ?></td>
+                                        <td class="px-4 py-4 text-xs text-gray-700"><?php echo htmlspecialchars($ct['TenThanhPhan']); ?></td>                                     
+                                        <td class="px-4 py-4 text-xs <?php echo $trangThaiClass; ?> font-medium flex items-center gap-2">
                                             <i class="fas <?php echo $trangThaiIcon; ?> <?php echo $trangThaiClass; ?>"></i>
                                             <?php echo htmlspecialchars($trangThaiHienThi); ?>
                                         </td>
@@ -321,7 +321,7 @@ $ngayXuat = date('d/m/Y', strtotime($phieuXuat['NgayXuat']));
                     </div>
 
                     <!-- Summary Footer -->
-                    <div class="mt-6 flex flex-col md:flex-row justify-between gap-4">
+                    <div class="mt-6 flex flex-col text-xs md:flex-row justify-between gap-4">
                         <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm md:w-1/3">
                             <div class="flex items-center gap-2 text-gray-700 font-medium mb-2">
                                 <i class="fas fa-chart-pie icon-blue"></i> Tổng kết

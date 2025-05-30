@@ -94,29 +94,30 @@ $recentXuatKho = $stmtXuatKhoRecent->fetchAll(PDO::FETCH_ASSOC);
 </head>
 <body>
     <!-- GioiThieu Section -->
-    <section class="hero-gradient text-red py-12 md:py-20">
-        <div class="container mx-auto px-4">
-            <div class="flex flex-col md:flex-row items-center justify-between">
-                <div class="md:w-1/2 mb-8 md:mb-0">
-                    <h1 class="text-[30px] md:text-5xl font-bold mb-4">Hệ thống quản lý kho</h1>
-                    <p class="text-lg opacity-90 mb-6">Quản lý hàng hóa hiệu quả, tối ưu vận hành doanh nghiệp</p>
-                    <div class="flex flex-wrap gap-4">
-                        <a href="nhapkho.php" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-red-600 bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-150 ease-in-out">
-                            <i class="fas fa-arrow-circle-down mr-2"></i>
-                            Nhập kho ngay
-                        </a>
-                        <a href="xuatkho.php" class="inline-flex items-center px-6 py-3 border border-white text-base font-medium rounded-md shadow-sm text-red-600 bg-transparent hover:bg-white hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transition duration-150 ease-in-out">
-                            <i class="fas fa-arrow-circle-up mr-2"></i>
-                            Xuất kho ngay
-                        </a>
-                    </div>
+    <section class="hero-gradient text-red py-8 sm:py-12 md:py-16 lg:py-20">
+    <div class="container mx-auto px-4">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="w-full md:w-1/2 mb-6 md:mb-0">
+                <h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-4">Hệ thống quản lý kho</h1>
+                <p class="text-base sm:text-lg opacity-90 mb-6">Quản lý hàng hóa hiệu quả, tối ưu vận hành doanh nghiệp</p>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <a href="nhapkho.php" class="inline-flex items-center px-4 py-2 sm:px-6 sm:py-3 border border-transparent text-sm sm:text-base font-medium rounded-md shadow-sm text-red-600 bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-150 ease-in-out">
+                        <i class="fas fa-arrow-circle-down mr-2"></i>
+                        Nhập kho ngay
+                    </a>
+                    <a href="xuatkho.php" class="inline-flex items-center px-4 py-2 sm:px-6 sm:py-3 border border-white text-sm sm:text-base font-medium rounded-md shadow-sm text-red-600 bg-transparent hover:bg-white hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transition duration-150 ease-in-out">
+                        <i class="fas fa-arrow-circle-up mr-2"></i>
+                        Xuất kho ngay
+                    </a>
                 </div>
-                <!-- <div class="md:w-1/2 flex justify-center">
-                    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRU2OJYIIRPZ0gr7vWKtLO-mx6p62rg1VkzpQ&s" alt="Warehouse Illustration" class="max-w-full h-auto md:max-w-md">
-                </div> -->
             </div>
+            <!-- Nếu muốn thêm hình ảnh -->
+            <!-- <div class="w-full md:w-1/2 flex justify-center">
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRU2OJYIIRPZ0gr7vWKtLO-mx6p62rg1VkzpQ&s" alt="Warehouse Illustration" class="w-full max-w-xs sm:max-w-sm md:max-w-md h-auto object-contain">
+            </div> -->
         </div>
-    </section>
+    </div>
+</section>
 
     <!-- ThongKe Section -->
     <section class="py-10 -mt-10">
@@ -164,15 +165,15 @@ $recentXuatKho = $stmtXuatKhoRecent->fetchAll(PDO::FETCH_ASSOC);
         </div>
 
         <!-- Thống kê -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="bg-white rounded-lg shadow-lg p-6 border-l-4 border-red-600">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
+            <div class="bg-white rounded-lg shadow-lg p-4 sm:p-6 border-l-4 border-red-600">
                 <div class="flex items-center">
-                    <div class="p-3 rounded-full bg-red-100 text-red-600 mr-4">
+                    <div class="p-3 rounded-full bg-red-100 text-red-600 mr-3 sm:mr-4">
                         <i class="fas fa-box text-2xl"></i>
                     </div>
                     <div>
-                        <p class="text-gray-500 text-sm">Tổng sản phẩm</p>
-                        <h3 class="text-2xl font-bold text-gray-800"><?php echo number_format($totalVai); ?></h3>
+                        <p class="text-gray-500 text-xs sm:text-sm">Tổng sản phẩm</p>
+                        <h3 class="text-lg sm:text-2xl font-bold text-gray-800"><?php echo number_format($totalVai); ?></h3>
                     </div>
                 </div>
             </div>
@@ -213,7 +214,7 @@ $recentXuatKho = $stmtXuatKhoRecent->fetchAll(PDO::FETCH_ASSOC);
         
         <!-- Nhập kho -->
         <div class="mb-10">
-            <h3 class="text-xl font-semibold text-gray-700 mb-4 flex items-center">
+            <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center">
                 <i class="fas fa-warehouse mr-2 text-indigo-600"></i> Nhập kho (5 đơn gần nhất)
             </h3>
             <div class="bg-white rounded-lg shadow-md overflow-hidden">
@@ -221,22 +222,20 @@ $recentXuatKho = $stmtXuatKhoRecent->fetchAll(PDO::FETCH_ASSOC);
                     <table class="min-w-full w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                                <th scope="col" class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     <i class="fas fa-clock mr-1 text-blue-500"></i> Thời gian
                                 </th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
-                                    <i class="fas fa-list mr-1 text-indigo-500"></i> Hoạt động
-                                </th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+
+                                <th scope="col" class="hidden sm:table-cell px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     <i class="fas fa-barcode mr-1 text-gray-500"></i> Mã Phiếu
                                 </th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                                <th scope="col" class="hidden md:table-cell px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     <i class="fas fa-user mr-1 text-purple-500"></i> Nhân Viên
                                 </th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
+                                <th scope="col" class="hidden lg:table-cell px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     <i class="fas fa-users mr-1 text-teal-500"></i> Khách Hàng
                                 </th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
+                                <th scope="col" class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     <i class="fas fa-info-circle mr-1 text-green-500"></i> Trạng Thái
                                 </th>
                             </tr>
@@ -244,7 +243,7 @@ $recentXuatKho = $stmtXuatKhoRecent->fetchAll(PDO::FETCH_ASSOC);
                         <tbody class="bg-white divide-y divide-gray-200">
                             <?php
                             foreach ($recentNhapKho as $row) {
-                                $thoiGian = date('d/m/Y H:i', strtotime($row['NgayNhan']));
+                                $thoiGian = date('d/m/Y', strtotime($row['NgayNhan']));
                                 $maPhieu = $row['MaSoMe'];
                                 $tenNhanVien = $row['TenNhanVien'] ?? $row['MaNhanVien'];
                                 $tenKhachHang = $row['TenKhachHang'] ?? $row['MaKhachHang'];
@@ -264,7 +263,7 @@ $recentXuatKho = $stmtXuatKhoRecent->fetchAll(PDO::FETCH_ASSOC);
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     <i class="fas fa-clock mr-1 text-blue-500"></i> <?php echo $thoiGian; ?>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
+                                <!-- <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex items-center">
                                         <div class="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-full bg-blue-100 text-blue-600">
                                             <i class="fas fa-arrow-circle-down"></i>
@@ -276,7 +275,7 @@ $recentXuatKho = $stmtXuatKhoRecent->fetchAll(PDO::FETCH_ASSOC);
                                             
                                         </div>
                                     </div>
-                                </td>
+                                </td> -->
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     <i class="fas fa-barcode mr-1 text-gray-500"></i> <?php echo htmlspecialchars($maPhieu); ?>
                                 </td>
@@ -303,7 +302,7 @@ $recentXuatKho = $stmtXuatKhoRecent->fetchAll(PDO::FETCH_ASSOC);
 
         <!-- Xuất kho -->
         <div>
-            <h3 class="text-xl font-semibold text-gray-700 mb-4 flex items-center">
+            <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center">
                 <i class="fas fa-truck mr-2 text-green-600"></i> Xuất kho (5 đơn gần nhất)
             </h3>
             <div class="bg-white rounded-lg shadow-md overflow-hidden">
@@ -314,9 +313,9 @@ $recentXuatKho = $stmtXuatKhoRecent->fetchAll(PDO::FETCH_ASSOC);
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">
                                     <i class="fas fa-clock mr-1 text-blue-500"></i> Thời gian
                                 </th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
+                                <!-- <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
                                     <i class="fas fa-list mr-1 text-indigo-500"></i> Hoạt động
-                                </th>
+                                </th> -->
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">
                                     <i class="fas fa-barcode mr-1 text-gray-500"></i> Mã Phiếu
                                 </th>
@@ -342,19 +341,7 @@ $recentXuatKho = $stmtXuatKhoRecent->fetchAll(PDO::FETCH_ASSOC);
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     <i class="fas fa-clock mr-1 text-blue-500"></i> <?php echo $thoiGian; ?>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="flex items-center">
-                                        <div class="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-full bg-green-100 text-green-600">
-                                            <i class="fas fa-arrow-circle-up"></i>
-                                        </div>
-                                        <div class="ml-4">
-                                            <div class="text-sm font-medium text-gray-900">
-                                                <i class="fas fa-list mr-1 text-indigo-500"></i> Xuất kho
-                                            </div>
-                                            <div class="text-sm text-gray-500"><?php echo htmlspecialchars($ghiChu); ?></div>
-                                        </div>
-                                    </div>
-                                </td>
+                                
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     <i class="fas fa-barcode mr-1 text-gray-500"></i> <?php echo htmlspecialchars($maPhieu); ?>
                                 </td>

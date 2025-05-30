@@ -250,41 +250,29 @@ $xuatHang = $stmt->fetchAll(PDO::FETCH_ASSOC);
 </head>
 <body class="bg-gray-50 font-sans antialiased">
     <!-- Hero Section -->
-    <section class="bg-gradient-to-br from-red-400 to-red-600 text-white py-12 md:py-20">
-        <div class="container mx-auto px-4">
-            <div class="flex flex-col md:flex-row items-center justify-between">
-                <div class="md:w-1/2 mb-8 md:mb-0">
-                    <h1 class="text-4xl md:text-5xl font-bold mb-4">Xuất Kho MAJ5</h1>
-                    <p class="text-lg opacity-90 mb-6">Chào mừng <strong><?php echo htmlspecialchars($tenNhanVien); ?></strong> đến với hệ thống xuất kho của MAJ5.</p>
-                </div>
-                <!-- <div class="md:w-1/2 flex justify-center">
-                    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRU2OJYIIRPZ0gr7vWKtLO-mx6p62rg1VkzpQ&s" alt="Warehouse Illustration" class="max-w-full h-auto md:max-w-md">
-                </div> -->
-            </div>
-        </div>
-    </section>
+    
 
     <!-- Main Content Section -->
     <section class="bg-gray-50">
-        <div class="container mx-auto">
+        <div class="container mx-auto mt-3">
             <div class="bg-white shadow-xl border-l-4 border-red-600 p-1">
-                <h2 class="text-[22px] font-bold text-gray-800 mb-8 flex items-center">
+                <h2 class="text-[20px] font-bold text-gray-800 mb-3 flex items-center ">
                     <i class="fas fa-list-ul mr-3 text-red-600"></i>
                     DANH SÁCH ĐƠN XUẤT HÀNG
                 </h2>
 
                 <!-- Thanh tìm kiếm và bộ lọc trạng thái -->
-                <div class="flex flex-col md:flex-row gap-4 mb-4">
+                <div class="flex text-sm flex-col md:flex-row gap-4 mb-4">
                     <div class="relative w-full md:w-1/3 group">
-                        <input type="text" id="searchTenNhanVien" placeholder="Tìm theo Tên Nhân Viên" class="p-3 border border-gray-300 rounded-lg w-full pl-12 focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-300 shadow-sm">
+                        <input type="text" id="searchTenNhanVien" placeholder="Tìm theo Tên Nhân Viên" class="p-1 border border-gray-300 rounded-lg w-full pl-12 focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-300 shadow-sm">
                         <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-red-500 transition-colors duration-300"></i>
                     </div>
                     <div class="relative w-full md:w-1/3 group">
-                        <input type="text" id="searchTenKhachHang" placeholder="Tìm theo Tên Khách Hàng" class="p-3 border border-gray-300 rounded-lg w-full pl-12 focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-300 shadow-sm">
+                        <input type="text" id="searchTenKhachHang" placeholder="Tìm theo Tên Khách Hàng" class="p-1 border border-gray-300 rounded-lg w-full pl-12 focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-300 shadow-sm">
                         <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-red-500 transition-colors duration-300"></i>
                     </div>
                     <div class="w-full md:w-1/3">
-                        <select id="filterTrangThai" class="p-3 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-300 shadow-sm">
+                        <select id="filterTrangThai" class="p-1 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-300 shadow-sm">
                             <option value="chua_xuat" <?php echo $trangThaiFilter === 'chua_xuat' ? 'selected' : ''; ?>>Đơn Hàng Chưa Xuất</option>
                             <option value="dang_xuat" <?php echo $trangThaiFilter === 'dang_xuat' ? 'selected' : ''; ?>>Đơn Hàng Đang Xuất</option>
                             <option value="hoan_tat" <?php echo $trangThaiFilter === 'hoan_tat' ? 'selected' : ''; ?>>Đơn Hàng Đã Hoàn Tất</option>
@@ -294,10 +282,10 @@ $xuatHang = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                 <!-- Buttons -->
                 <div class="flex gap-4 mb-4">
-                    <a id="btnXemChiTiet" href="#" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-full shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300">
+                    <a id="btnXemChiTiet" href="#" class="inline-flex items-center px-4 py-2 border border-transparent text-xs font-medium rounded-full shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300">
                         <i class="fas fa-eye mr-2"></i> Xem Chi Tiết
                     </a>
-                    <a id="btnXuatHang" href="#" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-full shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-300">
+                    <a id="btnXuatHang" href="#" class="inline-flex items-center px-4 py-2 border border-transparent text-xs font-medium rounded-full shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-300">
                         <i class="fas fa-arrow-circle-up mr-2"></i> Xuất Hàng
                     </a>
                 </div>
@@ -307,15 +295,15 @@ $xuatHang = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <table class="min-w-full divide-y divide-gray-200 rounded-lg overflow-hidden">
                         <thead class="bg-red-50">
                             <tr>
-                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Chọn</th>
-                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">STT</th>
-                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Mã Phiếu Xuất</th>
-                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Tên Khách Hàng</th>
-                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Tên Nhân Viên</th>
-                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Ngày Tạo</th>
-                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Trạng Thái</th>
-                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Tổng Số Lượng Xuất</th>
-                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Ghi chú</th>
+                                <th class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Chọn</th>
+                                <th class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">STT</th>
+                                <th class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Mã Phiếu Xuất</th>
+                                <th class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Tên Khách Hàng</th>
+                                <th class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Tên Nhân Viên</th>
+                                <th class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Ngày Tạo</th>
+                                <th class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Trạng Thái</th>
+                                <th class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Tổng Số Lượng Xuất</th>
+                                <th class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Ghi chú</th>
                             </tr>
                         </thead>
                         <tbody id="xuatHangTable" class="bg-white divide-y divide-gray-100">
@@ -329,14 +317,14 @@ $xuatHang = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                                         <input type="checkbox" class="row-checkbox" style="width: 20px; height: 20px;" value="<?php echo htmlspecialchars($xh['MaXuatHang']); ?>">
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><?php echo $stt++; ?></td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><?php echo htmlspecialchars($xh['MaXuatHang']); ?></td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><?php echo htmlspecialchars($xh['TenKhachHang']); ?></td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><?php echo htmlspecialchars($xh['TenNhanVien']); ?></td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><?php echo htmlspecialchars($xh['NgayXuat']); ?></td>
-                                    <td class="px-6 py-4 text-sm <?php echo $trangThaiClass; ?> whitespace-nowrap"><?php echo htmlspecialchars($trangThaiHienThi); ?></td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><?php echo number_format($xh['TongSoLuongXuat'], 0, ',', '.') . ' ' . htmlspecialchars($xh['TenDVT']); ?></td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><?php echo htmlspecialchars($xh['GhiChu']); ?></td>
+                                    <td class="px-4 py-4 whitespace-nowrap text-xs text-gray-700"><?php echo $stt++; ?></td>
+                                    <td class="px-4 py-4 whitespace-nowrap text-xs text-gray-700"><?php echo htmlspecialchars($xh['MaXuatHang']); ?></td>
+                                    <td class="px-4 py-4 whitespace-nowrap text-xs text-gray-700"><?php echo htmlspecialchars($xh['TenKhachHang']); ?></td>
+                                    <td class="px-4 py-4 whitespace-nowrap text-xs text-gray-700"><?php echo htmlspecialchars($xh['TenNhanVien']); ?></td>
+                                    <td class="px-4 py-4 whitespace-nowrap text-xs text-gray-700"><?php echo htmlspecialchars($xh['NgayXuat']); ?></td>
+                                    <td class="px-4 py-4 text-xs <?php echo $trangThaiClass; ?> whitespace-nowrap"><?php echo htmlspecialchars($trangThaiHienThi); ?></td>
+                                    <td class="px-4 py-4 whitespace-nowrap text-xs text-gray-700"><?php echo number_format($xh['TongSoLuongXuat'], 0, ',', '.') . ' ' . htmlspecialchars($xh['TenDVT']); ?></td>
+                                    <td class="px-4 py-4 whitespace-nowrap text-xs text-gray-700"><?php echo htmlspecialchars($xh['GhiChu']); ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>

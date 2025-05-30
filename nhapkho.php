@@ -192,10 +192,6 @@ $donSanXuat = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        .hero-gradient {
-            background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
-            color: white;
-        }
         .loading {
             position: fixed;
             top: 50%;
@@ -232,39 +228,27 @@ $donSanXuat = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </style>
 </head>
 <body class="bg-gray-50 font-sans antialiased">
-    <!-- Hero Section -->
-    <section class="hero-gradient text-white py-12 md:py-20">
-        <div class="container mx-auto px-4">
-            <div class="flex flex-col md:flex-row items-center justify-between">
-                <div class="md:w-1/2 mb-8 md:mb-0">
-                    <h1 class="text-4xl md:text-5xl font-bold mb-4">Nhập Kho MAJ5</h1>
-                    <p class="text-lg opacity-90 mb-6">Chào mừng <strong><?php echo htmlspecialchars($tenNhanVien); ?></strong> đến với hệ thống nhập kho của MAJ5.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
     <!-- Main Content Section -->
     <section class="bg-gray-50">
-        <div class="container mx-auto">
+        <div class="container mx-auto mt-3">
             <div class="bg-white shadow-xl border-l-4 border-red-600 p-1">
-                <h2 class="text-[22px] font-bold text-gray-800 mb-8 flex items-center ">
+                <h2 class="text-[20px] font-bold text-gray-800 mb-3 flex items-center ">
                     <i class="fas fa-list-ul mr-3 text-red-600"></i>
                     DANH SÁCH ĐƠN SẢN XUẤT
                 </h2>
 
                 <!-- Thanh tìm kiếm và bộ lọc trạng thái -->
-                <div class="flex flex-col md:flex-row gap-4 mb-4">
+                <div class="flex text-sm flex-col md:flex-row gap-4 mb-4">
                     <div class="relative w-full md:w-1/3 group">
-                        <input type="text" id="searchMaSoMe" placeholder="Tìm theo Mã Số Mẻ" class="p-3 border border-gray-300 rounded-lg w-full pl-12 focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-300 shadow-sm">
+                        <input type="text" id="searchMaSoMe" placeholder="Tìm theo Mã Số Mẻ" class=" p-1 border border-gray-300 rounded-lg w-full pl-12 focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-300 shadow-sm">
                         <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-red-500 transition-colors duration-300"></i>
                     </div>
                     <div class="relative w-full md:w-1/3 group">
-                        <input type="text" id="searchTenKhachHang" placeholder="Tìm theo Tên Khách Hàng" class="p-3 border border-gray-300 rounded-lg w-full pl-12 focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-300 shadow-sm">
+                        <input type="text" id="searchTenKhachHang" placeholder="Tìm theo Tên Khách Hàng" class="p-1 border border-gray-300 rounded-lg w-full pl-12 focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-300 shadow-sm">
                         <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-red-500 transition-colors duration-300"></i>
                     </div>
                     <div class="w-full md:w-1/3">
-                        <select id="filterTrangThai" class="p-3 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-300 shadow-sm">
+                        <select id="filterTrangThai" class="p-1 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-300 shadow-sm">
                             <option value="0" <?php echo $trangThai == 0 ? 'selected' : ''; ?>>Đơn Sản Xuất Chưa Nhập Đủ Hàng</option>
                             <option value="3" <?php echo $trangThai == 3 ? 'selected' : ''; ?>>Đơn Sản Xuất Đã Nhập Đủ Hàng</option>
                         </select>
@@ -273,13 +257,13 @@ $donSanXuat = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                 <!-- Buttons -->
                 <div class="flex gap-4 mb-4">
-                    <a id="btnXemChiTiet" href="#" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-full shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300">
+                    <a id="btnXemChiTiet" href="#" class="inline-flex items-center px-4 py-2 border border-transparent text-xs font-medium rounded-full shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300">
                         <i class="fas fa-eye mr-2"></i> Xem Chi Tiết
                     </a>
-                    <a id="btnNhapHang" href="#" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-full shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-300" style="display: <?php echo $trangThai == 0 ? 'inline-flex' : 'none'; ?>;">
+                    <a id="btnNhapHang" href="#" class="inline-flex items-center px-4 py-2 border border-transparent text-xs font-medium rounded-full shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-300" style="display: <?php echo $trangThai == 0 ? 'inline-flex' : 'none'; ?>;">
                         <i class="fas fa-arrow-circle-down mr-2"></i> Nhập Hàng
                     </a>
-                    <a id="btnNhapHangTon" href="#" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-full shadow-sm text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-all duration-300" style="display: <?php echo $trangThai == 3 ? 'inline-flex' : 'none'; ?>;">
+                    <a id="btnNhapHangTon" href="#" class="inline-flex items-center px-4 py-2 border border-transparent text-xs font-medium rounded-full shadow-sm text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-all duration-300" style="display: <?php echo $trangThai == 3 ? 'inline-flex' : 'none'; ?>;">
                         <i class="fas fa-box-open mr-2"></i> Nhập Hàng Tồn
                     </a>
                 </div>
@@ -289,14 +273,14 @@ $donSanXuat = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <table class="min-w-full divide-y divide-gray-200 rounded-lg overflow-hidden">
                         <thead class="bg-red-50">
                             <tr>
-                                <th scope="col" class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Chọn</th>
-                                <th scope="col" class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">STT</th>
-                                <th scope="col" class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Mã Số Mẻ</th>
-                                <th scope="col" class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Mã Đơn Hàng</th>
-                                <th scope="col" class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Tên Khách Hàng</th>
-                                <th scope="col" class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Tên Vải</th>
-                                <th scope="col" class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Số Lượng Giao</th>
-                                <th scope="col" class="px-6 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Ngày Nhận</th>
+                                <th scope="col" class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Chọn</th>
+                                <th scope="col" class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">STT</th>
+                                <th scope="col" class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Mã Số Mẻ</th>
+                                <th scope="col" class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Mã Đơn Hàng</th>
+                                <th scope="col" class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Tên Khách Hàng</th>
+                                <th scope="col" class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Tên Vải</th>
+                                <th scope="col" class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Số Lượng Giao</th>
+                                <th scope="col" class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Ngày Nhận</th>
                             </tr>
                         </thead>
                         <tbody id="donSanXuatTable" class="bg-white divide-y divide-gray-100">
@@ -304,17 +288,17 @@ $donSanXuat = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             $stt = $offset + 1;
                             foreach ($donSanXuat as $don): 
                             ?>
-                                <tr class="hover:bg-red-50 transition-colors duration-200">
+                                <tr class="hover:bg-red-50 text-pretty transition-colors duration-200">
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                                         <input type="checkbox" class="row-checkbox" style="width: 20px; height: 20px;" value="<?php echo htmlspecialchars($don['MaSoMe']); ?>">
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><?php echo $stt++; ?></td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><?php echo htmlspecialchars($don['MaSoMe']); ?></td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><?php echo htmlspecialchars($don['MaDonHang']); ?></td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><?php echo htmlspecialchars($don['TenKhachHang']); ?></td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><?php echo htmlspecialchars($don['TenVai']); ?></td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><?php echo htmlspecialchars($don['TongSoLuongGiao']); ?> <?php echo htmlspecialchars($don['TenDVT']); ?></td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><?php echo date('d/m/Y', strtotime($don['NgayNhan'])); ?></td>
+                                    <td class="px-6 py-4 text-left whitespace-nowrap text-xs text-gray-700"><?php echo $stt++; ?></td>
+                                    <td class="px-6 py-4 text-left whitespace-nowrap text-xs text-gray-700"><?php echo htmlspecialchars($don['MaSoMe']); ?></td>
+                                    <td class="px-6 py-4 text-left whitespace-nowrap text-xs text-gray-700"><?php echo htmlspecialchars($don['MaDonHang']); ?></td>
+                                    <td class="px-6 py-4 text-left whitespace-nowrap text-xs text-gray-700"><?php echo htmlspecialchars($don['TenKhachHang']); ?></td>
+                                    <td class="px-6 py-4 text-left whitespace-nowrap text-xs text-gray-700"><?php echo htmlspecialchars($don['TenVai']); ?></td>
+                                    <td class="px-6 py-4 text-left whitespace-nowrap text-xs font-bold text-green-700"><?php echo htmlspecialchars($don['TongSoLuongGiao']); ?> <?php echo htmlspecialchars($don['TenDVT']); ?></td>
+                                    <td class="px-6 py-4 text-left whitespace-nowrap text-xs text-gray-700"><?php echo date('d/m/Y', strtotime($don['NgayNhan'])); ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>

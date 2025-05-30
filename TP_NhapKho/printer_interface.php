@@ -1424,13 +1424,17 @@ function printWithBitmap($socket, $file, $labelType)
         }
 
         // Xử lý nút quay lại
+        // Xử lý nút quay lại
         document.querySelector('.btn-primary').addEventListener('click', function(e) {
             e.preventDefault();
             clearSessionData();
-            if (window.history.length > 1 && document.referrer && document.referrer !== window.location.href) {
+            const previousPage = sessionStorage.getItem('previousPage');
+            if (previousPage && previousPage !== window.location.href) {
+                window.location.href = previousPage;
+            } else if (window.history.length > 1) {
                 window.history.back();
             } else {
-                window.location.href = '/';
+                window.location.href = '/nhapkho.php'; // Trang mặc định nếu không có previousPage
             }
         });
 

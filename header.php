@@ -13,14 +13,13 @@ $tenNhanVien = $_SESSION['tenNhanVien'] ?? '';
 $maPhanQuyen = $_SESSION['maPhanQuyen'] ?? '';
 
 // Xác định vai trò dựa trên MaPhanQuyen
-// Xác định vai trò dựa trên MaPhanQuyen
 $vaiTro = '';
 if ($maPhanQuyen == 4) {
     $vaiTro = 'Nhân viên nhập kho';
 } elseif ($maPhanQuyen == 5) {
     $vaiTro = 'Nhân viên xuất kho';
 } elseif ($maPhanQuyen == 6) {
-    $vaiTro = 'Nhân viên kho ';
+    $vaiTro = 'Nhân viên kho';
 }
 
 // Thiết lập múi giờ Việt Nam
@@ -114,6 +113,58 @@ $current_page = basename($_SERVER['PHP_SELF']);
             box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
         }
     }
+
+    /* Responsive styles */
+    @media (max-width: 768px) {
+        .nav-link {
+            font-size: 0.75rem; /* Giảm kích thước chữ trên mobile */
+        }
+
+        .container {
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+
+        .mobile-menu {
+            display: flex;
+            justify-content: space-around;
+        }
+
+        .mobile-menu a {
+            flex: 1;
+            text-align: center;
+            padding: 0.5rem;
+        }
+
+        .mobile-menu i {
+            font-size: 1.25rem; /* Giảm kích thước biểu tượng */
+        }
+
+        .mobile-menu span {
+            font-size: 0.65rem; /* Giảm kích thước chữ */
+        }
+
+        .user-info-mobile {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .logo-container img {
+            height: 2rem; /* Giảm kích thước logo trên mobile */
+            width: auto;
+        }
+
+        .logo-container span {
+            font-size: 1rem; /* Giảm kích thước chữ logo */
+        }
+
+        .user-info-mobile span {
+            font-size: 0.7rem; /* Giảm kích thước chữ thông tin người dùng */
+        }
+    }
     </style>
 </head>
 
@@ -123,7 +174,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
         <div class="container mx-auto px-4">
             <div class="flex justify-between h-16">
                 <!-- Left side - Logo and Brand -->
-                <div class="flex items-center">
+                <div class="flex items-center logo-container">
                     <a href="home.php" class="flex-shrink-0 flex items-center group">
                         <div
                             class="relative overflow-hidden rounded-full p-0.5 group-hover:from-red-600 group-hover:to-red-800 transition duration-300">
@@ -146,8 +197,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
                             <span>Trang chủ</span>
                         </a>
 
-                        <?php if ($maPhanQuyen == 4 || $maPhanQuyen == 6): // Chỉ hiển thị Nhập kho cho nhân viên nhập kho 
-                        ?>
+                        <?php if ($maPhanQuyen == 4 || $maPhanQuyen == 6): ?>
                         <a href="nhapkho.php"
                             class="nav-link px-3 py-2 text-sm font-medium rounded-md transition duration-300 ease-in-out flex items-center space-x-1.5 <?php echo ($current_page == 'nhapkho.php') ? 'active text-red-600' : 'text-gray-700 hover:text-red-600'; ?>">
                             <i class="fas fa-arrow-circle-down"></i>
@@ -155,19 +205,13 @@ $current_page = basename($_SERVER['PHP_SELF']);
                         </a>
                         <?php endif; ?>
 
-                        <?php if ($maPhanQuyen == 5 || $maPhanQuyen == 6): // Chỉ hiển thị Xuất kho cho nhân viên xuất kho 
-                        ?>
+                        <?php if ($maPhanQuyen == 5 || $maPhanQuyen == 6): ?>
                         <a href="xuatkho.php"
                             class="nav-link px-3 py-2 text-sm font-medium rounded-md transition duration-300 ease-in-out flex items-center space-x-1.5 <?php echo ($current_page == 'xuatkho.php') ? 'active text-red-600' : 'text-gray-700 hover:text-red-600'; ?>">
                             <i class="fas fa-arrow-circle-up"></i>
                             <span>Xuất kho</span>
                         </a>
                         <?php endif; ?>
-
-                        <!-- <a href="#" class="nav-link px-3 py-2 text-sm font-medium rounded-md transition duration-300 ease-in-out flex items-center space-x-1.5 text-gray-700 hover:text-red-600">
-                            <i class="fas fa-chart-bar"></i>
-                            <span>Báo cáo</span>
-                        </a> -->
                     </div>
                 </div>
 
@@ -179,15 +223,12 @@ $current_page = basename($_SERVER['PHP_SELF']);
                             <p class="text-sm font-semibold text-gray-800"><?php echo htmlspecialchars($tenNhanVien); ?>
                             </p>
                         </div>
-                        <div class="h-8 w-8 bg-red-600 text-white rounded-full flex items-center justify-center shadow">
-                            <span class="font-semibold"><?php echo substr($tenNhanVien, 0, 1); ?></span>
-                        </div>
                     </div>
 
                     <a href="logout.php"
                         class="inline-flex items-center px-2 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-300 ease-in-out transform hover:-translate-y-0.5">
-                        <i class="fas fa-sign-out-alt mr-2"></i>
-                        Đăng xuất
+                        <i class="fas fa-sign-out-alt "></i>
+                        
                     </a>
                 </div>
             </div>
@@ -201,7 +242,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
         <!-- Mobile menu -->
         <div class="md:hidden border-t border-gray-100 bg-white shadow-md">
-            <div class="flex justify-around py-3">
+            <div class="mobile-menu border-b-2">
                 <a href="home.php"
                     class="text-center px-2 py-1 <?php echo ($current_page == 'home.php' || $current_page == 'index.php') ? 'text-red-600 font-medium' : 'text-gray-600 hover:text-red-600'; ?> transition duration-300">
                     <i class="fas fa-home block text-xl mb-1"></i>
@@ -223,15 +264,10 @@ $current_page = basename($_SERVER['PHP_SELF']);
                     <span class="text-xs">Xuất kho</span>
                 </a>
                 <?php endif; ?>
-
-                <!-- <a href="#" class="text-center  px-2 py-1 text-gray-300 transition duration-300">
-                    <i class="fas fa-chart-bar block text-xl mb-1"></i>
-                    <span class="text-xs">Báo cáo</span>
-                </a> -->
             </div>
 
             <!-- Mobile user info -->
-            <div class="flex items-center justify-between px-4 py-2 bg-gray-50 text-xs">
+            <div class="user-info-mobile flex items-center justify-between px-4 bg-gray-50 text-xs">
                 <div class="flex items-center">
                     <span class="text-gray-500">Xin chào, <?php echo htmlspecialchars($vaiTro); ?></span>
                     <span class="font-semibold text-gray-800 ml-1"><?php echo htmlspecialchars($tenNhanVien); ?></span>
@@ -245,24 +281,24 @@ $current_page = basename($_SERVER['PHP_SELF']);
     </nav>
 
     <!-- Page Header Banner -->
-    <!-- <?php if ($current_page == 'nhapkho.php' || $current_page == 'xuatkho.php'): ?>
-    <div class="bg-gradient-to-r from-red-600 to-red-800 text-white py-8 shadow-md">
+    <?php if ($current_page == 'nhapkho.php' || $current_page == 'xuatkho.php'): ?>
+    <div class="bg-gradient-to-r from-red-600 to-red-800 text-white py-6 md:py-8 shadow-md">
         <div class="container mx-auto px-4">
-            <div class="flex items-center">
-                <div class="mr-6 bg-white p-3 rounded-full text-red-600 shadow-lg pulse-anim">
-                    <i class="fas fa-<?php echo ($current_page == 'nhapkho.php') ? 'arrow-circle-down' : 'arrow-circle-up'; ?> text-2xl"></i>
+            <div class="flex items-center flex-col md:flex-row">
+                <div class="mr-0 md:mr-6 bg-white p-3 rounded-full text-red-600 shadow-lg pulse-anim">
+                    <i class="fas fa-<?php echo ($current_page == 'nhapkho.php') ? 'arrow-circle-down' : 'arrow-circle-up'; ?> text-xl md:text-2xl"></i>
                 </div>
-                <div>
-                    <h1 class="text-3xl font-bold"><?php echo ($current_page == 'nhapkho.php') ? 'NHẬP KHO' : 'XUẤT KHO'; ?></h1>
+                <div class="mt-4 md:mt-0">
+                    <h1 class="text-2xl md:text-3xl font-bold"><?php echo ($current_page == 'nhapkho.php') ? 'NHẬP KHO' : 'XUẤT KHO'; ?></h1>
                     <div class="flex items-center mt-1">
                         <div class="h-1 w-12 bg-white opacity-60 rounded mr-2"></div>
-                        <p class="text-red-100 text-sm">Quản lý <?php echo ($current_page == 'nhapkho.php') ? 'nhập' : 'xuất'; ?> kho hiệu quả, dễ dàng</p>
+                        <p class="text-red-100 text-xs md:text-sm">Quản lý <?php echo ($current_page == 'nhapkho.php') ? 'nhập' : 'xuất'; ?> kho hiệu quả, dễ dàng</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    <?php endif; ?> -->
+    <?php endif; ?>
 
     <!-- Script để cập nhật thời gian theo thời gian thực -->
     <script>

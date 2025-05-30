@@ -4,6 +4,8 @@ ob_start();
 header('Content-Type: text/html; charset=utf-8');
 require_once __DIR__ . '/../vendor/tecnickcom/tcpdf/tcpdf.php';
 require_once __DIR__ . '/../vendor/autoload.php';
+
+include '../convert.php';
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
 include('../db_config.php');
@@ -505,17 +507,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $timestamp = date('YmdHis');
         $safeMaSoMe = preg_replace('/[^A-Za-z0-9_-]/', '_', $maSoMe);
         $pdfFileName = "Tem_NhapKho_" . ($labelType === 'khachle' ? 'KhachLe_' : 'HeThong_') . "{$safeMaSoMe}_{$timestamp}.pdf";
+        $bmpFileName = str_replace('.pdf', '.bmp', $pdfFileName);
 
+        // Lưu file PDF tạm thời
+        $uploadDir = __DIR__ . '/uploads/';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+        $pdfPath = $uploadDir . $pdfFileName;
+        $pdf->Output($pdfPath, 'F');
+
+        // Chuyển đổi PDF sang BMP
+        $bmpPath = convertPdfToBmp($pdfPath);
+        if (!$bmpPath || !file_exists($bmpPath)) {
+            unlink($pdfPath); // Xóa file PDF tạm
+            sendError("Không thể chuyển đổi PDF sang BMP");
+        }
+
+        // Gửi file BMP về client
         ob_end_clean();
-        header('Content-Type: application/pdf');
-        header('Content-Disposition: inline; filename="' . $pdfFileName . '"');
+        header('Content-Type: image/bmp');
+        header('Content-Disposition: attachment; filename="' . $bmpFileName . '"');
         header('Cache-Control: private, max-age=0, must-revalidate');
         header('Pragma: public');
+        readfile($bmpPath);
 
-        $pdf->Output($pdfFileName, 'I');
+        // Xóa file tạm
+        unlink($pdfPath);
+        unlink($bmpPath);
         exit;
     } catch (Throwable $e) {
-        sendError("Lỗi nghiêm trọng khi tạo hoặc xuất PDF", $e);
+        // Xóa file PDF tạm nếu tồn tại
+        if (isset($pdfPath) && file_exists($pdfPath)) {
+            unlink($pdfPath);
+        }
+        // Xóa file BMP tạm nếu tồn tại
+        if (isset($bmpPath) && file_exists($bmpPath)) {
+            unlink($bmpPath);
+        }
+        sendError("Lỗi nghiêm trọng khi tạo hoặc xuất BMP", $e);
     }
 }
 // Xử lý lưu vào DB khi nhấn "Nhập kho"
@@ -1291,12 +1321,13 @@ function deleteRow(index) {
 }
 
 // Tạo và xử lý file PDF chứa thông tin tem nhập kho
+// Tạo và xử lý file BMP chứa thông tin tem nhập kho
 async function generatePDF(data, labelType) {
     if (!data || data.length === 0) {
         Swal.fire({
             icon: 'warning',
             title: 'Dữ liệu không hợp lệ',
-            text: 'Không có dữ liệu để tạo PDF.',
+            text: 'Không có dữ liệu để tạo BMP.',
             confirmButtonText: 'OK',
             customClass: {
                 popup: 'rounded-xl',
@@ -1309,7 +1340,7 @@ async function generatePDF(data, labelType) {
     }
 
     Swal.fire({
-        title: 'Đang tạo PDF...',
+        title: 'Đang tạo BMP...',
         text: 'Vui lòng chờ trong giây lát.',
         allowOutsideClick: false,
         didOpen: () => {
@@ -1332,6 +1363,7 @@ async function generatePDF(data, labelType) {
     formData.append('pdfData', JSON.stringify(data));
     formData.append('labelType', labelType);
 
+    sessionStorage.setItem('previousPage', window.location.href);
     try {
         const response = await fetch(window.location.href, {
             method: 'POST',
@@ -1343,65 +1375,76 @@ async function generatePDF(data, labelType) {
             throw new Error(errorData.error || `Lỗi Server: ${response.status}`);
         }
 
-        const pdfBlob = await response.blob();
-        const fileName = response.headers.get('Content-Disposition')?.match(/filename="(.+)"/)?.[1] || 
-                         `Tem_NhapKho_${labelType}_${Date.now()}.pdf`;
-
-        const isCordova = typeof cordova !== 'undefined' && 
-                         typeof cordova.plugins !== 'undefined' && 
-                         typeof cordova.file !== 'undefined' && 
-                         typeof cordova.plugins.fileOpener2 !== 'undefined';
-
-        if (isCordova) {
-            await saveAndOpenPDF(pdfBlob, fileName);
-        } else {
-            const pdfUrl = URL.createObjectURL(pdfBlob);
-            const newWindow = window.open(pdfUrl, '_blank');
-            if (!newWindow) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Popup bị chặn',
-                    text: 'Trình duyệt đã chặn mở tab mới. Nhấn OK để tải file.',
-                    showCancelButton: true,
-                    confirmButtonText: 'Tải file',
-                    cancelButtonText: 'Hủy',
-                    customClass: {
-                        popup: 'rounded-xl',
-                        title: 'text-lg font-semibold',
-                        confirmButton: 'bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg'
-                    },
-                    buttonsStyling: false
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        const link = document.createElement('a');
-                        link.href = pdfUrl;
-                        link.download = fileName;
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                    }
-                });
-            }
-            setTimeout(() => URL.revokeObjectURL(pdfUrl), 10000);
+        const contentType = response.headers.get('Content-Type');
+        if (!contentType.includes('image/bmp')) {
+            throw new Error('Phản hồi không phải file BMP: ' + contentType);
         }
 
-        Swal.fire({
-            icon: 'success',
-            title: 'Thành công!',
-            text: 'File PDF đã được xử lý.',
-            confirmButtonText: 'OK',
-            customClass: {
-                popup: 'rounded-xl',
-                title: 'text-lg font-semibold',
-                confirmButton: 'bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg'
-            },
-            buttonsStyling: false
-        });
+        const bmpBlob = await response.blob();
+        const contentDisposition = response.headers.get('Content-Disposition');
+        let fileName = contentDisposition?.match(/filename="(.+)"/)?.[1] ||
+            `Tem_${new Date().toISOString().replace(/[:.]/g, '-')}.bmp`;
+
+        const isCordova = typeof cordova !== 'undefined' &&
+            typeof cordova.plugins !== 'undefined' &&
+            typeof cordova.file !== 'undefined' &&
+            typeof cordova.plugins.fileOpener2 !== 'undefined';
+
+        if (isCordova) {
+            // Môi trường Cordova: Lưu file BMP tạm thời và chuyển hướng
+            const directory = cordova.file.externalDataDirectory || cordova.file.dataDirectory;
+            const filePath = directory + fileName;
+
+            await new Promise((resolve, reject) => {
+                window.resolveLocalFileSystemURL(directory, function(dirEntry) {
+                    dirEntry.getFile(fileName, { create: true, exclusive: false }, function(fileEntry) {
+                        fileEntry.createWriter(function(fileWriter) {
+                            fileWriter.onwriteend = function() {
+                                sessionStorage.setItem('labelType', labelType);
+                                window.location.href = `printer_interface.php?filePath=${encodeURIComponent(filePath)}&labelType=${encodeURIComponent(labelType)}`;
+                                resolve();
+                            };
+                            fileWriter.onerror = function(e) {
+                                reject(new Error('Không thể lưu file BMP: ' + e.toString()));
+                            };
+                            fileWriter.write(bmpBlob);
+                        }, reject);
+                    }, reject);
+                }, reject);
+            });
+        } else {
+            // Môi trường trình duyệt: Lưu file BMP vào sessionStorage và chuyển hướng
+            const reader = new FileReader();
+            reader.onload = function() {
+                if (!reader.result.startsWith('data:image/bmp;base64,')) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Lỗi',
+                        text: 'Dữ liệu trả về không phải BMP.',
+                        confirmButtonText: 'OK',
+                        customClass: {
+                            popup: 'rounded-xl',
+                            title: 'text-lg font-semibold',
+                            confirmButton: 'bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg'
+                        },
+                        buttonsStyling: false
+                    });
+                    return;
+                }
+                sessionStorage.setItem('bmpFile', reader.result);
+                sessionStorage.setItem('bmpFileName', fileName);
+                sessionStorage.setItem('labelType', labelType);
+                window.location.href = 'printer_interface.php';
+            };
+            reader.readAsDataURL(bmpBlob);
+        }
+
+        Swal.close();
     } catch (error) {
         Swal.fire({
             icon: 'error',
             title: 'Lỗi!',
-            text: `Lỗi khi tạo PDF: ${error.message}`,
+            text: `Lỗi khi tạo BMP: ${error.message}`,
             confirmButtonText: 'OK',
             customClass: {
                 popup: 'rounded-xl',
@@ -1410,8 +1453,6 @@ async function generatePDF(data, labelType) {
             },
             buttonsStyling: false
         });
-    } finally {
-        Swal.close();
     }
 }
 
