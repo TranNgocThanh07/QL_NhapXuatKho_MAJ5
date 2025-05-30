@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => 'admin/ql_nhap-xuat-kho_maj5',
-        'pretty_version' => '1.0.0+no-version-set',
-        'version' => '1.0.0.0',
-        'reference' => null,
+        'pretty_version' => 'dev-main',
+        'version' => 'dev-main',
+        'reference' => '24c66c9e391839d4c6fb72e61411699f347acf2e',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -11,9 +11,9 @@
     ),
     'versions' => array(
         'admin/ql_nhap-xuat-kho_maj5' => array(
-            'pretty_version' => '1.0.0+no-version-set',
-            'version' => '1.0.0.0',
-            'reference' => null,
+            'pretty_version' => 'dev-main',
+            'version' => 'dev-main',
+            'reference' => '24c66c9e391839d4c6fb72e61411699f347acf2e',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
@@ -45,6 +45,15 @@
             'install_path' => __DIR__ . '/../endroid/qr-code',
             'aliases' => array(),
             'dev_requirement' => false,
+        ),
+        'jetbrains/phpstorm-stubs' => array(
+            'pretty_version' => 'v2024.3',
+            'version' => '2024.3.0.0',
+            'reference' => '0e82bdfe850c71857ee4ee3501ed82a9fc5d043c',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../jetbrains/phpstorm-stubs',
+            'aliases' => array(),
+            'dev_requirement' => true,
         ),
         'mpdf/mpdf' => array(
             'pretty_version' => 'v8.2.5',

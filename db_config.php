@@ -3,7 +3,7 @@ $dbConfig = [
     'user' => 'sa',
     'password' => '123',
     'server' => 'localhost',
-    'database' => 'Maj5',
+    'database' => '0525_MAJ1',
     'port' => 1433
 ];
 
@@ -16,4 +16,3 @@ try {
 } catch (PDOException $e) {
     die("Kết nối database thất bại: " . $e->getMessage());
 }
-?>
