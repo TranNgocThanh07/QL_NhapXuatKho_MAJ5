@@ -70,30 +70,56 @@ if (isset($_GET['filePath']) && !empty($_GET['filePath'])) {
 
 // Xử lý các yêu cầu POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['action']) && $_POST['action'] === 'test_printer_connection') {
-        echo testActualPrinterConnection($printer_ip, $printer_port, $timeout);
-        exit; // Quan trọng: exit ngay để không chạy code khác
-    }
+    // Xử lý test kết nối - sửa tên thuộc tính
     if (isset($_POST['test_connection'])) {
+        echo testActualPrinterConnection($printer_ip, $printer_port, $timeout);
+        exit;
+    }
+    
+    // Xử lý test kết nối cũ (giữ lại để tương thích)
+    if (isset($_POST['test_printer_connection'])) {
         echo testPrinterConnection($printer_ip, $printer_port, $timeout);
-    } elseif (isset($_POST['calibrate_printer'])) {
+        exit;
+    }
+    
+    // Xử lý hiệu chuẩn máy in
+    if (isset($_POST['calibrate_printer'])) {
         echo calibratePrinter($printer_ip, $printer_port, $timeout);
-    } elseif (isset($_POST['print_text_test'])) {
+        exit;
+    }
+    
+    // Xử lý test in text
+    if (isset($_POST['print_text_test'])) {
         echo printTextTest($printer_ip, $printer_port, $timeout);
-    } elseif ($_POST['action'] === 'update_ip') {
+        exit;
+    }
+    
+    // Xử lý xóa bộ nhớ
+    if (isset($_POST['clear_memory'])) {
+        echo clearPrinterMemory($printer_ip, $printer_port, $timeout);
+        exit;
+    }
+    
+    // Xử lý cập nhật IP
+    if (isset($_POST['action']) && $_POST['action'] === 'update_ip') {
         $printer_ip = filter_var($_POST['printer_ip'], FILTER_VALIDATE_IP);
         if ($printer_ip === false) {
             echo '<div class="alert alert-danger">❌ Địa chỉ IP không hợp lệ</div>';
             exit;
         }
         writeDebugLog("Cập nhật IP máy in", ['new_ip' => $printer_ip]);
-    } elseif (isset($_POST['clear_memory'])) {
-        echo clearPrinterMemory($printer_ip, $printer_port, $timeout);
-    } elseif (isset($_POST['write_test_log'])) {
+        exit;
+    }
+    
+    // Xử lý test ghi log
+    if (isset($_POST['write_test_log'])) {
         writeDebugLog("Kiểm tra ghi log", ['test' => 'OK']);
         echo '<div class="alert alert-success">✅ Đã ghi log kiểm tra</div>';
-    } 
-    if ($_POST['action'] === 'print_with_label') {
+        exit;
+    }
+    
+    // Xử lý in với label
+    if (isset($_POST['action']) && $_POST['action'] === 'print_with_label') {
         $labelType = $_POST['label_type'] ?? 'default';
         session_start();
         $filePath = isset($_SESSION['bmpFilePath']) ? $_SESSION['bmpFilePath'] : null;
@@ -106,28 +132,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $result = printWithBitmap($socket, $filePath, $labelType);
                 fclose($socket);
                 unset($_SESSION['bmpFilePath']);
-                cleanupSession(); // Dọn dẹp session
+                cleanupSession();
                 echo $result;
             } else {
-                cleanupSession(); // Dọn dẹp session
+                cleanupSession();
                 echo handleError("Không thể kết nối đến máy in", ['ip' => $printer_ip, 'port' => $printer_port]);
             }
         } elseif ($bmpData && $fileName) {
-            // Kiểm tra và vệ sinh tên file
             $fileName = preg_replace('/[^A-Za-z0-9_\-\.]/', '', $fileName);
             $tempFile = sys_get_temp_dir() . '/' . uniqid('bmp_') . '_' . $fileName;
 
-            // Kiểm tra dữ liệu base64
             $data = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $bmpData), true);
             if ($data === false) {
                 echo handleError("Dữ liệu base64 không hợp lệ", ['file' => $fileName]);
-                return;
+                exit;
             }
 
-            // Kiểm tra quyền ghi vào thư mục tạm
             if (!is_writable(sys_get_temp_dir())) {
                 echo handleError("Không thể ghi vào thư mục tạm", ['dir' => sys_get_temp_dir()]);
-                return;
+                exit;
             }
 
             if (file_put_contents($tempFile, $data) !== false) {
@@ -135,10 +158,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($socket) {
                     $result = printWithBitmap($socket, $tempFile, $labelType);
                     fclose($socket);
-                    unlink($tempFile); // Dọn dẹp file tạm
+                    unlink($tempFile);
                     echo $result;
                 } else {
-                    unlink($tempFile); // Dọn dẹp file tạm ngay cả khi lỗi
+                    unlink($tempFile);
                     echo handleError("Không thể kết nối đến máy in", ['ip' => $printer_ip, 'port' => $printer_port]);
                 }
             } else {
@@ -147,6 +170,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             echo handleError("Không tìm thấy dữ liệu BMP để in", []);
         }
+        exit;
     }
 }
 
@@ -250,7 +274,7 @@ function calibratePrinter($ip, $port, $timeout)
     $socket = @fsockopen($ip, $port, $errno, $errstr, $timeout);
     if (!$socket) {
         writeDebugLog("Lỗi kết nối khi hiệu chuẩn", ['ip' => $ip, 'port' => $port, 'error' => $errstr]);
-        return '<div class="alert alert-danger">❌ Không thể kết nối đến máy in</div>';
+        return '<div class="alert alert-danger">❌ Không thể gửi kết nối máy in. Vui lòng tắt và mở lại máy in!</div>';
     }
 
     $calibration_commands = "CLS\n"
@@ -268,10 +292,10 @@ function calibratePrinter($ip, $port, $timeout)
 
     if ($bytes_sent > 0) {
         writeDebugLog("Hiệu chuẩn thành công", ['bytes_sent' => $bytes_sent]);
-        return '<div class="alert alert-success">✅ Đã hiệu chuẩn máy in thành công! (' . $bytes_sent . ' bytes)</div>';
+                return '<div class="alert alert-danger">✅ Hiệu chuẩn thành công!</div>';
     } else {
         writeDebugLog("Lỗi hiệu chuẩn", ['bytes_sent' => $bytes_sent]);
-        return '<div class="alert alert-danger">❌ Không thể hiệu chuẩn máy in</div>';
+        return '<div class="alert alert-danger">❌ Hiệu chuẩn thất bại!</div>';
     }
 }
 
@@ -283,7 +307,7 @@ function clearPrinterMemory($ip, $port, $timeout)
     $socket = @fsockopen($ip, $port, $errno, $errstr, $timeout);
     if (!$socket) {
         writeDebugLog("Lỗi kết nối khi xóa bộ nhớ", ['ip' => $ip, 'port' => $port, 'error' => $errstr]);
-        return '<div class="alert alert-danger">❌ Không thể kết nối đến máy in</div>';
+        return '<div class="alert alert-danger">❌ Không thể gửi kết nối máy in. Vui lòng tắt và mở lại máy in!</div>';
     }
 
     $clear_commands = "~!T\n"
@@ -293,8 +317,14 @@ function clearPrinterMemory($ip, $port, $timeout)
     $bytes_sent = fwrite($socket, $clear_commands);
     fclose($socket);
 
-    writeDebugLog("Xóa bộ nhớ máy in", ['bytes_sent' => $bytes_sent]);
-    return '<div class="alert alert-success">✅ Đã xóa bộ nhớ máy in</div>';
+    if ($bytes_sent > 0) {
+        writeDebugLog("Xóa bộ nhớ máy in", ['bytes_sent' => $bytes_sent]);
+                    return '<div class="alert alert-success">✅ Đã xóa bộ nhớ tạm thành công!</div>';
+    } else {
+        writeDebugLog("Lỗi xóa bộ nhớ", ['bytes_sent' => $bytes_sent]);
+     
+        return '<div class="alert alert-danger">❌ Xóa bộ nhớ tạm thất bại!</div>';
+    }
 }
 
 /**
@@ -305,12 +335,14 @@ function printTextTest($ip, $port, $timeout)
     $socket = @fsockopen($ip, $port, $errno, $errstr, $timeout);
     if (!$socket) {
         writeDebugLog("Lỗi kết nối khi in text", ['ip' => $ip, 'port' => $port, 'error' => $errstr]);
-        return '<div class="alert alert-danger">❌ Không thể kết nối đến máy in</div>';
+        return '<div class="alert alert-danger">❌ Không thể gửi kết nối máy in. Vui lòng tắt và mở lại máy in!</div>';
     }
 
     $test_commands = "SIZE 105 mm,148 mm\n"
         . "GAP 2 mm,0 mm\n"
         . "DIRECTION 1\n"
+        . "SPEED 8\n"
+        . "DENSITY 12\n"
         . "REFERENCE 0,0\n"
         . "OFFSET 0 mm\n"
         . "SET CUTTER OFF\n"
@@ -318,7 +350,7 @@ function printTextTest($ip, $port, $timeout)
         . "SET TEAR ON\n"
         . "CLS\n"
         . "CODEPAGE 1252\n"
-        . "TEXT 50,50,\"3\",0,1,1,\"TEST PRINT\"\n"
+        . "TEXT 50,50,\"3\",0,1,1,\"TEST PRINT MINH ANH\"\n"
         . "TEXT 50,100,\"2\",0,1,1,\"Xprinter D465B\"\n"
         . "TEXT 50,150,\"1\",0,1,1,\"" . date('Y-m-d H:i:s') . "\"\n"
         . "PRINT 1,1\n";
@@ -328,10 +360,10 @@ function printTextTest($ip, $port, $timeout)
 
     if ($bytes_sent > 0) {
         writeDebugLog("In text thành công", ['bytes_sent' => $bytes_sent]);
-        return '<div class="alert alert-success">✅ Đã gửi lệnh test text (' . $bytes_sent . ' bytes)</div>';
+            return '<div class="alert alert-success">✅ Đã gửi lệnh test in thành công!</div>';
     } else {
         writeDebugLog("Lỗi in text", ['bytes_sent' => $bytes_sent]);
-        return '<div class="alert alert-danger">❌ Không thể gửi lệnh test</div>';
+        return '<div class="alert alert-danger">❌ Không thể gửi lệnh test!</div>';
     }
 }
 
@@ -456,7 +488,7 @@ function printWithBitmap($socket, $file, $labelType)
     fwrite($socket, "\nPRINT 1,1\n");
 
     writeDebugLog("In bitmap thành công", ['width' => $width, 'height' => $height, 'file' => $file, 'labelType' => $labelType]);
-    //return '<div class="alert alert-success">✅ Đã in bitmap thành công! Kích thước: ' . $width . 'x' . $height . ' pixels, Loại tem: ' . $labelType . '</div>';
+    return '<div class="alert alert-success">✅ Đã in thành công!</div>';
 }
 ?>
 <!DOCTYPE html>
@@ -1204,10 +1236,10 @@ function printWithBitmap($socket, $file, $labelType)
                             </span>
                         </div>
                         <div class="form-group">
-                            <label class="form-label" for="printer_port">Cổng máy in:</label>
+                            <!-- <label class="form-label" for="printer_port">Cổng máy in:</label>
                             <input type="number" id="printer_port" name="printer_port" class="form-input"
                                 value="<?php echo htmlspecialchars($printer_port); ?>" placeholder="9100"
-                                min="1" max="65535" required>
+                                min="1" max="65535" required> -->
                             <span class="error-message"
                                 style="display: none; color: var(--danger-color); font-size: 0.875rem;">
                                 Vui lòng nhập cổng hợp lệ (1-65535)
@@ -1247,7 +1279,7 @@ function printWithBitmap($socket, $file, $labelType)
                             <span class="status-label">
                                 <svg class="icon status-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M20 6 9 17l-5-5"/>
-                                </svg> Trạng thái kết nối:
+                                </svg> Trạng thái:
                             </span>
                             <span class="status-value status-text" style="color: var(--success-color)">Đang kiểm tra...</span>
                         </div>
@@ -1275,32 +1307,43 @@ function printWithBitmap($socket, $file, $labelType)
                                     <path d="M20 6 9 17l-5-5" />
                                 </svg> Kết nối
                             </button>
-                            <button type="submit" name="action" value="print_text_test" class="btn btn-success">
+                        </form>
+                        
+                        <!-- Nút test in text -->
+                        <form method="post" style="display: contents;">
+                            <button type="submit" name="print_text_test" class="btn btn-success">
                                 <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
                                     stroke="currentColor" stroke-width="2">
                                     <path d="M12 20h9" />
                                     <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-                                </svg>Test
+                                </svg>Test in
                             </button>
-                            <button type="submit" name="action" value="calibrate_printer" class="btn btn-warning">
+                        </form>
+                        
+                        <!-- Nút hiệu chuẩn -->
+                        <form method="post" style="display: contents;">
+                            <button type="submit" name="calibrate_printer" class="btn btn-warning">
                                 <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
                                     stroke="currentColor" stroke-width="2">
                                     <path d="M6 10H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2" />
-                                    <path d="M6 14H4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2h-2" />
+                                    <path d="M6 14H4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h16a2 2 0 0 0-2-2h-2" />
                                     <path d="M6 6h.01" />
                                     <path d="M6 18h.01" />
                                 </svg>Hiệu chuẩn
                             </button>
-                            <button type="submit" name="action" value="clear_memory" class="btn btn-danger">
+                        </form>
+                        
+                        <!-- Nút xóa bộ nhớ -->
+                        <form method="post" style="display: contents;">
+                            <button type="submit" name="clear_memory" class="btn btn-danger">
                                 <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
                                     stroke="currentColor" stroke-width="2">
                                     <path d="M3 6h18" />
-                                    <path
-                                        d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                                </svg>Xóa cache
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                </svg>Xóa bộ nhớ
                             </button>
-                        </div>
-                    </form>
+                        </form>
+                    </div>
                 </div>
             </div>
 
@@ -1479,10 +1522,23 @@ function printWithBitmap($socket, $file, $labelType)
         const forms = document.querySelectorAll('form');
         forms.forEach(form => {
             form.addEventListener('submit', async function(e) {
-                e.preventDefault();
                 const submitBtn = e.submitter;
                 if (!submitBtn) return;
 
+                // CHỈ xử lý AJAX cho các form cần thiết, không chặn tất cả
+                const needsAjax = form.id === 'print-form' || 
+                                form.id === 'config-form' || 
+                                submitBtn.name === 'test_printer_connection';
+                
+                if (!needsAjax) {
+                    // Cho phép form submit bình thường cho các nút test, calibrate, clear memory
+                    console.log('Allowing normal form submit for:', submitBtn.name);
+                    return; // Không preventDefault, để form submit bình thường
+                }
+
+                // Chỉ preventDefault cho các form cần AJAX
+                e.preventDefault();
+                
                 const originalText = submitBtn.innerHTML;
                 let currentRetry = 0;
 
@@ -1599,15 +1655,7 @@ function printWithBitmap($socket, $file, $labelType)
         }
 
         // Xử lý hiệu ứng touch cho nút
-        const buttons = document.querySelectorAll('.btn');
-        buttons.forEach(btn => {
-            btn.addEventListener('touchstart', function() {
-                this.style.transform = 'scale(0.95)';
-            });
-            btn.addEventListener('touchend', function() {
-                this.style.transform = '';
-            });
-        });
+       
 
         // Xóa alert hiện có sau 5 giây
         const existingAlerts = document.querySelectorAll('.alert');
@@ -1667,7 +1715,7 @@ function printWithBitmap($socket, $file, $labelType)
                 const isConnected = await checkConnection();
                 if (isConnected) {
                     statusIcon.innerHTML = '<path d="M20 6 9 17l-5-5"/>';
-                    statusText.textContent = 'Máy in đã kết nối';
+                    statusText.textContent = 'Đã kết nối';
                     statusText.style.color = 'var(--success-color)';
                     connectionStatus.classList.add('connected');
                     connectionStatus.classList.remove('disconnected');
