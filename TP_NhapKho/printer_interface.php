@@ -70,6 +70,61 @@ if (isset($_GET['filePath']) && !empty($_GET['filePath'])) {
 
 // Xử lý các yêu cầu POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['action']) && $_POST['action'] === 'print_all_pages') {
+        $labelType = $_POST['label_type'] ?? 'default';
+        $bmpDataArray = isset($_POST['bmp_data_array']) ? json_decode($_POST['bmp_data_array'], true) : [];
+
+        if (empty($bmpDataArray)) {
+            echo handleError("Không tìm thấy dữ liệu BMP để in", ['context' => 'print_all_pages']);
+            exit;
+        }
+
+        $socket = retrySocketConnection($printer_ip, $printer_port, $timeout);
+        if (!$socket) {
+            echo handleError("Không thể kết nối đến máy in", ['ip' => $printer_ip, 'port' => $printer_port]);
+            exit;
+        }
+
+        $successCount = 0;
+        $totalPages = count($bmpDataArray);
+        $errors = [];
+
+        foreach ($bmpDataArray as $index => $bmpBase64) {
+            $bmpData = base64_decode($bmpBase64, true);
+            if ($bmpData === false) {
+                $errors[] = "Dữ liệu BMP không hợp lệ tại trang " . ($index + 1);
+                writeDebugLog("Lỗi giải mã BMP", ['page_index' => $index, 'error' => 'Invalid base64']);
+                continue;
+            }
+
+            // Tạo file tạm
+            $tempFile = tempnam(sys_get_temp_dir(), 'bmp_');
+            file_put_contents($tempFile, $bmpData);
+
+            $result = printWithBitmap($socket, $tempFile, $labelType);
+            unlink($tempFile);
+
+            if (strpos($result, 'alert-success') !== false) {
+                $successCount++;
+                writeDebugLog("In trang thành công", ['page_index' => $index, 'labelType' => $labelType]);
+            } else {
+                $errors[] = "Lỗi in trang " . ($index + 1) . ": " . strip_tags($result);
+                writeDebugLog("Lỗi in trang", ['page_index' => $index, 'error' => strip_tags($result)]);
+            }
+        }
+
+        fclose($socket);
+
+        if ($successCount === $totalPages) {
+            echo '<div class="alert alert-success">✅ Đã in thành công tất cả ' . $totalPages . ' trang!</div>';
+        } else if ($successCount > 0) {
+            echo '<div class="alert alert-warning">⚠️ In thành công ' . $successCount . '/' . $totalPages . ' trang. Lỗi: ' . htmlspecialchars(implode(', ', $errors)) . '</div>';
+        } else {
+            echo handleError("Không thể in bất kỳ trang nào", ['errors' => implode(', ', $errors)]);
+        }
+        exit;
+    }
+
     if (isset($_POST['action']) && $_POST['action'] === 'print_with_label') {
         $labelType = $_POST['label_type'] ?? 'default';
         $pageIndex = isset($_POST['page_index']) ? (int)$_POST['page_index'] : 0;
@@ -1490,11 +1545,11 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             const submitBtn = e.submitter;
             const originalText = submitBtn.innerHTML;
+            const alertContainer = document.getElementById('alert-container');
 
-            const updateButtonState = (isLoading, retryCount = 0) => {
+            const updateButtonState = (isLoading, message = 'Đang xử lý...') => {
                 if (isLoading) {
-                    const retryText = retryCount > 0 ? ` (Thử lại ${retryCount}/${RETRY_CONFIG.maxRetries})` : '';
-                    submitBtn.innerHTML = `<span class="loading"></span> Đang xử lý...${retryText}`;
+                    submitBtn.innerHTML = `<span class="loading"></span> ${message}`;
                     submitBtn.disabled = true;
                 } else {
                     submitBtn.innerHTML = originalText;
@@ -1503,9 +1558,15 @@ document.addEventListener('DOMContentLoaded', function() {
             };
 
             try {
-                updateButtonState(true);
+                updateButtonState(true, 'Đang chuẩn bị in...');
                 const formData = new FormData(printForm);
-                formData.append('bmp_data', bmpDataArray[currentPage].replace(/^data:image\/bmp;base64,/, '')); // Gửi base64
+                // Gửi toàn bộ mảng bmpDataArray
+                formData.append('bmp_data_array', JSON.stringify(bmpDataArray.map(data => data.replace(/^data:image\/bmp;base64,/, ''))));
+                formData.set('action', 'print_all_pages'); // Đổi action để PHP nhận diện
+
+                let currentPage = 0;
+                const totalPages = bmpDataArray.length;
+
                 const response = await fetch(window.location.href, {
                     method: 'POST',
                     body: formData
@@ -1514,15 +1575,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = result;
                 const alertElements = tempDiv.querySelectorAll('.alert');
-                const alertContainer = document.getElementById('alert-container');
 
                 alertElements.forEach(alert => {
                     const clonedAlert = alert.cloneNode(true);
                     alertContainer.appendChild(clonedAlert);
-                    setTimeout(() => fadeOutAlert(clonedAlert), 4000);
+                    setTimeout(() => fadeOutAlert(clonedAlert), 5000);
                 });
 
                 if (result.includes('alert-success')) {
+                    updateButtonState(true, `Đang in ${totalPages} trang...`);
                     setTimeout(() => {
                         window.history.length > 1 ? window.history.back() : window.location.href = '/nhapkho.php';
                     }, 3000);
@@ -1535,6 +1596,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
 
     // Hàm xóa session data
     function clearSessionData() {
