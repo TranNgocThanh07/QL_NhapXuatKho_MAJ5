@@ -1668,39 +1668,43 @@ function printWithBitmap($socket, $file, $labelType)
         });
 
         async function checkConnection() {
-            const PING_TIMEOUT = 10000;
-            const MAX_RETRIES = 2;
-            const RETRY_DELAY = 1000;
+        const PING_TIMEOUT = 10000;
+        const MAX_RETRIES = 2;
+        const RETRY_DELAY = 1000;
 
-            for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), PING_TIMEOUT);
-                try {
-                    const formData = new FormData();
-                    formData.append('action', 'test_printer_connection');
-                    const response = await fetch(window.location.href, {
-                        method: 'POST',
-                        body: formData,
-                        signal: controller.signal,
-                        cache: 'no-cache'
-                    });
-                    clearTimeout(timeoutId);
-                    if (response.ok) {
-                        const text = await response.text();
-                        return text.includes('alert-success') && text.includes('Kết nối thành công');
+        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), PING_TIMEOUT);
+            try {
+                const formData = new FormData();
+                formData.append('action', 'test_connection'); // Sử dụng test_connection thay vì test_printer_connection
+                const response = await fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData,
+                    signal: controller.signal,
+                    cache: 'no-cache',
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
                     }
-                    throw new Error(`HTTP ${response.status}`);
-                } catch (error) {
-                    clearTimeout(timeoutId);
-                    console.warn(`Thử kết nối máy in lần ${attempt}/${MAX_RETRIES}: ${error.message}`);
-                    if (attempt < MAX_RETRIES) {
-                        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-                    }
+                });
+                clearTimeout(timeoutId);
+                if (response.ok) {
+                    const text = await response.text();
+                    return text.includes('alert-success') && text.includes('Kết nối thành công');
+                }
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            } catch (error) {
+                clearTimeout(timeoutId);
+                console.warn(`Thử kết nối máy in lần ${attempt}/${MAX_RETRIES}: ${error.message}`);
+                if (attempt < MAX_RETRIES) {
+                    await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
                 }
             }
-            return false;
         }
-
+        return false;
+}
         let connectionCheckPaused = false;
         async function updateConnectionStatus() {
             if (connectionCheckPaused) return;

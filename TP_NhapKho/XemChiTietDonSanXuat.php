@@ -138,11 +138,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $pdf->Output($pdfPath, 'F');
 
         // Chuyển đổi PDF sang BMP
-        $bmpPath = convertPdfToBmpAllPages($pdfPath);
-        if (!$bmpPath || !file_exists($bmpPath)) {
+        $bmpFiles = convertPdfToBmpAllPages($pdfPath);
+        if (!is_array($bmpFiles) || empty($bmpFiles) || !file_exists($bmpFiles[0])) {
             unlink($pdfPath); // Xóa file PDF tạm
             sendError("Không thể chuyển đổi PDF sang BMP");
         }
+        $bmpPath = $bmpFiles[0]; // Lấy file BMP đầu tiên
 
         // Gửi file BMP về client
         ob_end_clean();
@@ -154,7 +155,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
         // Xóa file tạm
         unlink($pdfPath);
-        unlink($bmpPath);
+        foreach ($bmpFiles as $bmpFile) {
+            if (file_exists($bmpFile)) {
+                unlink($bmpFile); // Xóa từng file BMP
+            }
+        }
+        $tempDir = dirname($bmpPath);
+        if (strpos($tempDir, 'pdf_to_bmp_gs_') !== false) {
+            $files = glob($tempDir . '/*');
+            foreach ($files as $file) {
+                if (is_file($file)) {
+                    unlink($file);
+                }
+            }
+            rmdir($tempDir);
+            error_log("Cleaned up temp directory: " . $tempDir);
+        }
         exit;
     } catch (Throwable $e) {
         // Xóa file PDF tạm nếu tồn tại

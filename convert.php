@@ -267,7 +267,7 @@ function convertPdfToBmpWithGsAllPages($pdfFile, $pageCount)
  *
  * @param array $bmpFiles Mảng đường dẫn các file BMP.
  * @param string $originalName Tên file PDF gốc.
- * @return string|bool Đường dẫn đến file ZIP hoặc false nếu thất bại.
+
  */
 /**
  * Ghi log gỡ lỗi vào file debug.log.
