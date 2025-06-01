@@ -47,15 +47,14 @@ function convertPdfToBmpAllPagesInMemory($pdfData)
             $bmpFile = $tempDir . '/page_' . str_pad($page, 3, '0', STR_PAD_LEFT) . '.bmp';
 
             // Cấu hình lệnh Ghostscript cho từng trang
-            $gsCommand = sprintf(
-                '%s -dSAFER -dBATCH -dNOPAUSE -dFirstPage=%d -dLastPage=%d -sDEVICE=bmpmono -r150 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sOutputFile=%s %s 2>&1',
-                $gs_command,
-                $page,
-                $page,
-                escapeshellarg($bmpFile),
-                escapeshellarg($tempPdfFile)
-            );
-
+           $gsCommand = sprintf(
+    '%s -dSAFER -dBATCH -dNOPAUSE -dFirstPage=%d -dLastPage=%d -sDEVICE=bmpmono -r203 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -dPDFFitPage -sPAPERSIZE=a6 -dFIXEDMEDIA -sOutputFile=%s %s 2>&1',
+    $gs_command,
+    $page,
+    $page,
+    escapeshellarg($bmpFile),
+    escapeshellarg($tempPdfFile)
+);
             exec($gsCommand, $output, $returnCode);
             writeDebugLog("Chạy lệnh Ghostscript cho trang " . $page, [
                 'command' => $gsCommand,
