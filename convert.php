@@ -2,21 +2,15 @@
 require_once __DIR__ . '/vendor/autoload.php';
 
 /**
- * Chuyển đổi toàn bộ trang PDF sang định dạng BMP.
- *
- * @param string $pdfPath Đường dẫn đến file PDF đầu vào.
- * @return array|bool Mảng đường dẫn đến các file BMP đầu ra hoặc false nếu thất bại.
- */
-/**
- * Chuyển đổi toàn bộ trang PDF sang BMP trong bộ nhớ.
+ * Chuyển đổi toàn bộ trang PDF sang BMP trong bộ nhớ sử dụng Ghostscript.
  *
  * @param string $pdfData Dữ liệu PDF dưới dạng chuỗi.
  * @return array|bool Mảng dữ liệu BMP nhị phân hoặc false nếu thất bại.
  */
 function convertPdfToBmpAllPagesInMemory($pdfData)
 {
-    writeDebugLog("Bắt đầu chuyển đổi PDF sang BMP trong bộ nhớ", ['data_length' => strlen($pdfData)]);
-    
+    writeDebugLog("Bắt đầu chuyển đổi PDF sang BMP trong bộ nhớ với Ghostscript", ['data_length' => strlen($pdfData)]);
+
     // Kiểm tra dữ liệu PDF hợp lệ
     if (strlen($pdfData) < 100) {
         writeDebugLog("Dữ liệu PDF không hợp lệ", ['data_length' => strlen($pdfData)]);
@@ -24,75 +18,87 @@ function convertPdfToBmpAllPagesInMemory($pdfData)
     }
 
     try {
-        // Kiểm tra xem Imagick có sẵn không
-        if (!extension_loaded('imagick')) {
-            writeDebugLog("Imagick không được cài đặt", []);
-            return false; // Có thể thêm fallback nếu cần
+        // Tạo file PDF tạm
+        $tempDir = sys_get_temp_dir() . '/' . uniqid('pdf_to_bmp_gs_');
+        if (!mkdir($tempDir, 0755, true)) {
+            writeDebugLog("Không thể tạo thư mục tạm", ['temp_dir' => $tempDir]);
+            return false;
+        }
+
+        $tempPdfFile = $tempDir . '/temp_pdf.pdf';
+        file_put_contents($tempPdfFile, $pdfData);
+        writeDebugLog("Tạo file PDF tạm thành công", ['temp_pdf' => $tempPdfFile]);
+
+        // Đếm số trang PDF
+        $pageCount = getPdfPageCount($tempPdfFile);
+        if ($pageCount === false) {
+            writeDebugLog("Không thể đếm số trang PDF", ['temp_pdf' => $tempPdfFile]);
+            @unlink($tempPdfFile);
+            @rmdir($tempDir);
+            return false;
         }
 
         $bmpDataArray = [];
-        $imagick = new Imagick();
+        $gs_command = '"C:\Program Files\gs\gs10.05.1\bin\gswin64c.exe"';
 
-        // Đọc PDF từ dữ liệu chuỗi
-        $imagick->readImageBlob($pdfData);
-        $pageCount = $imagick->getNumberImages();
+        for ($page = 1; $page <= $pageCount; $page++) {
+            writeDebugLog("Xử lý trang với Ghostscript", ['page' => $page, 'total' => $pageCount]);
 
-        writeDebugLog("Số trang PDF phát hiện", ['page_count' => $pageCount]);
+            $bmpFile = $tempDir . '/page_' . str_pad($page, 3, '0', STR_PAD_LEFT) . '.bmp';
 
-        for ($page = 0; $page < $pageCount; $page++) {
-            writeDebugLog("Xử lý trang", ['page' => $page + 1, 'total' => $pageCount]);
+            // Cấu hình lệnh Ghostscript cho từng trang
+            $gsCommand = sprintf(
+                '%s -dSAFER -dBATCH -dNOPAUSE -dFirstPage=%d -dLastPage=%d -sDEVICE=bmpmono -r150 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sOutputFile=%s %s 2>&1',
+                $gs_command,
+                $page,
+                $page,
+                escapeshellarg($bmpFile),
+                escapeshellarg($tempPdfFile)
+            );
 
-            // Chuyển đến trang cụ thể
-            $imagick->setIteratorIndex($page);
+            exec($gsCommand, $output, $returnCode);
+            writeDebugLog("Chạy lệnh Ghostscript cho trang " . $page, [
+                'command' => $gsCommand,
+                'return_code' => $returnCode,
+                'output_lines' => count($output)
+            ]);
 
-            // Cấu hình để render PDF với độ phân giải cao
-            $imagick->setResolution(150, 150);
-
-            // Chuyển sang định dạng đen trắng
-            $imagick->setImageType(Imagick::IMGTYPE_BILEVEL);
-            $imagick->setImageColorspace(Imagick::COLORSPACE_GRAY);
-
-            // Điều chỉnh kích thước nếu cần (max 832x1180)
-            $width = $imagick->getImageWidth();
-            $height = $imagick->getImageHeight();
-
-            writeDebugLog("Kích thước gốc trang " . ($page + 1), ['width' => $width, 'height' => $height]);
-
-            if ($width > 832 || $height > 1180) {
-                $scale = min(832 / $width, 1180 / $height);
-                $newWidth = (int)($width * $scale);
-                $newHeight = (int)($height * $scale);
-                $imagick->resizeImage($newWidth, $newHeight, Imagick::FILTER_LANCZOS, 1);
-                writeDebugLog("Điều chỉnh kích thước trang " . ($page + 1), [
-                    'original_width' => $width,
-                    'original_height' => $height,
-                    'new_width' => $newWidth,
-                    'new_height' => $newHeight,
-                    'scale' => $scale
-                ]);
-            }
-
-            // Chuyển sang BMP và lấy dữ liệu nhị phân
-            $imagick->setImageFormat('BMP');
-            $bmpData = $imagick->getImageBlob();
-
-            // Kiểm tra dữ liệu BMP hợp lệ
-            if (strlen($bmpData) > 100) {
-                $bmpDataArray[] = $bmpData;
-                writeDebugLog("Chuyển đổi trang " . ($page + 1) . " thành công", [
-                    'page' => $page + 1,
-                    'bmp_data_length' => strlen($bmpData)
-                ]);
+            if ($returnCode === 0 && file_exists($bmpFile) && filesize($bmpFile) > 100) {
+                // Đọc dữ liệu BMP và thêm vào mảng
+                $bmpData = file_get_contents($bmpFile);
+                if (strlen($bmpData) > 100) {
+                    $bmpDataArray[] = $bmpData;
+                    writeDebugLog("Chuyển đổi trang " . $page . " thành công với Ghostscript", [
+                        'page' => $page,
+                        'bmp_file' => $bmpFile,
+                        'size' => filesize($bmpFile)
+                    ]);
+                } else {
+                    writeDebugLog("Dữ liệu BMP không hợp lệ cho trang " . $page, [
+                        'page' => $page,
+                        'bmp_file' => $bmpFile,
+                        'size' => filesize($bmpFile)
+                    ]);
+                }
+                // Xóa file BMP tạm
+                @unlink($bmpFile);
             } else {
-                writeDebugLog("Dữ liệu BMP trang " . ($page + 1) . " không hợp lệ", [
-                    'page' => $page + 1,
-                    'bmp_data_length' => strlen($bmpData)
+                writeDebugLog("Lỗi khi chuyển đổi trang " . $page . " với Ghostscript", [
+                    'page' => $page,
+                    'return_code' => $returnCode,
+                    'file_exists' => file_exists($bmpFile),
+                    'file_size' => file_exists($bmpFile) ? filesize($bmpFile) : 0,
+                    'output' => implode("\n", array_slice($output, -5))
                 ]);
             }
+
+            $output = [];
         }
 
-        $imagick->clear();
-        $imagick->destroy();
+        // Xóa file PDF tạm và thư mục
+        @unlink($tempPdfFile);
+        @rmdir($tempDir);
+        writeDebugLog("Dọn dẹp file tạm", ['temp_dir' => $tempDir]);
 
         if (empty($bmpDataArray)) {
             writeDebugLog("Không có trang nào được chuyển đổi thành công", ['total_pages' => $pageCount]);
@@ -103,10 +109,17 @@ function convertPdfToBmpAllPagesInMemory($pdfData)
         return $bmpDataArray;
 
     } catch (Exception $e) {
-        writeDebugLog("Lỗi khi chuyển đổi PDF sang BMP", [
+        writeDebugLog("Lỗi khi chuyển đổi PDF sang BMP với Ghostscript", [
             'error' => $e->getMessage(),
             'trace' => $e->getTraceAsString()
         ]);
+        // Dọn dẹp file tạm nếu có lỗi
+        if (isset($tempPdfFile) && file_exists($tempPdfFile)) {
+            @unlink($tempPdfFile);
+        }
+        if (isset($tempDir) && file_exists($tempDir)) {
+            @rmdir($tempDir);
+        }
         return false;
     }
 }

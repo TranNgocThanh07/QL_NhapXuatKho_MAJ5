@@ -572,3 +572,36 @@
 [2025-06-01 16:37:18] Kích thước gốc trang 2 | {"width":298,"height":420}
 [2025-06-01 16:37:18] Chuyển đổi trang 2 thành công | {"page":2,"bmp_data_length":16930}
 [2025-06-01 16:37:18] Chuyển đổi hoàn tất | {"total_files":2}
+[2025-06-01 16:45:09] Bắt đầu chuyển đổi PDF sang BMP trong bộ nhớ | {"data_length":159254}
+[2025-06-01 16:45:09] Số trang PDF phát hiện | {"page_count":2}
+[2025-06-01 16:45:09] Xử lý trang | {"page":1,"total":2}
+[2025-06-01 16:45:09] Kích thước gốc trang 1 | {"width":298,"height":420}
+[2025-06-01 16:45:09] Chuyển đổi trang 1 thành công | {"page":1,"bmp_data_length":16930}
+[2025-06-01 16:45:09] Xử lý trang | {"page":2,"total":2}
+[2025-06-01 16:45:09] Kích thước gốc trang 2 | {"width":298,"height":420}
+[2025-06-01 16:45:09] Chuyển đổi trang 2 thành công | {"page":2,"bmp_data_length":16930}
+[2025-06-01 16:45:09] Chuyển đổi hoàn tất | {"total_files":2}
+[2025-06-01 16:49:44] Bắt đầu chuyển đổi PDF sang BMP trong bộ nhớ với Ghostscript | {"data_length":159254}
+[2025-06-01 16:49:44] Tạo file PDF tạm thành công | {"temp_pdf":"C:\\Users\\Admin\\AppData\\Local\\Temp\/pdf_to_bmp_gs_683c84a84ef24\/temp_pdf.pdf"}
+[2025-06-01 16:49:44] Bắt đầu đếm số trang PDF | {"file":"C:\\Users\\Admin\\AppData\\Local\\Temp\/pdf_to_bmp_gs_683c84a84ef24\/temp_pdf.pdf"}
+[2025-06-01 16:49:44] Đếm trang với Imagick thành công | {"page_count":2}
+[2025-06-01 16:49:44] Xử lý trang với Ghostscript | {"page":1,"total":2}
+[2025-06-01 16:49:44] Chạy lệnh Ghostscript cho trang 1 | {"command":"\"C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe\" -dSAFER -dBATCH -dNOPAUSE -dFirstPage=1 -dLastPage=1 -sDEVICE=bmpmono -r150 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sOutputFile=\"C:\\Users\\Admin\\AppData\\Local\\Temp\/pdf_to_bmp_gs_683c84a84ef24\/page_001.bmp\" \"C:\\Users\\Admin\\AppData\\Local\\Temp\/pdf_to_bmp_gs_683c84a84ef24\/temp_pdf.pdf\" 2>&1","return_code":1,"output_lines":1}
+[2025-06-01 16:49:44] Lỗi khi chuyển đổi trang 1 với Ghostscript | {"page":1,"return_code":1,"file_exists":false,"file_size":0,"output":"The system cannot find the path specified."}
+[2025-06-01 16:49:44] Xử lý trang với Ghostscript | {"page":2,"total":2}
+[2025-06-01 16:49:44] Chạy lệnh Ghostscript cho trang 2 | {"command":"\"C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe\" -dSAFER -dBATCH -dNOPAUSE -dFirstPage=2 -dLastPage=2 -sDEVICE=bmpmono -r150 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sOutputFile=\"C:\\Users\\Admin\\AppData\\Local\\Temp\/pdf_to_bmp_gs_683c84a84ef24\/page_002.bmp\" \"C:\\Users\\Admin\\AppData\\Local\\Temp\/pdf_to_bmp_gs_683c84a84ef24\/temp_pdf.pdf\" 2>&1","return_code":1,"output_lines":1}
+[2025-06-01 16:49:44] Lỗi khi chuyển đổi trang 2 với Ghostscript | {"page":2,"return_code":1,"file_exists":false,"file_size":0,"output":"The system cannot find the path specified."}
+[2025-06-01 16:49:44] Dọn dẹp file tạm | {"temp_dir":"C:\\Users\\Admin\\AppData\\Local\\Temp\/pdf_to_bmp_gs_683c84a84ef24"}
+[2025-06-01 16:49:44] Không có trang nào được chuyển đổi thành công | {"total_pages":2}
+[2025-06-01 16:51:44] Bắt đầu chuyển đổi PDF sang BMP trong bộ nhớ với Ghostscript | {"data_length":159254}
+[2025-06-01 16:51:44] Tạo file PDF tạm thành công | {"temp_pdf":"C:\\Users\\Admin\\AppData\\Local\\Temp\/pdf_to_bmp_gs_683c8520ba2c0\/temp_pdf.pdf"}
+[2025-06-01 16:51:44] Bắt đầu đếm số trang PDF | {"file":"C:\\Users\\Admin\\AppData\\Local\\Temp\/pdf_to_bmp_gs_683c8520ba2c0\/temp_pdf.pdf"}
+[2025-06-01 16:51:45] Đếm trang với Imagick thành công | {"page_count":2}
+[2025-06-01 16:51:45] Xử lý trang với Ghostscript | {"page":1,"total":2}
+[2025-06-01 16:51:45] Chạy lệnh Ghostscript cho trang 1 | {"command":"\"C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe\" -dSAFER -dBATCH -dNOPAUSE -dFirstPage=1 -dLastPage=1 -sDEVICE=bmpmono -r150 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sOutputFile=\"C:\\Users\\Admin\\AppData\\Local\\Temp\/pdf_to_bmp_gs_683c8520ba2c0\/page_001.bmp\" \"C:\\Users\\Admin\\AppData\\Local\\Temp\/pdf_to_bmp_gs_683c8520ba2c0\/temp_pdf.pdf\" 2>&1","return_code":0,"output_lines":8}
+[2025-06-01 16:51:45] Chuyển đổi trang 1 thành công với Ghostscript | {"page":1,"bmp_file":"C:\\Users\\Admin\\AppData\\Local\\Temp\/pdf_to_bmp_gs_683c8520ba2c0\/page_001.bmp","size":69982}
+[2025-06-01 16:51:45] Xử lý trang với Ghostscript | {"page":2,"total":2}
+[2025-06-01 16:51:45] Chạy lệnh Ghostscript cho trang 2 | {"command":"\"C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe\" -dSAFER -dBATCH -dNOPAUSE -dFirstPage=2 -dLastPage=2 -sDEVICE=bmpmono -r150 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sOutputFile=\"C:\\Users\\Admin\\AppData\\Local\\Temp\/pdf_to_bmp_gs_683c8520ba2c0\/page_002.bmp\" \"C:\\Users\\Admin\\AppData\\Local\\Temp\/pdf_to_bmp_gs_683c8520ba2c0\/temp_pdf.pdf\" 2>&1","return_code":0,"output_lines":8}
+[2025-06-01 16:51:45] Chuyển đổi trang 2 thành công với Ghostscript | {"page":2,"bmp_file":"C:\\Users\\Admin\\AppData\\Local\\Temp\/pdf_to_bmp_gs_683c8520ba2c0\/page_002.bmp","size":69982}
+[2025-06-01 16:51:45] Dọn dẹp file tạm | {"temp_dir":"C:\\Users\\Admin\\AppData\\Local\\Temp\/pdf_to_bmp_gs_683c8520ba2c0"}
+[2025-06-01 16:51:45] Chuyển đổi hoàn tất | {"total_files":2}
