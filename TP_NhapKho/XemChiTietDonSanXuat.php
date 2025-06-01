@@ -136,8 +136,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             sendError("Dữ liệu PDF đầu ra không hợp lệ");
         }
 
-        error_log("[" . date('Y-m-d H:i:s') . "] Tạo PDF thành công: fileName=$pdfFileName, size=" . strlen($pdfDataOutput));
-        file_put_contents(__DIR__ . '/debug_pdf.pdf', $pdfDataOutput);
 
         $bmpDataArray = convertPdfToBmpAllPagesInMemory($pdfDataOutput);
         if (!$bmpDataArray || empty($bmpDataArray)) {
