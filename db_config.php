@@ -3,7 +3,7 @@ $dbConfig = [
     'user' => 'sa',
     'password' => '123',
     'server' => 'localhost',
-    'database' => '0525_MAJ1',
+    'database' => 'Maj5',
     'port' => 1433
 ];
 

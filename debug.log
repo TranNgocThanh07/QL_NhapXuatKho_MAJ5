@@ -417,3 +417,158 @@
 [2025-05-30 22:22:24] Imagick không được cài đặt, chuyển sang Ghostscript
 [2025-05-30 22:22:25] Chạy lệnh Ghostscript
 [2025-05-30 22:22:25] Chuyển đổi PDF sang BMP thành công với Ghostscript
+[2025-06-01 15:27:54] Bắt đầu chuyển đổi PDF sang BMP trong bộ nhớ | {"data_length":155047}
+[2025-06-01 15:27:55] Số trang PDF phát hiện | {"page_count":1}
+[2025-06-01 15:27:55] Xử lý trang | {"page":1,"total":1}
+[2025-06-01 15:27:55] Kích thước gốc trang 1 | {"width":298,"height":420}
+[2025-06-01 15:27:55] Chuyển đổi trang 1 thành công | {"page":1,"bmp_data_length":16930}
+[2025-06-01 15:27:55] Chuyển đổi hoàn tất | {"total_files":1}
+[2025-06-01 15:34:11] Bắt đầu chuyển đổi PDF sang BMP trong bộ nhớ | {"data_length":155047}
+[2025-06-01 15:34:11] Số trang PDF phát hiện | {"page_count":1}
+[2025-06-01 15:34:11] Xử lý trang | {"page":1,"total":1}
+[2025-06-01 15:34:11] Kích thước gốc trang 1 | {"width":298,"height":420}
+[2025-06-01 15:34:11] Chuyển đổi trang 1 thành công | {"page":1,"bmp_data_length":16930}
+[2025-06-01 15:34:11] Chuyển đổi hoàn tất | {"total_files":1}
+[2025-06-01 15:43:23] Bắt đầu chuyển đổi PDF sang BMP trong bộ nhớ | {"data_length":155047}
+[2025-06-01 15:43:24] Số trang PDF phát hiện | {"page_count":1}
+[2025-06-01 15:43:24] Xử lý trang | {"page":1,"total":1}
+[2025-06-01 15:43:24] Kích thước gốc trang 1 | {"width":298,"height":420}
+[2025-06-01 15:43:24] Chuyển đổi trang 1 thành công | {"page":1,"bmp_data_length":16930}
+[2025-06-01 15:43:24] Chuyển đổi hoàn tất | {"total_files":1}
+[2025-06-01 15:45:55] Bắt đầu chuyển đổi PDF sang BMP trong bộ nhớ | {"data_length":155047}
+[2025-06-01 15:45:55] Số trang PDF phát hiện | {"page_count":1}
+[2025-06-01 15:45:55] Xử lý trang | {"page":1,"total":1}
+[2025-06-01 15:45:55] Kích thước gốc trang 1 | {"width":298,"height":420}
+[2025-06-01 15:45:55] Chuyển đổi trang 1 thành công | {"page":1,"bmp_data_length":16930}
+[2025-06-01 15:45:55] Chuyển đổi hoàn tất | {"total_files":1}
+[2025-06-01 15:48:02] Bắt đầu chuyển đổi PDF sang BMP trong bộ nhớ | {"data_length":155047}
+[2025-06-01 15:48:02] Số trang PDF phát hiện | {"page_count":1}
+[2025-06-01 15:48:02] Xử lý trang | {"page":1,"total":1}
+[2025-06-01 15:48:02] Kích thước gốc trang 1 | {"width":298,"height":420}
+[2025-06-01 15:48:02] Chuyển đổi trang 1 thành công | {"page":1,"bmp_data_length":16930}
+[2025-06-01 15:48:02] Chuyển đổi hoàn tất | {"total_files":1}
+[2025-06-01 15:52:43] Bắt đầu chuyển đổi PDF sang BMP trong bộ nhớ | {"data_length":155047}
+[2025-06-01 15:52:43] Số trang PDF phát hiện | {"page_count":1}
+[2025-06-01 15:52:43] Xử lý trang | {"page":1,"total":1}
+[2025-06-01 15:52:43] Kích thước gốc trang 1 | {"width":298,"height":420}
+[2025-06-01 15:52:43] Chuyển đổi trang 1 thành công | {"page":1,"bmp_data_length":16930}
+[2025-06-01 15:52:43] Chuyển đổi hoàn tất | {"total_files":1}
+[2025-06-01 15:57:09] Bắt đầu chuyển đổi PDF sang BMP trong bộ nhớ | {"data_length":159254}
+[2025-06-01 15:57:10] Số trang PDF phát hiện | {"page_count":2}
+[2025-06-01 15:57:10] Xử lý trang | {"page":1,"total":2}
+[2025-06-01 15:57:10] Kích thước gốc trang 1 | {"width":298,"height":420}
+[2025-06-01 15:57:10] Chuyển đổi trang 1 thành công | {"page":1,"bmp_data_length":16930}
+[2025-06-01 15:57:10] Xử lý trang | {"page":2,"total":2}
+[2025-06-01 15:57:10] Kích thước gốc trang 2 | {"width":298,"height":420}
+[2025-06-01 15:57:10] Chuyển đổi trang 2 thành công | {"page":2,"bmp_data_length":16930}
+[2025-06-01 15:57:10] Chuyển đổi hoàn tất | {"total_files":2}
+[2025-06-01 15:59:04] Bắt đầu chuyển đổi PDF sang BMP trong bộ nhớ | {"data_length":159254}
+[2025-06-01 15:59:04] Số trang PDF phát hiện | {"page_count":2}
+[2025-06-01 15:59:04] Xử lý trang | {"page":1,"total":2}
+[2025-06-01 15:59:04] Kích thước gốc trang 1 | {"width":298,"height":420}
+[2025-06-01 15:59:04] Chuyển đổi trang 1 thành công | {"page":1,"bmp_data_length":16930}
+[2025-06-01 15:59:04] Xử lý trang | {"page":2,"total":2}
+[2025-06-01 15:59:04] Kích thước gốc trang 2 | {"width":298,"height":420}
+[2025-06-01 15:59:04] Chuyển đổi trang 2 thành công | {"page":2,"bmp_data_length":16930}
+[2025-06-01 15:59:04] Chuyển đổi hoàn tất | {"total_files":2}
+[2025-06-01 16:06:33] Bắt đầu chuyển đổi PDF sang BMP trong bộ nhớ | {"data_length":159254}
+[2025-06-01 16:06:33] Số trang PDF phát hiện | {"page_count":2}
+[2025-06-01 16:06:33] Xử lý trang | {"page":1,"total":2}
+[2025-06-01 16:06:33] Kích thước gốc trang 1 | {"width":298,"height":420}
+[2025-06-01 16:06:33] Chuyển đổi trang 1 thành công | {"page":1,"bmp_data_length":16930}
+[2025-06-01 16:06:33] Xử lý trang | {"page":2,"total":2}
+[2025-06-01 16:06:33] Kích thước gốc trang 2 | {"width":298,"height":420}
+[2025-06-01 16:06:33] Chuyển đổi trang 2 thành công | {"page":2,"bmp_data_length":16930}
+[2025-06-01 16:06:33] Chuyển đổi hoàn tất | {"total_files":2}
+[2025-06-01 16:13:45] Bắt đầu chuyển đổi PDF sang BMP trong bộ nhớ | {"data_length":155047}
+[2025-06-01 16:13:45] Số trang PDF phát hiện | {"page_count":1}
+[2025-06-01 16:13:45] Xử lý trang | {"page":1,"total":1}
+[2025-06-01 16:13:45] Kích thước gốc trang 1 | {"width":298,"height":420}
+[2025-06-01 16:13:45] Chuyển đổi trang 1 thành công | {"page":1,"bmp_data_length":16930}
+[2025-06-01 16:13:45] Chuyển đổi hoàn tất | {"total_files":1}
+[2025-06-01 16:17:24] Bắt đầu chuyển đổi PDF sang BMP trong bộ nhớ | {"data_length":155047}
+[2025-06-01 16:17:24] Số trang PDF phát hiện | {"page_count":1}
+[2025-06-01 16:17:24] Xử lý trang | {"page":1,"total":1}
+[2025-06-01 16:17:25] Kích thước gốc trang 1 | {"width":298,"height":420}
+[2025-06-01 16:17:25] Chuyển đổi trang 1 thành công | {"page":1,"bmp_data_length":16930}
+[2025-06-01 16:17:25] Chuyển đổi hoàn tất | {"total_files":1}
+[2025-06-01 16:23:33] Bắt đầu chuyển đổi PDF sang BMP trong bộ nhớ | {"data_length":155047}
+[2025-06-01 16:23:33] Số trang PDF phát hiện | {"page_count":1}
+[2025-06-01 16:23:33] Xử lý trang | {"page":1,"total":1}
+[2025-06-01 16:23:33] Kích thước gốc trang 1 | {"width":298,"height":420}
+[2025-06-01 16:23:33] Chuyển đổi trang 1 thành công | {"page":1,"bmp_data_length":16930}
+[2025-06-01 16:23:33] Chuyển đổi hoàn tất | {"total_files":1}
+[2025-06-01 16:25:48] Bắt đầu chuyển đổi PDF sang BMP trong bộ nhớ | {"data_length":155047}
+[2025-06-01 16:25:48] Số trang PDF phát hiện | {"page_count":1}
+[2025-06-01 16:25:48] Xử lý trang | {"page":1,"total":1}
+[2025-06-01 16:25:49] Kích thước gốc trang 1 | {"width":298,"height":420}
+[2025-06-01 16:25:49] Chuyển đổi trang 1 thành công | {"page":1,"bmp_data_length":16930}
+[2025-06-01 16:25:49] Chuyển đổi hoàn tất | {"total_files":1}
+[2025-06-01 16:28:49] Bắt đầu chuyển đổi PDF sang BMP trong bộ nhớ | {"data_length":155047}
+[2025-06-01 16:28:49] Số trang PDF phát hiện | {"page_count":1}
+[2025-06-01 16:28:49] Xử lý trang | {"page":1,"total":1}
+[2025-06-01 16:28:49] Kích thước gốc trang 1 | {"width":298,"height":420}
+[2025-06-01 16:28:49] Chuyển đổi trang 1 thành công | {"page":1,"bmp_data_length":16930}
+[2025-06-01 16:28:49] Chuyển đổi hoàn tất | {"total_files":1}
+[2025-06-01 16:29:42] Bắt đầu chuyển đổi PDF sang BMP trong bộ nhớ | {"data_length":159254}
+[2025-06-01 16:29:42] Số trang PDF phát hiện | {"page_count":2}
+[2025-06-01 16:29:42] Xử lý trang | {"page":1,"total":2}
+[2025-06-01 16:29:42] Kích thước gốc trang 1 | {"width":298,"height":420}
+[2025-06-01 16:29:42] Chuyển đổi trang 1 thành công | {"page":1,"bmp_data_length":16930}
+[2025-06-01 16:29:42] Xử lý trang | {"page":2,"total":2}
+[2025-06-01 16:29:43] Kích thước gốc trang 2 | {"width":298,"height":420}
+[2025-06-01 16:29:43] Chuyển đổi trang 2 thành công | {"page":2,"bmp_data_length":16930}
+[2025-06-01 16:29:43] Chuyển đổi hoàn tất | {"total_files":2}
+[2025-06-01 16:30:11] Bắt đầu chuyển đổi PDF sang BMP trong bộ nhớ | {"data_length":171865}
+[2025-06-01 16:30:11] Số trang PDF phát hiện | {"page_count":5}
+[2025-06-01 16:30:11] Xử lý trang | {"page":1,"total":5}
+[2025-06-01 16:30:11] Kích thước gốc trang 1 | {"width":298,"height":420}
+[2025-06-01 16:30:11] Chuyển đổi trang 1 thành công | {"page":1,"bmp_data_length":16930}
+[2025-06-01 16:30:11] Xử lý trang | {"page":2,"total":5}
+[2025-06-01 16:30:11] Kích thước gốc trang 2 | {"width":298,"height":420}
+[2025-06-01 16:30:11] Chuyển đổi trang 2 thành công | {"page":2,"bmp_data_length":16930}
+[2025-06-01 16:30:11] Xử lý trang | {"page":3,"total":5}
+[2025-06-01 16:30:12] Kích thước gốc trang 3 | {"width":298,"height":420}
+[2025-06-01 16:30:12] Chuyển đổi trang 3 thành công | {"page":3,"bmp_data_length":16930}
+[2025-06-01 16:30:12] Xử lý trang | {"page":4,"total":5}
+[2025-06-01 16:30:12] Kích thước gốc trang 4 | {"width":298,"height":420}
+[2025-06-01 16:30:12] Chuyển đổi trang 4 thành công | {"page":4,"bmp_data_length":16930}
+[2025-06-01 16:30:12] Xử lý trang | {"page":5,"total":5}
+[2025-06-01 16:30:12] Kích thước gốc trang 5 | {"width":298,"height":420}
+[2025-06-01 16:30:12] Chuyển đổi trang 5 thành công | {"page":5,"bmp_data_length":16930}
+[2025-06-01 16:30:12] Chuyển đổi hoàn tất | {"total_files":5}
+[2025-06-01 16:31:47] Bắt đầu chuyển đổi PDF sang BMP trong bộ nhớ | {"data_length":163456}
+[2025-06-01 16:31:47] Số trang PDF phát hiện | {"page_count":3}
+[2025-06-01 16:31:47] Xử lý trang | {"page":1,"total":3}
+[2025-06-01 16:31:48] Kích thước gốc trang 1 | {"width":298,"height":420}
+[2025-06-01 16:31:48] Chuyển đổi trang 1 thành công | {"page":1,"bmp_data_length":16930}
+[2025-06-01 16:31:48] Xử lý trang | {"page":2,"total":3}
+[2025-06-01 16:31:48] Kích thước gốc trang 2 | {"width":298,"height":420}
+[2025-06-01 16:31:48] Chuyển đổi trang 2 thành công | {"page":2,"bmp_data_length":16930}
+[2025-06-01 16:31:48] Xử lý trang | {"page":3,"total":3}
+[2025-06-01 16:31:48] Kích thước gốc trang 3 | {"width":298,"height":420}
+[2025-06-01 16:31:48] Chuyển đổi trang 3 thành công | {"page":3,"bmp_data_length":16930}
+[2025-06-01 16:31:48] Chuyển đổi hoàn tất | {"total_files":3}
+[2025-06-01 16:34:25] Bắt đầu chuyển đổi PDF sang BMP trong bộ nhớ | {"data_length":120}
+[2025-06-01 16:34:26] Lỗi khi chuyển đổi PDF sang BMP | {"error":"no decode delegate for this image format `' @ error\/blob.c\/BlobToImage\/481","trace":"#0 D:\\Cong_Viec\\Cty_MinhAnh\\Website\\QL_NhapXuatKho_MAJ5\\convert.php(37): Imagick->readImageBlob('D:\\\\Cong_Viec\\\\Ct...')\n#1 D:\\Cong_Viec\\Cty_MinhAnh\\Website\\QL_NhapXuatKho_MAJ5\\TP_NhapKho\\XemChiTietDonSanXuat.php(141): convertPdfToBmpAllPagesInMemory('D:\\\\Cong_Viec\\\\Ct...')\n#2 {main}"}
+[2025-06-01 16:36:07] Bắt đầu chuyển đổi PDF sang BMP trong bộ nhớ | {"data_length":163456}
+[2025-06-01 16:36:08] Số trang PDF phát hiện | {"page_count":3}
+[2025-06-01 16:36:08] Xử lý trang | {"page":1,"total":3}
+[2025-06-01 16:36:08] Kích thước gốc trang 1 | {"width":298,"height":420}
+[2025-06-01 16:36:08] Chuyển đổi trang 1 thành công | {"page":1,"bmp_data_length":16930}
+[2025-06-01 16:36:08] Xử lý trang | {"page":2,"total":3}
+[2025-06-01 16:36:08] Kích thước gốc trang 2 | {"width":298,"height":420}
+[2025-06-01 16:36:08] Chuyển đổi trang 2 thành công | {"page":2,"bmp_data_length":16930}
+[2025-06-01 16:36:08] Xử lý trang | {"page":3,"total":3}
+[2025-06-01 16:36:08] Kích thước gốc trang 3 | {"width":298,"height":420}
+[2025-06-01 16:36:08] Chuyển đổi trang 3 thành công | {"page":3,"bmp_data_length":16930}
+[2025-06-01 16:36:08] Chuyển đổi hoàn tất | {"total_files":3}
+[2025-06-01 16:37:17] Bắt đầu chuyển đổi PDF sang BMP trong bộ nhớ | {"data_length":159254}
+[2025-06-01 16:37:18] Số trang PDF phát hiện | {"page_count":2}
+[2025-06-01 16:37:18] Xử lý trang | {"page":1,"total":2}
+[2025-06-01 16:37:18] Kích thước gốc trang 1 | {"width":298,"height":420}
+[2025-06-01 16:37:18] Chuyển đổi trang 1 thành công | {"page":1,"bmp_data_length":16930}
+[2025-06-01 16:37:18] Xử lý trang | {"page":2,"total":2}
+[2025-06-01 16:37:18] Kích thước gốc trang 2 | {"width":298,"height":420}
+[2025-06-01 16:37:18] Chuyển đổi trang 2 thành công | {"page":2,"bmp_data_length":16930}
+[2025-06-01 16:37:18] Chuyển đổi hoàn tất | {"total_files":2}

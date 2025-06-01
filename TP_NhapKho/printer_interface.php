@@ -70,6 +70,38 @@ if (isset($_GET['filePath']) && !empty($_GET['filePath'])) {
 
 // Xử lý các yêu cầu POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['action']) && $_POST['action'] === 'print_with_label') {
+        $labelType = $_POST['label_type'] ?? 'default';
+        $pageIndex = isset($_POST['page_index']) ? (int)$_POST['page_index'] : 0;
+        $bmpBase64 = $_POST['bmp_data'] ?? ''; // Lấy base64 từ form POST
+
+        if (empty($bmpBase64)) {
+            echo handleError("Không tìm thấy dữ liệu BMP để in", ['page_index' => $pageIndex]);
+            exit;
+        }
+
+        $bmpData = base64_decode($bmpBase64, true);
+        if ($bmpData === false) {
+            echo handleError("Dữ liệu BMP không hợp lệ", ['page_index' => $pageIndex]);
+            exit;
+        }
+
+        // Tạo file tạm
+        $tempFile = tempnam(sys_get_temp_dir(), 'bmp_');
+        file_put_contents($tempFile, $bmpData);
+
+        $socket = retrySocketConnection($printer_ip, $printer_port, $timeout);
+        if ($socket) {
+            $result = printWithBitmap($socket, $tempFile, $labelType);
+            fclose($socket);
+            unlink($tempFile);
+            echo $result;
+        } else {
+            unlink($tempFile);
+            echo handleError("Không thể kết nối đến máy in", ['ip' => $printer_ip, 'port' => $printer_port]);
+        }
+        exit;
+    }
     // Xử lý test kết nối - sửa tên thuộc tính
     if (isset($_POST['test_connection'])) {
         echo testActualPrinterConnection($printer_ip, $printer_port, $timeout);
@@ -121,55 +153,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Xử lý in với label
     if (isset($_POST['action']) && $_POST['action'] === 'print_with_label') {
         $labelType = $_POST['label_type'] ?? 'default';
+        $pageIndex = isset($_POST['page_index']) ? (int)$_POST['page_index'] : 0;
         session_start();
-        $filePath = isset($_SESSION['bmpFilePath']) ? $_SESSION['bmpFilePath'] : null;
-        $bmpData = isset($_POST['bmp_data']) ? $_POST['bmp_data'] : null;
-        $fileName = isset($_POST['file_name']) ? $_POST['file_name'] : null;
+        $bmpDataArray = isset($_SESSION['bmpData']) ? $_SESSION['bmpData'] : [];
 
-        if ($filePath && file_exists($filePath) && is_readable($filePath)) {
+        if (!empty($bmpDataArray) && isset($bmpDataArray[$pageIndex])) {
+            $bmpData = base64_decode($bmpDataArray[$pageIndex], true);
+            if ($bmpData === false) {
+                echo handleError("Dữ liệu BMP không hợp lệ", ['page_index' => $pageIndex]);
+                exit;
+            }
+
+            // Tạo file tạm trong bộ nhớ (không lưu xuống đĩa)
+            $tempFile = tempnam(sys_get_temp_dir(), 'bmp_');
+            file_put_contents($tempFile, $bmpData);
+
             $socket = retrySocketConnection($printer_ip, $printer_port, $timeout);
             if ($socket) {
-                $result = printWithBitmap($socket, $filePath, $labelType);
+                $result = printWithBitmap($socket, $tempFile, $labelType);
                 fclose($socket);
-                unset($_SESSION['bmpFilePath']);
-                cleanupSession();
+                unlink($tempFile);
                 echo $result;
             } else {
-                cleanupSession();
+                unlink($tempFile);
                 echo handleError("Không thể kết nối đến máy in", ['ip' => $printer_ip, 'port' => $printer_port]);
             }
-        } elseif ($bmpData && $fileName) {
-            $fileName = preg_replace('/[^A-Za-z0-9_\-\.]/', '', $fileName);
-            $tempFile = sys_get_temp_dir() . '/' . uniqid('bmp_') . '_' . $fileName;
-
-            $data = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $bmpData), true);
-            if ($data === false) {
-                echo handleError("Dữ liệu base64 không hợp lệ", ['file' => $fileName]);
-                exit;
-            }
-
-            if (!is_writable(sys_get_temp_dir())) {
-                echo handleError("Không thể ghi vào thư mục tạm", ['dir' => sys_get_temp_dir()]);
-                exit;
-            }
-
-            if (file_put_contents($tempFile, $data) !== false) {
-                $socket = retrySocketConnection($printer_ip, $printer_port, $timeout);
-                if ($socket) {
-                    $result = printWithBitmap($socket, $tempFile, $labelType);
-                    fclose($socket);
-                    unlink($tempFile);
-                    echo $result;
-                } else {
-                    unlink($tempFile);
-                    echo handleError("Không thể kết nối đến máy in", ['ip' => $printer_ip, 'port' => $printer_port]);
-                }
-            } else {
-                echo handleError("Không thể lưu file BMP từ Data URL", ['file' => $tempFile]);
-            }
         } else {
-            echo handleError("Không tìm thấy dữ liệu BMP để in", []);
+            echo handleError("Không tìm thấy dữ liệu BMP để in", ['page_index' => $pageIndex]);
         }
+        cleanupSession();
         exit;
     }
 }
@@ -370,58 +382,42 @@ function printTextTest($ip, $port, $timeout)
 /**
  * Chuyển đổi BMP thành dữ liệu bitmap cho TSPL
  */
-function convertBmpToBitmap($bmpFile, $maxWidth = 832, $maxHeight = 1180) {
-    // Kiểm tra file tồn tại và có thể đọc
-    if (!file_exists($bmpFile) || !is_readable($bmpFile)) {
-        return handleError("File BMP không tồn tại hoặc không thể đọc", ['file' => $bmpFile]);
+/**
+ * Chuyển đổi dữ liệu BMP thành bitmap cho TSPL
+ * @param string $bmpData Dữ liệu BMP nhị phân
+ * @param int $maxWidth Chiều rộng tối đa
+ * @param int $maxHeight Chiều cao tối đa
+ * @return array|string Mảng chứa width, height, data hoặc thông báo lỗi
+ */
+function convertBmpToBitmap($bmpData, $maxWidth = 832, $maxHeight = 1180) {
+    // Kiểm tra dữ liệu BMP
+    if (strlen($bmpData) < 54) {
+        return handleError("Dữ liệu BMP không hợp lệ", ['data_length' => strlen($bmpData)]);
     }
 
-    // Kiểm tra kích thước file
-    $fileSize = filesize($bmpFile);
-    if ($fileSize === false || $fileSize > 10 * 1024 * 1024) { // Giới hạn 10MB
-        return handleError("File BMP quá lớn hoặc lỗi khi lấy kích thước", ['file' => $bmpFile, 'size' => $fileSize]);
-    }
-
-    $file = fopen($bmpFile, 'rb');
-    if (!$file) {
-        return handleError("Không thể mở file BMP", ['file' => $bmpFile]);
-    }
-
-    $header = fread($file, 54);
-    if (strlen($header) < 54) {
-        fclose($file);
-        return handleError("Header BMP không hợp lệ", ['file' => $bmpFile]);
-    }
-
+    $header = substr($bmpData, 0, 54);
     $width = unpack('V', substr($header, 18, 4))[1];
     $height = abs(unpack('V', substr($header, 22, 4))[1]);
     $bitsPerPixel = unpack('v', substr($header, 28, 2))[1];
+    $dataOffset = unpack('V', substr($header, 10, 4))[1];
 
     if ($width > $maxWidth || $height > $maxHeight) {
-        fclose($file);
         return handleError("Kích thước BMP vượt quá giới hạn", ['width' => $width, 'height' => $height]);
     }
 
     if ($bitsPerPixel != 1 && $bitsPerPixel != 24) {
-        fclose($file);
         return handleError("Định dạng BMP không được hỗ trợ", ['bits_per_pixel' => $bitsPerPixel]);
     }
 
     $rowSize = floor(($bitsPerPixel * $width + 31) / 32) * 4;
-    $dataOffset = unpack('V', substr($header, 10, 4))[1];
-    if (fseek($file, $dataOffset) !== 0) {
-        fclose($file);
-        return handleError("Không thể di chuyển con trỏ file đến dữ liệu BMP", ['file' => $bmpFile]);
-    }
-
     $bitmapData = '';
     $bytesPerRow = ceil($width / 8);
 
     for ($y = 0; $y < $height; $y++) {
-        $row = fread($file, $rowSize);
-        if ($row === false) {
-            fclose($file);
-            return handleError("Lỗi khi đọc dữ liệu BMP", ['file' => $bmpFile, 'row' => $y]);
+        $rowStart = $dataOffset + ($height - 1 - $y) * $rowSize;
+        $row = substr($bmpData, $rowStart, $rowSize);
+        if (strlen($row) < $rowSize) {
+            return handleError("Lỗi khi đọc dữ liệu BMP", ['row' => $y]);
         }
 
         $binaryRow = '';
@@ -451,19 +447,18 @@ function convertBmpToBitmap($bmpFile, $maxWidth = 832, $maxHeight = 1180) {
         $bitmapData = $binaryRow . $bitmapData;
     }
 
-    fclose($file);
-    writeDebugLog("Chuyển đổi BMP thành bitmap thành công", ['file' => $bmpFile, 'width' => $width, 'height' => $height]);
+    writeDebugLog("Chuyển đổi BMP thành bitmap thành công", ['width' => $width, 'height' => $height]);
     return ['width' => $width, 'height' => $height, 'data' => $bitmapData];
 }
 /**
  * In bitmap bằng phương pháp TSPL BITMAP với dữ liệu nhúng
  */
-function printWithBitmap($socket, $file, $labelType)
-{
-    $bitmap = convertBmpToBitmap($file);
-    if (!$bitmap) {
+function printWithBitmap($socket, $file, $labelType) {
+    $bmpData = file_get_contents($file);
+    $bitmap = convertBmpToBitmap($bmpData);
+    if (!is_array($bitmap)) {
         writeDebugLog("Lỗi chuyển đổi BMP", ['file' => $file]);
-        return '<div class="alert alert-danger">❌ Không thể chuyển đổi BMP</div>';
+        return $bitmap; // Trả về thông báo lỗi
     }
 
     $width = $bitmap['width'];
@@ -487,7 +482,7 @@ function printWithBitmap($socket, $file, $labelType)
     fwrite($socket, $invertedData);
     fwrite($socket, "\nPRINT 1,1\n");
 
-    writeDebugLog("In bitmap thành công", ['width' => $width, 'height' => $height, 'file' => $file, 'labelType' => $labelType]);
+    writeDebugLog("In bitmap thành công", ['width' => $width, 'height' => $height, 'labelType' => $labelType]);
     return '<div class="alert alert-success">✅ Đã in thành công!</div>';
 }
 ?>
@@ -1190,19 +1185,24 @@ function printWithBitmap($socket, $file, $labelType)
                 </div>
                 <div class="card-body">
                     <div class="preview-container" style="text-align: center; margin-bottom: 1.5rem;">
-                        <h3>Xem trước tem</h3>
-                        <img id="bmp-preview" src="" alt="Xem trước tem"
-                            style="max-width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                    <h3>Xem trước tem</h3>
+                    <div id="preview-list" style="display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center;">
+                        <!-- Danh sách hình ảnh xem trước sẽ được thêm bằng JavaScript -->
                     </div>
-                    <form id="print-form" method="post" style="text-align: center;">
-                        <input type="hidden" name="action" value="print_with_label">
-                        <input type="hidden" name="bmp_data" id="bmp_data">
-                        <input type="hidden" name="file_name" id="file_name">
-                        <input type="hidden" name="label_type" id="label_type">
-                        <button type="submit" class="btn btn-primary">
-                            🖨️ In Tem
-                        </button>
-                    </form>
+                    <div style="margin-top: 1rem;">
+                        <button class="btn btn-primary" onclick="selectPreviousPage()">Trang trước</button>
+                        <span id="page-indicator" style="margin: 0 1rem;">Trang 1</span>
+                        <button class="btn btn-primary" onclick="selectNextPage()">Trang sau</button>
+                    </div>
+                </div>
+                <form id="print-form" method="post" style="text-align: center;">
+                    <input type="hidden" name="action" value="print_with_label">
+                    <input type="hidden" name="page_index" id="page_index" value="0">
+                    <input type="hidden" name="label_type" id="label_type">
+                    <button type="submit" class="btn btn-primary">
+                        🖨️ In Tem
+                    </button>
+                </form>
                 </div>
             </div>
         </div>
@@ -1387,287 +1387,381 @@ function printWithBitmap($socket, $file, $labelType)
     </div>
 
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Lấy dữ liệu từ sessionStorage hoặc PHP
-        const bmpData = sessionStorage.getItem('bmpFile');
-        const fileName = sessionStorage.getItem('bmpFileName');
-        const filePath = '<?php echo isset($_SESSION['bmpFilePath']) ? htmlspecialchars($_SESSION['bmpFilePath']) : ''; ?>';
-        const printSection = document.getElementById('print-section');
-        const previewImg = document.getElementById('bmp-preview');
-        const form = document.getElementById('print-form');
-        const bmpDataInput = document.getElementById('bmp_data');
-        const fileNameInput = document.getElementById('file_name');
-        const labelTypeInput = document.getElementById('label_type');
+document.addEventListener('DOMContentLoaded', function() {
+    // Lấy dữ liệu từ sessionStorage
+    const bmpDataArray = JSON.parse(sessionStorage.getItem('bmpFiles') || '[]');
+    const labelType = sessionStorage.getItem('labelType') || 'system'; // Giữ khai báo này
+    const printSection = document.getElementById('print-section');
+    const previewList = document.getElementById('preview-list');
+    const pageIndexInput = document.getElementById('page_index');
+    const labelTypeInput = document.getElementById('label_type');
+    const pageIndicator = document.getElementById('page-indicator');
+    let currentPage = 0;
 
-        // Cấu hình retry
-        const RETRY_CONFIG = {
-            maxRetries: 2,
-            retryDelay: 2000,
-            timeoutDuration: 10000
-        };
+    // Cấu hình retry
+    const RETRY_CONFIG = {
+        maxRetries: 2,
+        retryDelay: 2000,
+        timeoutDuration: 10000
+    };
 
-        // Hàm hiển thị thông báo
-        function showMessage(message, type) {
-            const alertContainer = document.getElementById('alert-container');
-            const alert = document.createElement('div');
-            alert.className = `alert alert-${type}`;
-            alert.innerHTML = message;
-            alertContainer.appendChild(alert);
-            setTimeout(() => fadeOutAlert(alert), 4000);
-        }
+    // Hàm hiển thị thông báo
+    function showMessage(message, type) {
+        const alertContainer = document.getElementById('alert-container');
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type}`;
+        alert.innerHTML = message;
+        alertContainer.appendChild(alert);
+        setTimeout(() => fadeOutAlert(alert), 4000);
+    }
 
-        // Hàm xóa session data
-        function clearSessionData() {
-            sessionStorage.removeItem('bmpFile');
-            sessionStorage.removeItem('bmpFileName');
-            sessionStorage.removeItem('labelType');
-        }
-
-        // Xử lý nút quay lại
-        // Xử lý nút quay lại
-        document.querySelector('.btn-primary').addEventListener('click', function(e) {
-            e.preventDefault();
-            clearSessionData();
-            const previousPage = sessionStorage.getItem('previousPage');
-            if (previousPage && previousPage !== window.location.href) {
-                window.location.href = previousPage;
-            } else if (window.history.length > 1) {
-                window.history.back();
-            } else {
-                window.location.href = '/nhapkho.php'; // Trang mặc định nếu không có previousPage
-            }
+    // Hàm hiển thị danh sách xem trước
+    function displayPreviews() {
+        previewList.innerHTML = '';
+        bmpDataArray.forEach((base64Url, index) => {
+            const img = document.createElement('img');
+            img.src = base64Url; // base64Url đã có dạng data:image/bmp;base64,...
+            img.alt = `Trang ${index + 1}`;
+            img.style.maxWidth = '200px';
+            img.style.maxHeight = '300px';
+            img.style.border = index === currentPage ? '2px solid var(--primary-color)' : '1px solid var(--border-color)';
+            img.style.borderRadius = 'var(--radius-sm)';
+            img.style.cursor = 'pointer';
+            img.onclick = () => selectPage(index);
+            previewList.appendChild(img);
         });
+        pageIndicator.textContent = `Trang ${currentPage + 1} / ${bmpDataArray.length}`;
+        pageIndexInput.value = currentPage;
+    }
 
-        // Ngăn zoom trên thiết bị di động
-        document.addEventListener('touchmove', function(e) {
-            if (e.touches.length > 1) {
-                e.preventDefault();
-            }
-        }, { passive: false });
+    // Chọn trang
+    function selectPage(index) {
+        if (index >= 0 && index < bmpDataArray.length) {
+            currentPage = index;
+            displayPreviews();
+        }
+    }
 
-        let lastTouchEnd = 0;
-        document.addEventListener('touchend', function(e) {
-            const now = (new Date()).getTime();
-            if (now - lastTouchEnd <= 300) {
-                e.preventDefault();
-            }
-            lastTouchEnd = now;
-        }, false);
+    window.selectPreviousPage = function() {
+        if (currentPage > 0) {
+            selectPage(currentPage - 1);
+        }
+    };
 
-        // Xử lý form cấu hình
-        const configForm = document.getElementById('config-form');
-        if (configForm) {
-            const printerSelect = configForm.querySelector('#printer_select');
-            const ipInput = configForm.querySelector('#printer_ip');
-            const portInput = configForm.querySelector('#printer_port');
-            const ipErrorMessage = configForm.querySelector('#custom_ip_group .error-message');
-            const portErrorMessage = configForm.querySelector('#printer_port + .error-message');
+    window.selectNextPage = function() {
+        if (currentPage < bmpDataArray.length - 1) {
+            selectPage(currentPage + 1);
+        }
+    }
 
-            window.toggleCustomIP = function() {
-                const customIpGroup = document.getElementById('custom_ip_group');
-                if (printerSelect.value === 'custom') {
-                    customIpGroup.style.display = 'block';
-                    ipInput.setAttribute('required', 'required');
+    // Hiển thị print section
+    if (bmpDataArray.length > 0) {
+        printSection.classList.remove('hidden');
+        labelTypeInput.value = labelType;
+        displayPreviews();
+    } else {
+        console.error('Không tìm thấy dữ liệu BMP trong sessionStorage');
+        printSection.classList.add('hidden');
+        showMessage('❌ Không tìm thấy dữ liệu tem để hiển thị', 'danger');
+    }
+
+    // Xử lý form submit
+    const printForm = document.getElementById('print-form');
+    if (printForm) {
+        printForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const submitBtn = e.submitter;
+            const originalText = submitBtn.innerHTML;
+
+            const updateButtonState = (isLoading, retryCount = 0) => {
+                if (isLoading) {
+                    const retryText = retryCount > 0 ? ` (Thử lại ${retryCount}/${RETRY_CONFIG.maxRetries})` : '';
+                    submitBtn.innerHTML = `<span class="loading"></span> Đang xử lý...${retryText}`;
+                    submitBtn.disabled = true;
                 } else {
-                    customIpGroup.style.display = 'none';
-                    ipInput.removeAttribute('required');
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
                 }
             };
 
-            toggleCustomIP();
-
-            if (ipInput && ipErrorMessage) {
-                ipInput.addEventListener('input', function() {
-                    if (ipInput.validity.valid || ipInput.value === '') {
-                        ipInput.style.borderColor = 'var(--primary-color)';
-                        ipErrorMessage.style.display = 'none';
-                    } else {
-                        ipInput.style.borderColor = 'var(--danger-color)';
-                        ipErrorMessage.style.display = 'block';
-                    }
+            try {
+                updateButtonState(true);
+                const formData = new FormData(printForm);
+                formData.append('bmp_data', bmpDataArray[currentPage].replace(/^data:image\/bmp;base64,/, '')); // Gửi base64
+                const response = await fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
                 });
-            }
+                const result = await response.text();
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = result;
+                const alertElements = tempDiv.querySelectorAll('.alert');
+                const alertContainer = document.getElementById('alert-container');
 
-            if (portInput && portErrorMessage) {
-                portInput.addEventListener('input', function() {
-                    const value = parseInt(portInput.value);
-                    if (value >= 1 && value <= 65535) {
-                        portInput.style.borderColor = 'var(--primary-color)';
-                        portErrorMessage.style.display = 'none';
-                    } else {
-                        portInput.style.borderColor = 'var(--danger-color)';
-                        portErrorMessage.style.display = 'block';
-                    }
+                alertElements.forEach(alert => {
+                    const clonedAlert = alert.cloneNode(true);
+                    alertContainer.appendChild(clonedAlert);
+                    setTimeout(() => fadeOutAlert(clonedAlert), 4000);
                 });
-            }
-        }
 
-        // Hàm retry với exponential backoff
-        async function retryRequest(requestFn, retries = RETRY_CONFIG.maxRetries) {
-            for (let attempt = 1; attempt <= retries; attempt++) {
-                try {
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), RETRY_CONFIG.timeoutDuration);
-                    const result = await requestFn(controller.signal);
-                    clearTimeout(timeoutId);
-                    return result;
-                } catch (error) {
-                    console.warn(`Thử lại lần ${attempt}/${retries}:`, error.message);
-                    if (attempt === retries) {
-                        throw new Error(`Thất bại sau ${retries} lần thử: ${error.message}`);
-                    }
-                    const delay = RETRY_CONFIG.retryDelay * Math.pow(2, attempt - 1);
-                    await new Promise(resolve => setTimeout(resolve, delay));
+                if (result.includes('alert-success')) {
+                    setTimeout(() => {
+                        window.history.length > 1 ? window.history.back() : window.location.href = '/nhapkho.php';
+                    }, 3000);
                 }
+            } catch (error) {
+                console.error('Lỗi in:', error);
+                showMessage(`❌ Có lỗi: ${error.message}`, 'danger');
+            } finally {
+                updateButtonState(false);
             }
+        });
+    }
+
+    // Hàm xóa session data
+    function clearSessionData() {
+        sessionStorage.removeItem('bmpFiles');
+        sessionStorage.removeItem('labelType');
+    }
+
+    // Xử lý nút quay lại
+    document.querySelector('.btn-primary').addEventListener('click', function(e) {
+        e.preventDefault();
+        clearSessionData();
+        const previousPage = sessionStorage.getItem('previousPage');
+        if (previousPage && previousPage !== window.location.href) {
+            window.location.href = previousPage;
+        } else if (window.history.length > 1) {
+            window.history.back();
+        } else {
+            window.location.href = '/nhapkho.php';
         }
+    });
 
-        // Xử lý submit form
-        const forms = document.querySelectorAll('form');
-        forms.forEach(form => {
-            form.addEventListener('submit', async function(e) {
-                const submitBtn = e.submitter;
-                if (!submitBtn) return;
+    // Xóa đoạn mã dư thừa
+    // const labelType = sessionStorage.getItem('labelType') || 'system'; // Xóa dòng này
 
-                // CHỈ xử lý AJAX cho các form cần thiết, không chặn tất cả
-                const needsAjax = form.id === 'print-form' || 
-                                form.id === 'config-form' || 
-                                submitBtn.name === 'test_printer_connection';
-                
-                if (!needsAjax) {
-                    // Cho phép form submit bình thường cho các nút test, calibrate, clear memory
-                    console.log('Allowing normal form submit for:', submitBtn.name);
-                    return; // Không preventDefault, để form submit bình thường
-                }
+    // Hiển thị print section nếu có dữ liệu (sửa đoạn này để xóa logic dư thừa)
+    // Đoạn mã sau bị dư thừa vì đã xử lý ở trên
+    /*
+    if (filePath || (bmpData && fileName)) {
+        if (printSection) {
+            printSection.classList.remove('hidden');
+            ...
+        }
+    } else {
+        if (printSection) printSection.classList.add('hidden');
+        showMessage('❌ Không tìm thấy dữ liệu tem để hiển thị', 'danger']);
+    }
+    */
 
-                // Chỉ preventDefault cho các form cần AJAX
-                e.preventDefault();
-                
-                const originalText = submitBtn.innerHTML;
-                let currentRetry = 0;
+    // Ngăn zoom trên thiết bị di động
+    document.addEventListener('touchmove', function(e) {
+        if (e.touches.length > 1) {
+            e.preventDefault();
+        }
+    }, { passive: false });
 
-                const updateButtonState = (isLoading, retryCount = 0) => {
-                    if (isLoading) {
-                        const retryText = retryCount > 0 ? ` (Thử lại ${retryCount}/${RETRY_CONFIG.maxRetries})` : '';
-                        submitBtn.innerHTML = `<span class="loading"></span> Đang xử lý...${retryText}`;
-                        submitBtn.disabled = true;
-                    } else {
-                        submitBtn.innerHTML = originalText;
-                        submitBtn.disabled = false;
-                    }
-                };
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', function(e) {
+        const now = (new Date()).getTime();
+        if (now - lastTouchEnd <= 300) {
+            e.preventDefault();
+        }
+        lastTouchEnd = now;
+    }, false);
 
-                try {
-                    updateButtonState(true);
-                    const result = await retryRequest(async (signal) => {
-                        currentRetry++;
-                        if (currentRetry > 1) {
-                            updateButtonState(true, currentRetry - 1);
-                        }
-                        const formData = new FormData(form);
-                        if (submitBtn.name && submitBtn.value) {
-                            formData.set(submitBtn.name, submitBtn.value);
-                        }
-                        const response = await fetch(window.location.href, {
-                            method: 'POST',
-                            body: formData,
-                            signal: signal
-                        });
-                        if (!response.ok) {
-                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                        }
-                        return await response.text();
-                    });
+    // Xử lý form cấu hình
+    const configForm = document.getElementById('config-form');
+    if (configForm) {
+        const printerSelect = configForm.querySelector('#printer_select');
+        const ipInput = configForm.querySelector('#printer_ip');
+        const ipErrorMessage = configForm.querySelector('#custom_ip_group .error-message');
+        const portErrorMessage = port;
 
-                    const tempDiv = document.createElement('div');
-                    tempDiv.innerHTML = result;
-                    const alertElements = tempDiv.querySelectorAll('.alert');
-                    const alertContainer = document.getElementById('alert-container');
+        window.toggleCustomIP = function() {
+            const customIpGroup = document.getElementById('custom_ip_group');
+            if (printerSelect.value === 'custom') {
+                customIpGroup.style.display = 'block';
+                ipInput.setAttribute('required', 'required');
+            } else {
+                customIpGroup.style.display = 'none';
+                ipInput.removeAttribute('required');
+            }
+        };
 
-                    alertElements.forEach(alert => {
-                        const clonedAlert = alert.cloneNode(true);
-                        alertContainer.appendChild(clonedAlert);
-                        setTimeout(() => fadeOutAlert(clonedAlert), 4000);
-                    });
+        toggleCustomIP();
 
-                    const isSuccess = result.includes('alert-success');
-                    if (form.id === 'print-form' && isSuccess) {
-                        setTimeout(() => {
-                            if (document.referrer && document.referrer !== window.location.href) {
-                                window.location.href = document.referrer;
-                            } else {
-                                window.history.back();
-                            }
-                        }, 3000);
-                    }
-                } catch (error) {
-                    console.error('Lỗi cuối cùng:', error);
-                    showMessage(`❌ ${error.message}`, 'danger');
-                } finally {
-                    updateButtonState(false);
+        if (ipInput && ipErrorMessage) {
+            ipInput.addEventListener('input', function() {
+                if (ipInput.validity.valid || ipInput.value === '') {
+                    ipInput.style.borderColor = 'var(--primary-color)';
+                    ipErrorMessage.style.display = 'none';
+                } else {
+                    ipInput.style.borderColor = 'var(--danger-color)';
+                    ipErrorMessage.style.display = 'block';
                 }
             });
-        });
-
-        // Lấy loại tem từ sessionStorage
-        const labelType = sessionStorage.getItem('labelType') || 'system';
-
-        // Hiển thị print section nếu có dữ liệu
-        if (filePath || (bmpData && fileName)) {
-            if (printSection) {
-                printSection.classList.remove('hidden');
-                if (bmpData && fileName) {
-                    if (bmpDataInput) bmpDataInput.value = bmpData;
-                    if (fileNameInput) fileNameInput.value = fileName;
-                    if (previewImg) previewImg.src = bmpData;
-                } else if (filePath && typeof cordova !== 'undefined') {
-                    handleCordovaPreview(filePath, previewImg, printSection);
-                }
-                if (labelTypeInput) labelTypeInput.value = labelType;
-            }
-        } else {
-            if (printSection) printSection.classList.add('hidden');
-            showMessage('❌ Không tìm thấy dữ liệu tem để hiển thị', 'danger');
         }
 
-        function handleCordovaPreview(filePath, previewImg, printSection) {
-            if (typeof window.resolveLocalFileSystemURL === 'function') {
-                window.resolveLocalFileSystemURL(filePath, function(fileEntry) {
-                    fileEntry.file(function(file) {
-                        const reader = new FileReader();
-                        reader.onloadend = function() {
-                            if (previewImg) previewImg.src = this.result;
-                            if (printSection) printSection.classList.remove('hidden');
-                        };
-                        reader.onerror = function(error) {
-                            console.error('Lỗi đọc file trong Cordova:', error);
-                            showMessage('❌ Lỗi khi đọc file tem trong Cordova', 'danger');
-                            if (printSection) printSection.classList.add('hidden');
-                        };
-                        reader.readAsDataURL(file);
-                    }, function(error) {
+        // Xử lý portInput nếu có
+        const portInput = configForm.querySelector('#printer_port');
+        const portErrorMessageElement = configForm.querySelector('#printer_port + .error-message');
+        if (portInput && portErrorMessageElement) {
+            portInput.addEventListener('input', function() {
+                const value = parseInt(portInput.value);
+                if (value >= 1 && value <= 65535) {
+                    portInput.style.borderColor = 'var(--primary-color)';
+                    portErrorMessageElement.style.display = 'none';
+                } else {
+                    portInput.style.borderColor = 'var(--danger-color)';
+                    portErrorMessageElement.style.display = 'block';
+                }
+            });
+        }
+    }
+
+    // Hàm retry với exponential backoff
+    async function retryRequest(requestFn, retries = RETRY_CONFIG.maxRetries) {
+        for (let attempt = 1; attempt <= retries; attempt++) {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), RETRY_CONFIG.timeoutDuration);
+                const result = await requestFn(controller.signal);
+                clearTimeout(timeoutId);
+                return result;
+            } catch (error) {
+                console.warn(`Thử lại lần ${attempt}/${retries}:`, error.message);
+                if (attempt === retries) {
+                    throw new Error(`Thất bại sau ${retries} lần thử: ${error.message}`);
+                }
+                const delay = RETRY_CONFIG.retryDelay * Math.pow(2, attempt - 1);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+        }
+    }
+
+    // Xử lý submit form
+    const forms = document.querySelectorAll('form');
+    forms.forEach(form => {
+        form.addEventListener('submit', async function(e) {
+            const submitBtn = e.submitter;
+            if (!submitBtn) return;
+
+            // CHỈ xử lý AJAX cho các form cần thiết
+            const needsAjax = form.id === 'print-form' || 
+                            form.id === 'config-form' || 
+                            submitBtn.name === 'test_connection'; // Sửa để dùng test_connection
+            
+            if (!needsAjax) {
+                console.log('Allowing normal form submit for:', submitBtn.name);
+                return; // Không preventDefault
+            }
+
+            e.preventDefault();
+            
+            const originalText = submitBtn.innerHTML;
+            let currentRetry = 0;
+
+            const updateButtonState = (isLoading, retryCount = 0) => {
+                if (isLoading) {
+                    const retryText = retryCount > 0 ? ` (Thử lại ${retryCount}/${RETRY_CONFIG.maxRetries})` : '';
+                    submitBtn.innerHTML = `<span class="loading"></span> Đang xử lý...${retryText}`;
+                    submitBtn.disabled = true;
+                } else {
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                }
+            };
+
+            try {
+                updateButtonState(true);
+                const result = await retryRequest(async (signal) => {
+                    currentRetry++;
+                    if (currentRetry > 1) {
+                        updateButtonState(true, currentRetry - 1);
+                    }
+                    const formData = new FormData(form);
+                    if (submitBtn.name && submitBtn.value) {
+                        formData.set(submitBtn.name, submitBtn.value);
+                    }
+                    const response = await fetch(window.location.href, {
+                        method: 'POST',
+                        body: formData,
+                        signal: signal
+                    });
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return await response.text();
+                });
+
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = result;
+                const alertElements = tempDiv.querySelectorAll('.alert');
+                const alertContainer = document.getElementById('alert-container');
+
+                alertElements.forEach(alert => {
+                    const clonedAlert = alert.cloneNode(true);
+                    alertContainer.appendChild(clonedAlert);
+                    setTimeout(() => fadeOutAlert(clonedAlert), 4000);
+                });
+
+                const isSuccess = result.includes('alert-success');
+                if (form.id === 'print-form' && isSuccess) {
+                    setTimeout(() => {
+                        if (document.referrer && document.referrer !== window.location.href) {
+                            window.location.href = document.referrer;
+                        } else {
+                            window.history.back();
+                        }
+                    }, 3000);
+                }
+            } catch (error) {
+                console.error('Lỗi cuối cùng:', error);
+                showMessage(`❌ ${error.message}`, 'danger');
+            } finally {
+                updateButtonState(false);
+            }
+        });
+    });
+
+    // Xóa đoạn mã xử lý filePath, bmpData, fileName (Cordova) vì không cần thiết
+    function handleCordovaPreview(filePath, previewImg, printSection) {
+        if (typeof window.resolveLocalFileSystemURL === 'function') {
+            window.resolveLocalFileSystemURL(filePath, function(fileEntry) {
+                fileEntry.file(function(file) {
+                    const reader = new FileReader();
+                    reader.onloadend = function() {
+                        if (previewImg) previewImg.src = this.result;
+                        if (printSection) printSection.classList.remove('hidden');
+                    };
+                    reader.onerror = function(error) {
                         console.error('Lỗi đọc file trong Cordova:', error);
                         showMessage('❌ Lỗi khi đọc file tem trong Cordova', 'danger');
                         if (printSection) printSection.classList.add('hidden');
-                    });
+                    };
+                    reader.readAsDataURL(file);
                 }, function(error) {
-                    console.error('Lỗi truy cập filePath trong Cordova:', error);
-                    showMessage('❌ Lỗi khi truy cập file tem trong Cordova', 'danger');
+                    console.error('Lỗi đọc file trong Cordova:', error);
+                    showMessage('❌ Lỗi khi đọc file tem trong Cordova', 'danger');
                     if (printSection) printSection.classList.add('hidden');
                 });
-            }
+            }, function(error) {
+                console.error('Lỗi truy cập filePath trong Cordova:', error);
+                showMessage('❌ Lỗi khi truy cập file tem trong Cordova', 'danger');
+                if (printSection) printSection.classList.add('hidden');
+            });
         }
+    }
 
-        // Xử lý hiệu ứng touch cho nút
-       
+    // Xóa alert hiện có sau 5 giây
+    const existingAlerts = document.querySelectorAll('.alert');
+    existingAlerts.forEach(alert => {
+        setTimeout(() => fadeOutAlert(alert), 5000);
+    });
 
-        // Xóa alert hiện có sau 5 giây
-        const existingAlerts = document.querySelectorAll('.alert');
-        existingAlerts.forEach(alert => {
-            setTimeout(() => fadeOutAlert(alert), 5000);
-        });
-
-        async function checkConnection() {
+    async function checkConnection() {
         const PING_TIMEOUT = 10000;
         const MAX_RETRIES = 2;
         const RETRY_DELAY = 1000;
@@ -1677,7 +1771,7 @@ function printWithBitmap($socket, $file, $labelType)
             const timeoutId = setTimeout(() => controller.abort(), PING_TIMEOUT);
             try {
                 const formData = new FormData();
-                formData.append('action', 'test_connection'); // Sử dụng test_connection thay vì test_printer_connection
+                formData.append('action', 'test_connection');
                 const response = await fetch(window.location.href, {
                     method: 'POST',
                     body: formData,
@@ -1704,91 +1798,92 @@ function printWithBitmap($socket, $file, $labelType)
             }
         }
         return false;
-}
-        let connectionCheckPaused = false;
-        async function updateConnectionStatus() {
-            if (connectionCheckPaused) return;
-            const connectionStatus = document.getElementById('connection-status');
-            if (!connectionStatus) return;
+    }
 
-            const statusIcon = connectionStatus.querySelector('.status-icon');
-            const statusText = connectionStatus.querySelector('.status-text');
-            if (!statusIcon || !statusText) return;
+    let connectionCheckPaused = false;
+    async function updateConnectionStatus() {
+        if (connectionCheckPaused) return;
+        const connectionStatus = document.getElementById('connection-status');
+        if (!connectionStatus) return;
 
-            statusText.textContent = 'Đang kiểm tra...';
-            statusText.style.color = 'var(--warning-color)';
-            statusIcon.innerHTML = '<path d="M12 2v10l4-4"/><circle cx="12" cy="12" r="10"/>';
+        const statusIcon = connectionStatus.querySelector('.status-icon');
+        const statusText = connectionStatus.querySelector('.status-text');
+        if (!statusIcon || !statusText) return;
 
-            try {
-                const isConnected = await checkConnection();
-                if (isConnected) {
-                    statusIcon.innerHTML = '<path d="M20 6 9 17l-5-5"/>';
-                    statusText.textContent = 'Đã kết nối';
-                    statusText.style.color = 'var(--success-color)';
-                    connectionStatus.classList.add('connected');
-                    connectionStatus.classList.remove('disconnected');
-                } else {
-                    statusIcon.innerHTML = '<path d="M6 18L18 6M6 6l12 12"/>';
-                    statusText.textContent = 'Mất kết nối';
-                    statusText.style.color = 'var(--danger-color)';
-                    connectionStatus.classList.remove('connected');
-                    connectionStatus.classList.add('disconnected');
-                    connectionCheckPaused = true;
-                    setTimeout(() => { connectionCheckPaused = false; }, 10000);
-                }
-            } catch (error) {
-                console.error('Lỗi kiểm tra kết nối máy in:', error);
-                statusIcon.innerHTML = '<path d="M12 9v4m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/>';
-                statusText.textContent = 'Lỗi kiểm tra kết nối';
-                statusText.style.color = 'var(--warning-color)';
+        statusText.textContent = 'Đang kiểm tra...';
+        statusText.style.color = 'var(--warning-color)';
+        statusIcon.innerHTML = '<path d="M12 2v10l4-4"/><circle cx="12" cy="12" r="10"/>';
+
+        try {
+            const isConnected = await checkConnection();
+            if (isConnected) {
+                statusIcon.innerHTML = '<path d="M20 6 9 17l-5-5"/>';
+                statusText.textContent = 'Đã kết nối';
+                statusText.style.color = 'var(--success-color)';
+                connectionStatus.classList.add('connected');
+                connectionStatus.classList.remove('disconnected');
+            } else {
+                statusIcon.innerHTML = '<path d="M6 18L18 6M6 6l12 12"/>';
+                statusText.textContent = 'Mất kết nối';
+                statusText.style.color = 'var(--danger-color)';
                 connectionStatus.classList.remove('connected');
                 connectionStatus.classList.add('disconnected');
+                connectionCheckPaused = true;
+                setTimeout(() => { connectionCheckPaused = false; }, 10000);
             }
+        } catch (error) {
+            console.error('Lỗi kiểm tra kết nối máy in:', error);
+            statusIcon.innerHTML = '<path d="M12 9v4m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/>';
+            statusText.textContent = 'Lỗi kiểm tra kết nối';
+            statusText.style.color = 'var(--warning-color)';
+            connectionStatus.classList.remove('connected');
+            connectionStatus.classList.add('disconnected');
         }
+    }
 
-        updateConnectionStatus();
-        setInterval(updateConnectionStatus, 10000);
+    updateConnectionStatus();
+    setInterval(updateConnectionStatus, 10000);
 
-        function fadeOutAlert(alert) {
-            if (alert && alert.parentNode) {
-                alert.style.opacity = '0';
-                alert.style.transform = 'translateY(-10px)';
-                const isSuccess = alert.classList.contains('alert-success');
-                setTimeout(() => {
-                    if (alert.parentNode) {
-                        if (isSuccess) {
-                            const printMessage = document.createElement('div');
-                            printMessage.className = 'alert alert-success print-message';
-                            printMessage.innerHTML = '✅ Đã in';
-                            printMessage.style.opacity = '0';
-                            printMessage.style.transform = 'translateY(-20px)';
-                            printMessage.style.transition = 'all 0.3s ease';
-                            alert.parentNode.replaceChild(printMessage, alert);
-                            setTimeout(() => {
-                                printMessage.style.opacity = '1';
-                                printMessage.style.transform = 'translateY(0)';
-                            }, 10);
-                            setTimeout(() => fadeOutAlert(printMessage), 3000);
-                        } else {
-                            alert.remove();
-                        }
+    function fadeOutAlert(alert) {
+        if (alert && alert.parentNode) {
+            alert.style.opacity = '0';
+            alert.style.transform = 'translateY(-10px)';
+            const isSuccess = alert.classList.contains('alert-success');
+            setTimeout(() => {
+                if (alert.parentNode) {
+                    if (isSuccess) {
+                        const printMessage = document.createElement('div');
+                        printMessage.className = 'alert alert-success print-message';
+                        printMessage.innerHTML = '✅ Đã in';
+                        printMessage.style.opacity = '0';
+                        printMessage.style.transform = 'translateY(-20px)';
+                        printMessage.style.transition = 'all 0.3s ease';
+                        alert.parentNode.replaceChild(printMessage, alert);
+                        setTimeout(() => {
+                            printMessage.style.opacity = '1';
+                            printMessage.style.transform = 'translateY(0)';
+                        }, 10);
+                        setTimeout(() => fadeOutAlert(printMessage), 3000);
+                    } else {
+                        alert.remove();
                     }
-                }, 300);
-            }
+                }
+            }, 300);
         }
+    }
 
-        window.addEventListener('error', function(event) {
-            console.error('Global error:', event.error);
-            showMessage('❌ Đã xảy ra lỗi không mong muốn', 'danger');
-        });
-
-        window.addEventListener('unhandledrejection', function(event) {
-            console.error('Unhandled promise rejection:', event.reason);
-            showMessage('❌ Lỗi xử lý bất đồng bộ', 'danger');
-            event.preventDefault();
-        });
+    window.addEventListener('error', function(event) {
+        console.error('Global error:', event.error);
+        showMessage('❌ Đã xảy ra lỗi không mong muốn', 'danger');
     });
-    </script>
+
+    window.addEventListener('unhandledrejection', function(event) {
+        console.error('Unhandled promise rejection:', event.reason);
+        showMessage('❌ Lỗi xử lý bất đồng bộ', 'danger');
+        event.preventDefault();
+    });
+});
+</script>
     <noscript>
         <div class="alert alert-warning">
             ⚠️ JavaScript bị tắt. Một số tính năng như xem trước tem sẽ không hoạt động. Vui lòng bật JavaScript để có trải nghiệm tốt nhất.

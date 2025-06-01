@@ -7,45 +7,46 @@ require_once __DIR__ . '/vendor/autoload.php';
  * @param string $pdfPath Đường dẫn đến file PDF đầu vào.
  * @return array|bool Mảng đường dẫn đến các file BMP đầu ra hoặc false nếu thất bại.
  */
-function convertPdfToBmpAllPages($pdfPath)
+/**
+ * Chuyển đổi toàn bộ trang PDF sang BMP trong bộ nhớ.
+ *
+ * @param string $pdfData Dữ liệu PDF dưới dạng chuỗi.
+ * @return array|bool Mảng dữ liệu BMP nhị phân hoặc false nếu thất bại.
+ */
+function convertPdfToBmpAllPagesInMemory($pdfData)
 {
-    writeDebugLog("Bắt đầu chuyển đổi PDF toàn bộ trang", ['file' => $pdfPath]);
+    writeDebugLog("Bắt đầu chuyển đổi PDF sang BMP trong bộ nhớ", ['data_length' => strlen($pdfData)]);
     
-    // Kiểm tra file PDF có tồn tại và hợp lệ
-    if (!file_exists($pdfPath) || filesize($pdfPath) < 100) {
-        writeDebugLog("File PDF không hợp lệ hoặc không tồn tại", ['file' => $pdfPath, 'exists' => file_exists($pdfPath), 'size' => filesize($pdfPath)]);
+    // Kiểm tra dữ liệu PDF hợp lệ
+    if (strlen($pdfData) < 100) {
+        writeDebugLog("Dữ liệu PDF không hợp lệ", ['data_length' => strlen($pdfData)]);
         return false;
     }
-
-    // Đếm số trang trong PDF
-    $pageCount = getPdfPageCount($pdfPath);
-    if ($pageCount === false || $pageCount <= 0) {
-        writeDebugLog("Không thể xác định số trang PDF", ['file' => $pdfPath, 'page_count' => $pageCount]);
-        return false;
-    }
-
-    writeDebugLog("Số trang PDF phát hiện", ['page_count' => $pageCount]);
 
     try {
         // Kiểm tra xem Imagick có sẵn không
         if (!extension_loaded('imagick')) {
-            writeDebugLog("Imagick không được cài đặt, chuyển sang Ghostscript", ['file' => $pdfPath]);
-            return convertPdfToBmpWithGsAllPages($pdfPath, $pageCount);
+            writeDebugLog("Imagick không được cài đặt", []);
+            return false; // Có thể thêm fallback nếu cần
         }
 
-        $bmpFiles = [];
-        
+        $bmpDataArray = [];
+        $imagick = new Imagick();
+
+        // Đọc PDF từ dữ liệu chuỗi
+        $imagick->readImageBlob($pdfData);
+        $pageCount = $imagick->getNumberImages();
+
+        writeDebugLog("Số trang PDF phát hiện", ['page_count' => $pageCount]);
+
         for ($page = 0; $page < $pageCount; $page++) {
             writeDebugLog("Xử lý trang", ['page' => $page + 1, 'total' => $pageCount]);
-            
-            // Tạo đối tượng Imagick cho từng trang
-            $imagick = new Imagick();
+
+            // Chuyển đến trang cụ thể
+            $imagick->setIteratorIndex($page);
 
             // Cấu hình để render PDF với độ phân giải cao
             $imagick->setResolution(150, 150);
-
-            // Đọc trang cụ thể của PDF
-            $imagick->readImage($pdfPath . '[' . $page . ']');
 
             // Chuyển sang định dạng đen trắng
             $imagick->setImageType(Imagick::IMGTYPE_BILEVEL);
@@ -63,54 +64,50 @@ function convertPdfToBmpAllPages($pdfPath)
                 $newHeight = (int)($height * $scale);
                 $imagick->resizeImage($newWidth, $newHeight, Imagick::FILTER_LANCZOS, 1);
                 writeDebugLog("Điều chỉnh kích thước trang " . ($page + 1), [
-                    'original_width' => $width, 
-                    'original_height' => $height, 
-                    'new_width' => $newWidth, 
+                    'original_width' => $width,
+                    'original_height' => $height,
+                    'new_width' => $newWidth,
                     'new_height' => $newHeight,
                     'scale' => $scale
                 ]);
             }
 
-            // Lưu thành BMP
-            $bmpFile = sys_get_temp_dir() . '/' . uniqid('pdf_to_bmp_page_' . ($page + 1) . '_') . '.bmp';
+            // Chuyển sang BMP và lấy dữ liệu nhị phân
             $imagick->setImageFormat('BMP');
-            $imagick->writeImage($bmpFile);
+            $bmpData = $imagick->getImageBlob();
 
-            $imagick->clear();
-            $imagick->destroy();
-
-            // Kiểm tra file BMP được tạo
-            if (file_exists($bmpFile) && filesize($bmpFile) > 100) {
-                $bmpFiles[] = $bmpFile;
-                writeDebugLog("Chuyển đổi trang " . ($page + 1) . " thành công với Imagick", [
+            // Kiểm tra dữ liệu BMP hợp lệ
+            if (strlen($bmpData) > 100) {
+                $bmpDataArray[] = $bmpData;
+                writeDebugLog("Chuyển đổi trang " . ($page + 1) . " thành công", [
                     'page' => $page + 1,
-                    'bmp_file' => $bmpFile, 
-                    'size' => filesize($bmpFile)
+                    'bmp_data_length' => strlen($bmpData)
                 ]);
             } else {
-                writeDebugLog("File BMP trang " . ($page + 1) . " không hợp lệ sau khi chuyển đổi với Imagick", [
+                writeDebugLog("Dữ liệu BMP trang " . ($page + 1) . " không hợp lệ", [
                     'page' => $page + 1,
-                    'bmp_file' => $bmpFile,
-                    'exists' => file_exists($bmpFile),
-                    'size' => file_exists($bmpFile) ? filesize($bmpFile) : 0
+                    'bmp_data_length' => strlen($bmpData)
                 ]);
-                // Tiếp tục với trang tiếp theo thay vì dừng lại
-                continue;
             }
         }
 
-        if (empty($bmpFiles)) {
-            writeDebugLog("Không có trang nào được chuyển đổi thành công với Imagick", ['total_pages' => $pageCount]);
-            return convertPdfToBmpWithGsAllPages($pdfPath, $pageCount);
+        $imagick->clear();
+        $imagick->destroy();
+
+        if (empty($bmpDataArray)) {
+            writeDebugLog("Không có trang nào được chuyển đổi thành công", ['total_pages' => $pageCount]);
+            return false;
         }
 
-        writeDebugLog("Chuyển đổi hoàn tất với Imagick", ['total_files' => count($bmpFiles), 'files' => $bmpFiles]);
-        return $bmpFiles;
+        writeDebugLog("Chuyển đổi hoàn tất", ['total_files' => count($bmpDataArray)]);
+        return $bmpDataArray;
 
     } catch (Exception $e) {
-        writeDebugLog("Lỗi khi chuyển đổi PDF với Imagick", ['error' => $e->getMessage(), 'file' => $pdfPath, 'trace' => $e->getTraceAsString()]);
-        // Thử phương pháp dự phòng với Ghostscript
-        return convertPdfToBmpWithGsAllPages($pdfPath, $pageCount);
+        writeDebugLog("Lỗi khi chuyển đổi PDF sang BMP", [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        return false;
     }
 }
 
