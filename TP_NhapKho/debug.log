@@ -870,3 +870,5 @@
 [2025-05-30 22:02:54] Kết nối thành công ở lần thử 1 | ip: 192.168.110.198 | port: 9100 | response_time: 2041.36ms
 [2025-05-30 22:02:55] Chuyển đổi BMP thành bitmap thành công | file: C:\Users\DUYDUO~1\AppData\Local\Temp/bmp_683a0eecb29b3_Tem_NhapKho_HeThong_P0525_001_20250530220250.bmp | width: 827 | height: 1165
 [2025-05-30 22:02:55] In bitmap thành công | width: 827 | height: 1165 | file: C:\Users\DUYDUO~1\AppData\Local\Temp/bmp_683a0eecb29b3_Tem_NhapKho_HeThong_P0525_001_20250530220250.bmp | labelType: system
+[2025-06-01 17:44:10] Thử kết nối lần 1 thất bại | ip: 192.168.110.198 | port: 9100 | error: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond | errno: 10060 | response_time: 10038ms
+[2025-06-01 17:44:22] Thử kết nối lần 2 thất bại | ip: 192.168.110.198 | port: 9100 | error: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond | errno: 10060 | response_time: 10005.61ms
