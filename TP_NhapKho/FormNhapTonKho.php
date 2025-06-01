@@ -69,7 +69,7 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
             $watermarkHeight = $watermarkWidth * $imgInfo[1] / $imgInfo[0];
             $x = $centerX - $watermarkWidth / 2;
             $y = $centerY - $watermarkHeight / 2;
-            $pdf->SetAlpha(0.05);
+            $pdf->SetAlpha(0.4);
             $pdf->Image($watermarkPath, $x, $y, $watermarkWidth, $watermarkHeight);
             $pdf->SetAlpha(1);
         }
@@ -527,8 +527,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             sendError("Dữ liệu PDF đầu ra không hợp lệ");
         }
 
-        error_log("[" . date('Y-m-d H:i:s') . "] Tạo PDF thành công: fileName=$pdfFileName, size=" . strlen($pdfDataOutput));
-        file_put_contents(__DIR__ . '/debug_pdf.pdf', $pdfDataOutput);
 
         $bmpDataArray = convertPdfToBmpAllPagesInMemory($pdfDataOutput);
         if (!$bmpDataArray || empty($bmpDataArray)) {
@@ -1299,6 +1297,7 @@ async function generatePDF(data, labelType) {
         startTime: startTime.toFixed(2) + 'ms'
     });
 
+    // Kiểm tra dữ liệu đầu vào
     if (!data || !Array.isArray(data) || data.length === 0) {
         console.error(`[${new Date().toISOString()}] Dữ liệu đầu vào không hợp lệ`, {
             data: JSON.stringify(data, null, 2),
@@ -1325,6 +1324,25 @@ async function generatePDF(data, labelType) {
         totalItems: data.length
     });
 
+    // Đợi Cordova sẵn sàng nếu chạy trong môi trường Cordova
+    const isCordova = typeof cordova !== 'undefined' && cordova.platformId;
+    if (isCordova) {
+        await new Promise(resolve => {
+            if (document.readyState === 'complete' && typeof cordova.plugins !== 'undefined') {
+                console.log(`[${new Date().toISOString()}] Môi trường Cordova đã sẵn sàng ngay lập tức`);
+                resolve();
+            } else {
+                console.log(`[${new Date().toISOString()}] Đang chờ sự kiện deviceready`);
+                document.addEventListener('deviceready', () => {
+                    console.log(`[${new Date().toISOString()}] Sự kiện deviceready được kích hoạt`);
+                    resolve();
+                }, { once: true });
+            }
+        });
+    } else {
+        console.log(`[${new Date().toISOString()}] Chạy trong môi trường trình duyệt`);
+    }
+
     console.log(`[${new Date().toISOString()}] Hiển thị Swal loading`);
     Swal.fire({
         title: 'Đang tạo BMP...',
@@ -1336,7 +1354,6 @@ async function generatePDF(data, labelType) {
     });
 
     try {
-        const isCordova = typeof cordova !== 'undefined' && cordova.platformId;
         console.log(`[${new Date().toISOString()}] Môi trường thực thi`, {
             isCordova,
             platform: isCordova ? cordova.platformId : 'Trình duyệt'
@@ -1438,7 +1455,30 @@ async function generatePDF(data, labelType) {
                 throw new Error('Không có dữ liệu BMP để xử lý');
             }
 
+            // Kiểm tra quyền truy cập bộ nhớ (nếu có plugin diagnostic)
+            if (cordova.plugins && cordova.plugins.diagnostic) {
+                await new Promise((resolve, reject) => {
+                    cordova.plugins.diagnostic.requestExternalStorageAuthorization(status => {
+                        if (status === cordova.plugins.diagnostic.permissionStatus.GRANTED) {
+                            console.log(`[${new Date().toISOString()}] Quyền truy cập bộ nhớ đã được cấp`);
+                            resolve();
+                        } else {
+                            console.error(`[${new Date().toISOString()}] Không có quyền truy cập bộ nhớ`);
+                            reject(new Error('Không có quyền truy cập bộ nhớ'));
+                        }
+                    }, reject);
+                });
+            }
+
+            const maSoMe = data[0]?.MaSoMe || 'Unknown';
+            const timestamp = new Date().toISOString().replace(/[-:.]/g, '');
             const filePaths = await Promise.all(bmpDataArray.map(async (bmpBase64, index) => {
+                // Kiểm tra dữ liệu base64
+                if (!bmpBase64 || typeof bmpBase64 !== 'string') {
+                    console.error(`[${new Date().toISOString()}] Dữ liệu BMP ${index + 1} không hợp lệ`);
+                    throw new Error(`Dữ liệu BMP ${index + 1} không hợp lệ`);
+                }
+
                 console.log(`[${new Date().toISOString()}] Lưu BMP base64`, {
                     index: index + 1,
                     total: bmpDataArray.length,
@@ -1451,7 +1491,16 @@ async function generatePDF(data, labelType) {
                     type: bmpBlob.type
                 });
 
-                const fileName = `Tem_NhapKhoTon_${labelType}_${maSoMe}_${timestamp}_page${index}.bmp`;
+                // Kiểm tra kích thước file
+                const maxSizeMB = 10; // Giới hạn 10MB
+                if (bmpBlob.size > maxSizeMB * 1024 * 1024) {
+                    console.error(`[${new Date().toISOString()}] File BMP quá lớn`, {
+                        size: (bmpBlob.size / 1024 / 1024).toFixed(2) + 'MB'
+                    });
+                    throw new Error('Kích thước file BMP vượt quá giới hạn');
+                }
+
+                const fileName = `Tem_NhapKhoTon_${labelType}_${maSoMe}_${timestamp}_page${index + 1}.bmp`;
                 return new Promise((resolve, reject) => {
                     window.resolveLocalFileSystemURL(cordova.file.dataDirectory, (dirEntry) => {
                         console.log(`[${new Date().toISOString()}] Truy cập thư mục dataDirectory`, {
@@ -1511,10 +1560,22 @@ async function generatePDF(data, labelType) {
                 labelType
             });
 
-            window.location.href = `printer_interface.php?filePath=${filePathParam}&labelType=${encodeURIComponent(labelType)}`;
-            console.log(`[${new Date().toISOString()}] Đã thực hiện chuyển hướng trong Cordova`, {
-                redirectUrl: window.location.href
-            });
+            const redirectUrl = `printer_interface.php?filePath=${filePathParam}&labelType=${encodeURIComponent(labelType)}`;
+            console.log(`[${new Date().toISOString()}] Chuyển hướng tới: ${redirectUrl}`);
+            Swal.close();
+            setTimeout(() => {
+                window.location.href = redirectUrl;
+                setTimeout(() => {
+                    if (!window.location.href.includes('printer_interface.php')) {
+                        console.error(`[${new Date().toISOString()}] Chuyển hướng thất bại`);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Lỗi',
+                            text: 'Không thể chuyển hướng đến trang in.'
+                        });
+                    }
+                }, 1000);
+            }, 100);
         } else {
             console.log(`[${new Date().toISOString()}] Xử lý trong môi trường trình duyệt`);
             const bmpDataArray = result.bmpData || [];
@@ -1543,16 +1604,24 @@ async function generatePDF(data, labelType) {
             console.log(`[${new Date().toISOString()}] Lưu labelType vào sessionStorage`, { labelType });
 
             console.log(`[${new Date().toISOString()}] Chuyển hướng đến printer_interface.php trong trình duyệt`);
-            window.location.href = 'printer_interface.php';
-            console.log(`[${new Date().toISOString()}] Đã thực hiện chuyển hướng trong trình duyệt`, {
-                redirectUrl: window.location.href
-            });
+            setTimeout(() => {
+                window.location.href = 'printer_interface.php';
+                setTimeout(() => {
+                    if (!window.location.href.includes('printer_interface.php')) {
+                        console.error(`[${new Date().toISOString()}] Chuyển hướng thất bại`);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Lỗi',
+                            text: 'Không thể chuyển hướng đến trang in.'
+                        });
+                    }
+                }, 1000);
+            }, 100);
         }
 
         console.log(`[${new Date().toISOString()}] Đóng Swal loading`, {
             totalTime: (performance.now() - startTime).toFixed(2) + 'ms'
         });
-        Swal.close();
     } catch (error) {
         console.error(`[${new Date().toISOString()}] Lỗi trong generatePDF`, {
             message: error.message,

@@ -71,7 +71,7 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
             $watermarkHeight = $watermarkWidth * $imgInfo[1] / $imgInfo[0];
             $x = $centerX - $watermarkWidth / 2;
             $y = $centerY - $watermarkHeight / 2;
-            $pdf->SetAlpha(0.05);
+            $pdf->SetAlpha(0.4);
             $pdf->Image($watermarkPath, $x, $y, $watermarkWidth, $watermarkHeight);
             $pdf->SetAlpha(1);
         }

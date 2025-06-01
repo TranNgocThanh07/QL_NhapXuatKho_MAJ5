@@ -124,7 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         exit;
     }
-
+    
     if (isset($_POST['action']) && $_POST['action'] === 'print_with_label') {
         $labelType = $_POST['label_type'] ?? 'default';
         $pageIndex = isset($_POST['page_index']) ? (int)$_POST['page_index'] : 0;
@@ -445,83 +445,65 @@ function printTextTest($ip, $port, $timeout)
  * @return array|string Mảng chứa width, height, data hoặc thông báo lỗi
  */
 function convertBmpToBitmap($bmpData, $maxWidth = 420, $maxHeight = 595) {
-    // Kiểm tra dữ liệu BMP
-    if (strlen($bmpData) < 54) {
-        return handleError("Dữ liệu BMP không hợp lệ", ['data_length' => strlen($bmpData)]);
-    }
+    // Kiểm tra cơ bản
+    $len = strlen($bmpData);
+    if ($len < 54) return false;
+    if ($len > 10485760) return false; // 10MB limit
     
-    // Kiểm tra kích thước dữ liệu
-    if (strlen($bmpData) > 10 * 1024 * 1024) { // Giới hạn 10MB
-        return handleError("Dữ liệu BMP quá lớn", ['size' => strlen($bmpData)]);
-    }
-
-    $header = substr($bmpData, 0, 54);
-    if (strlen($header) < 54) {
-        return handleError("Header BMP không hợp lệ", ['header_length' => strlen($header)]);
-    }
+    // Đọc header một lần
+    $h = substr($bmpData, 0, 54);
+    $w = unpack('V', substr($h, 18, 4))[1];
+    $height = abs(unpack('V', substr($h, 22, 4))[1]);
+    $bpp = unpack('v', substr($h, 28, 2))[1];
+    $offset = unpack('V', substr($h, 10, 4))[1];
     
-    $width = unpack('V', substr($header, 18, 4))[1];
-    $height = abs(unpack('V', substr($header, 22, 4))[1]);
-    $bitsPerPixel = unpack('v', substr($header, 28, 2))[1];
-    $dataOffset = unpack('V', substr($header, 10, 4))[1];
-
-    if ($bitsPerPixel != 1 && $bitsPerPixel != 24) {
-        return handleError("Định dạng BMP không được hỗ trợ", ['bits_per_pixel' => $bitsPerPixel]);
-    }
-
-    $rowSize = floor(($bitsPerPixel * $width + 31) / 32) * 4;
-    $bitmapData = '';
-    $bytesPerRow = ceil($width / 8);
+    // Chỉ hỗ trợ 1-bit và 24-bit
+    if ($bpp != 1 && $bpp != 24) return false;
     
-    // Kiểm tra xem có đủ dữ liệu để đọc không
-    $totalDataNeeded = $dataOffset + ($height * $rowSize);
-    if (strlen($bmpData) < $totalDataNeeded) {
-        return handleError("Dữ liệu BMP không đủ", [
-            'available' => strlen($bmpData), 
-            'needed' => $totalDataNeeded
-        ]);
-    }
-
-    // Đọc từng dòng một cách tuần tự như hàm thứ hai
-    for ($y = 0; $y < $height; $y++) {
-        // Tính vị trí bắt đầu của dòng hiện tại
-        $currentRowOffset = $dataOffset + ($y * $rowSize);
-        $row = substr($bmpData, $currentRowOffset, $rowSize);
-        
-        if (strlen($row) < $rowSize) {
-            return handleError("Lỗi khi đọc dữ liệu BMP", ['row' => $y, 'expected' => $rowSize, 'actual' => strlen($row)]);
+    $rowSize = (($bpp * $w + 31) >> 5) << 2; // Tối ưu phép chia/nhân
+    $bytesPerRow = ($w + 7) >> 3; // ceil($w / 8)
+    
+    // Kiểm tra dữ liệu đủ
+    if ($len < $offset + ($height * $rowSize)) return false;
+    
+    $bitmap = '';
+    
+    // Tối ưu cho 1-bit BMP (đã là monochrome)
+    if ($bpp == 1) {
+        for ($y = 0; $y < $height; $y++) {
+            $rowStart = $offset + ($y * $rowSize);
+            $row = substr($bmpData, $rowStart, $bytesPerRow);
+            $bitmap = $row . $bitmap; // Reverse order
         }
-
-        $binaryRow = '';
-        if ($bitsPerPixel == 1) {
-            for ($i = 0; $i < $bytesPerRow; $i++) {
-                $byte = isset($row[$i]) ? ord($row[$i]) : 0;
-                $binaryRow .= chr($byte);
-            }
-        } else {
-            for ($x = 0; $x < $width; $x += 8) {
+    } else {
+        // 24-bit: chuyển sang 1-bit
+        for ($y = 0; $y < $height; $y++) {
+            $rowStart = $offset + ($y * $rowSize);
+            $row = substr($bmpData, $rowStart, $rowSize);
+            $binaryRow = '';
+            
+            for ($x = 0; $x < $w; $x += 8) {
                 $byte = 0;
-                for ($bit = 0; $bit < 8 && ($x + $bit) < $width; $bit++) {
-                    $pixelOffset = ($x + $bit) * 3;
-                    if ($pixelOffset + 2 < strlen($row)) {
-                        $b = ord($row[$pixelOffset]);
-                        $g = ord($row[$pixelOffset + 1]);
-                        $r = ord($row[$pixelOffset + 2]);
-                        $gray = ($r + $g + $b) / 3;
-                        if ($gray < 128) {
-                            $byte |= (1 << (7 - $bit));
+                for ($bit = 0; $bit < 8 && ($x + $bit) < $w; $bit++) {
+                    $pixelPos = ($x + $bit) * 3;
+                    if ($pixelPos + 2 < $rowSize) {
+                        // Sử dụng weighted average thay vì simple average
+                        $b = ord($row[$pixelPos]);
+                        $g = ord($row[$pixelPos + 1]);
+                        $r = ord($row[$pixelPos + 2]);
+                        // Luminance formula: 0.299*R + 0.587*G + 0.114*B
+                        if (($r * 299 + $g * 587 + $b * 114) < 127500) { // < 128 * 1000
+                            $byte |= (128 >> $bit); // 1 << (7 - $bit)
                         }
                     }
                 }
                 $binaryRow .= chr($byte);
             }
+            $bitmap = $binaryRow . $bitmap;
         }
-        // Thêm dòng vào đầu bitmap data (giống hàm thứ hai)
-        $bitmapData = $binaryRow . $bitmapData;
     }
-
-    writeDebugLog("Chuyển đổi BMP thành bitmap thành công", ['width' => $width, 'height' => $height]);
-    return ['width' => $width, 'height' => $height, 'data' => $bitmapData];
+    
+    return ['width' => $w, 'height' => $height, 'data' => $bitmap];
 }
 /**
  * In bitmap bằng phương pháp TSPL BITMAP với dữ liệu nhúng
