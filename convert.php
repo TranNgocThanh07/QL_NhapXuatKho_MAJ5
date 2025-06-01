@@ -48,7 +48,7 @@ function convertPdfToBmpAllPagesInMemory($pdfData)
 
             // Cấu hình lệnh Ghostscript cho từng trang
             $gsCommand = sprintf(
-                '%s -dSAFER -dBATCH -dNOPAUSE -dFirstPage=%d -dLastPage=%d -sDEVICE=bmpmono -r150 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -sOutputFile=%s %s 2>&1',
+                '%s -dSAFER -dBATCH -dNOPAUSE -dFirstPage=%d -dLastPage=%d -sDEVICE=bmpmono -r203 -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -dPDFFitPage -sPAPERSIZE=a6 -dFIXEDMEDIA -sOutputFile=%s %s 2>&1',
                 $gs_command,
                 $page,
                 $page,

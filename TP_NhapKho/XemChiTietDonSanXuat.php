@@ -138,7 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $pdf->Output($pdfPath, 'F');
 
         // Chuyển đổi PDF sang BMP
-        $bmpFiles = convertPdfToBmpAllPages($pdfPath);
+        $bmpFiles = convertPdfToBmpAllPagesInMemory($pdfPath);
         if (!is_array($bmpFiles) || empty($bmpFiles) || !file_exists($bmpFiles[0])) {
             unlink($pdfPath); // Xóa file PDF tạm
             sendError("Không thể chuyển đổi PDF sang BMP");

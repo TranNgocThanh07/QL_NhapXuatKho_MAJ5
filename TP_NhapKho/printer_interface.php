@@ -389,21 +389,26 @@ function printTextTest($ip, $port, $timeout)
  * @param int $maxHeight Chiều cao tối đa
  * @return array|string Mảng chứa width, height, data hoặc thông báo lỗi
  */
-function convertBmpToBitmap($bmpData, $maxWidth = 832, $maxHeight = 1180) {
+function convertBmpToBitmap($bmpData, $maxWidth = 420, $maxHeight = 595) {
     // Kiểm tra dữ liệu BMP
     if (strlen($bmpData) < 54) {
         return handleError("Dữ liệu BMP không hợp lệ", ['data_length' => strlen($bmpData)]);
     }
+    
+    // Kiểm tra kích thước dữ liệu
+    if (strlen($bmpData) > 10 * 1024 * 1024) { // Giới hạn 10MB
+        return handleError("Dữ liệu BMP quá lớn", ['size' => strlen($bmpData)]);
+    }
 
     $header = substr($bmpData, 0, 54);
+    if (strlen($header) < 54) {
+        return handleError("Header BMP không hợp lệ", ['header_length' => strlen($header)]);
+    }
+    
     $width = unpack('V', substr($header, 18, 4))[1];
     $height = abs(unpack('V', substr($header, 22, 4))[1]);
     $bitsPerPixel = unpack('v', substr($header, 28, 2))[1];
     $dataOffset = unpack('V', substr($header, 10, 4))[1];
-
-    if ($width > $maxWidth || $height > $maxHeight) {
-        return handleError("Kích thước BMP vượt quá giới hạn", ['width' => $width, 'height' => $height]);
-    }
 
     if ($bitsPerPixel != 1 && $bitsPerPixel != 24) {
         return handleError("Định dạng BMP không được hỗ trợ", ['bits_per_pixel' => $bitsPerPixel]);
@@ -412,12 +417,24 @@ function convertBmpToBitmap($bmpData, $maxWidth = 832, $maxHeight = 1180) {
     $rowSize = floor(($bitsPerPixel * $width + 31) / 32) * 4;
     $bitmapData = '';
     $bytesPerRow = ceil($width / 8);
+    
+    // Kiểm tra xem có đủ dữ liệu để đọc không
+    $totalDataNeeded = $dataOffset + ($height * $rowSize);
+    if (strlen($bmpData) < $totalDataNeeded) {
+        return handleError("Dữ liệu BMP không đủ", [
+            'available' => strlen($bmpData), 
+            'needed' => $totalDataNeeded
+        ]);
+    }
 
+    // Đọc từng dòng một cách tuần tự như hàm thứ hai
     for ($y = 0; $y < $height; $y++) {
-        $rowStart = $dataOffset + ($height - 1 - $y) * $rowSize;
-        $row = substr($bmpData, $rowStart, $rowSize);
+        // Tính vị trí bắt đầu của dòng hiện tại
+        $currentRowOffset = $dataOffset + ($y * $rowSize);
+        $row = substr($bmpData, $currentRowOffset, $rowSize);
+        
         if (strlen($row) < $rowSize) {
-            return handleError("Lỗi khi đọc dữ liệu BMP", ['row' => $y]);
+            return handleError("Lỗi khi đọc dữ liệu BMP", ['row' => $y, 'expected' => $rowSize, 'actual' => strlen($row)]);
         }
 
         $binaryRow = '';
@@ -444,6 +461,7 @@ function convertBmpToBitmap($bmpData, $maxWidth = 832, $maxHeight = 1180) {
                 $binaryRow .= chr($byte);
             }
         }
+        // Thêm dòng vào đầu bitmap data (giống hàm thứ hai)
         $bitmapData = $binaryRow . $bitmapData;
     }
 
