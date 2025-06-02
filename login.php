@@ -28,7 +28,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['maPhanQuyen'] = $user['MaPhanQuyen'];
 
                 if ($remember) {
-                    setcookie('taiKhoan', $taiKhoan, time() + 30 * 24 * 3600, '/');
+                    // Lưu cả tài khoản và mật khẩu (đã mã hóa base64 để bảo mật cơ bản)
+                    setcookie('saved_taiKhoan', $taiKhoan, time() + 30 * 24 * 3600, '/');
+                    setcookie('saved_matKhau', base64_encode($matKhau), time() + 30 * 24 * 3600, '/');
+                    setcookie('remember_me', '1', time() + 30 * 24 * 3600, '/');
+                } else {
+                    // Xóa cookie nếu không chọn nhớ
+                    setcookie('saved_taiKhoan', '', time() - 3600, '/');
+                    setcookie('saved_matKhau', '', time() - 3600, '/');
+                    setcookie('remember_me', '', time() - 3600, '/');
                 }
 
                 header('Location: home.php');
@@ -42,7 +50,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$savedTaiKhoan = $_COOKIE['taiKhoan'] ?? '';
+// Lấy thông tin đã lưu từ cookie
+$savedTaiKhoan = $_COOKIE['saved_taiKhoan'] ?? '';
+$savedMatKhau = isset($_COOKIE['saved_matKhau']) ? base64_decode($_COOKIE['saved_matKhau']) : '';
+$isRemembered = isset($_COOKIE['remember_me']);
 ?>
 
 <!DOCTYPE html>
@@ -125,7 +136,9 @@ $savedTaiKhoan = $_COOKIE['taiKhoan'] ?? '';
 
                     <div class="bg-green-50 border-2 rounded-md p-3 flex items-center relative">
                         <img src="assets/Lock.png" alt="Lock" class="w-5 h-5 object-contain" />
-                        <input type="password" name="matKhau" id="password" placeholder="Mật khẩu"
+                        <input type="password" name="matKhau" id="password" 
+                            value="<?php echo htmlspecialchars($savedMatKhau); ?>"
+                            placeholder="Mật khẩu"
                             class="w-full bg-transparent focus:outline-none text-gray-700 pl-2 pr-10">
                         <button type="button" onclick="togglePassword()"
                             class="absolute right-3 text-gray-500 hover:text-gray-700 focus:outline-none">
@@ -142,7 +155,8 @@ $savedTaiKhoan = $_COOKIE['taiKhoan'] ?? '';
 
                     <div class="flex justify-between items-center mb-4 mt-10">
                         <label class="flex items-center space-x-2 mt-5">
-                            <input type="checkbox" name="remember"
+                            <input type="checkbox" name="remember" 
+                                <?php echo $isRemembered ? 'checked' : ''; ?>
                                 class="w-4 h-4 text-red-600 focus:ring-red-500 border-gray-300 rounded" />
                             <span class="text-sm text-gray-500">Nhớ mật khẩu</span>
                         </label>
@@ -156,15 +170,6 @@ $savedTaiKhoan = $_COOKIE['taiKhoan'] ?? '';
             </form>
         </div>
     </div>
-
-    <!-- <div class="absolute bottom-0 w-full text-center py-4 bg-gray-100">
-        <div class="flex items-center justify-center space-x-2 group animate-footerBounce">
-            <img src="assets/LogoMinhAnh.png" alt="Logo Minh Anh" class="w-6 h-6 transform transition-all duration-300 group-hover:scale-110 group-hover:rotate-12"/>
-            <span class="text-sm text-blue-600 font-medium transition-all duration-300">
-                Sản phẩm đến từ CTTNHH Minh Anh
-            </span>
-        </div>
-    </div> -->
 
     <?php if ($error): ?>
     <div
@@ -192,26 +197,46 @@ $savedTaiKhoan = $_COOKIE['taiKhoan'] ?? '';
         </div>
     </div>
     <?php endif; ?>
-</body>
 
-<script>
-function togglePassword() {
-    const passwordInput = document.getElementById('password');
-    const eyeIcon = document.getElementById('eye-icon');
+    <script>
+    function togglePassword() {
+        const passwordInput = document.getElementById('password');
+        const eyeIcon = document.getElementById('eye-icon');
 
-    if (passwordInput.type === 'password') {
-        passwordInput.type = 'text';
-        eyeIcon.innerHTML = `
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            eyeIcon.innerHTML = `
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.79m0 0L21 21"></path>
             `;
-    } else {
-        passwordInput.type = 'password';
-        eyeIcon.innerHTML = `
+        } else {
+            passwordInput.type = 'password';
+            eyeIcon.innerHTML = `
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
             `;
+        }
     }
-}
-</script>
+
+    // Auto-fill form khi trang load (hỗ trợ cho Cordova)
+    document.addEventListener('DOMContentLoaded', function() {
+        // Đảm bảo các giá trị được fill đúng cách
+        const taiKhoanInput = document.querySelector('input[name="taiKhoan"]');
+        const matKhauInput = document.querySelector('input[name="matKhau"]');
+        const rememberCheckbox = document.querySelector('input[name="remember"]');
+        
+        if (taiKhoanInput && '<?php echo $savedTaiKhoan; ?>') {
+            taiKhoanInput.value = '<?php echo htmlspecialchars($savedTaiKhoan); ?>';
+        }
+        
+        if (matKhauInput && '<?php echo $savedMatKhau; ?>') {
+            matKhauInput.value = '<?php echo htmlspecialchars($savedMatKhau); ?>';
+        }
+        
+        if (rememberCheckbox && <?php echo $isRemembered ? 'true' : 'false'; ?>) {
+            rememberCheckbox.checked = true;
+        }
+    });
+    </script>
+</body>
 
 </html>

@@ -314,7 +314,7 @@ $xuatHang = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 $trangThaiClass = ($xh['DangXuat'] > 0) ? 'text-amber-600' : 'text-red-600';
                             ?>
                                 <tr class="hover:bg-red-50 transition-colors duration-200">
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-700">
                                         <input type="checkbox" class="row-checkbox" style="width: 20px; height: 20px;" value="<?php echo htmlspecialchars($xh['MaXuatHang']); ?>">
                                     </td>
                                     <td class="px-4 py-4 whitespace-nowrap text-xs text-gray-700"><?php echo $stt++; ?></td>

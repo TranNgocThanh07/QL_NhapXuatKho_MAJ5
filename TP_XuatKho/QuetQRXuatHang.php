@@ -258,224 +258,408 @@ $chiTietXuatWithQR = array_map(function($ct) {
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-    <style>
-        :root {
-            --primary-color: #FF3B30;
-            --secondary-color: #5850EC;
-            --success-color: #34C759;
-            --warning-color: #FF9500;
-            --danger-color: #FF3B30;
-            --info-color: #007AFF;
-            --background-color: #F7F8FA;
+<style>
+    :root {
+        --primary-color: #FF3B30;
+        --secondary-color: #5850EC;
+        --success-color: #34C759;
+        --warning-color: #FF9500;
+        --danger-color: #FF3B30;
+        --info-color: #007AFF;
+        --background-color: #F7F8FA;
+    }
+
+    body {
+        font-family: 'Inter', sans-serif;
+        background: var(--background-color);
+        color: #1F2A44;
+        line-height: 1.6;
+        margin: 0;
+        padding: 0;
+    }
+
+    .container{
+        max-width: 100%;
+        margin: 0 auto;
+    }
+
+    .header-gradient {
+        background: linear-gradient(135deg, var(--primary-color), #D11F2A);
+        padding: 1rem;
+        box-shadow: 0 4px 20px rgba(255, 59, 48, 0.2);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .header-gradient h2 {
+        font-size: 1rem;
+        margin: 0;
+        gap: 0.5rem;
+    }
+
+    .card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        margin-bottom: 1rem;
+    }
+
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+    }
+
+    .progress-bar {
+        height: 12px;
+        background: #E5E7EB;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .progress-value {
+        height: 100%;
+        background: linear-gradient(90deg, var(--secondary-color), #818CF8);
+        border-radius: 12px;
+        transition: width 0.5s ease;
+    }
+
+    .pulse {
+        animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(88, 80, 236, 0.7); }
+        70% { box-shadow: 0 0 0 12px rgba(88, 80, 236, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(88, 80, 236, 0); }
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1rem;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+        border: 1px solid #E5E7EB;
+    }
+
+    .stat-card i {
+        position: absolute;
+        right: -10px;
+        bottom: -10px;
+        font-size: 2.5rem;
+        opacity: 0.1;
+    }
+
+    .data-table-container {
+        max-height: 400px;
+        overflow-y: auto;
+        border-radius: 16px;
+        border: 1px solid #E5E7EB;
+        position: relative;
+    }
+
+    .table-container {
+        overflow-x: auto;
+        border-radius: 16px;
+        border: 1px solid #E5E7EB;
+        max-height: 450px;
+        overflow-y: auto;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 600px; /* Đảm bảo bảng có chiều rộng tối thiểu */
+    }
+
+    th, td {
+        padding: 0.5rem;
+        text-align: left;
+        font-size: 0.75rem;
+    }
+
+    th {
+        background: linear-gradient(to right, #FFF1F1, #FFE5E5);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: #6B7280;
+    }
+
+    tr:hover {
+        background: #FFF5F5;
+    }
+
+    .badge {
+        padding: 0.5rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .scan-button {
+        background: var(--success-color);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 9999px;
+        box-shadow: 0 6px 15px rgba(52, 199, 89, 0.3);
+        transition: all 0.2s ease;
+        font-size: 0.75rem;
+    }
+
+    .scan-button:hover {
+        background: #2DB847;
+        transform: scale(1.05);
+    }
+
+    #scanner-container {
+        width: 100%;
+        height: 280px;
+        background: #F0F0F0;
+        border-radius: 12px;
+        position: relative;
+    }
+
+    .qr-guide {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        background: rgba(0, 0, 0, 0.6);
+        padding: 0.75rem;
+        border-radius: 8px;
+        text-align: center;
+        z-index: 10;
+        font-size: 0.75rem;
+    }
+
+    .wrap-text {
+        white-space: normal;
+        word-break: break-word;
+        max-width: 150px;
+    }
+
+    /* Responsive Adjustments */
+    @media (max-width: 1024px) {
+        .grid-cols-3 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
         }
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--background-color);
-            color: #1F2A44;
-            line-height: 1.6;
+
+        .info-card {
+            padding: 1rem;
         }
-        
+
+        .header-gradient h2 {
+            font-size: 0.9rem;
+        }
+
+        .scan-button {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.7rem;
+        }
+
+        .stat-card p {
+            font-size: 0.7rem;
+        }
+
+        .stat-card .text-lg {
+            font-size: 1rem;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .grid-cols-3, .grid-cols-1 {
+            grid-template-columns: 1fr;
+        }
+
         .header-gradient {
-            background: linear-gradient(135deg, var(--primary-color), #D11F2A);
-            padding: 1.5rem 2rem;
-           
-            box-shadow: 0 4px 20px rgba(255, 59, 48, 0.2);
+            padding: 0.75rem;
+            gap: 0.5rem;
         }
-        .card {
-            background: white;
-            border-radius: 16px;       
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+        .header-gradient h2 {
+            font-size: 0.85rem;
         }
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+
+        .info-card {
+            padding: 0.75rem;
         }
-        .progress-bar {
-            height: 12px;
-            background: #E5E7EB;
-            border-radius: 12px;
-            overflow: hidden;
+
+        .info-card p {
+            font-size: 0.7rem;
         }
-        .progress-value {
-            height: 100%;
-            background: linear-gradient(90deg, var(--secondary-color), #818CF8);
-            border-radius: 12px;
-            transition: width 0.5s ease;
-        }
-        .pulse {
-            animation: pulse 1.5s infinite;
-        }
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(88, 80, 236, 0.7); }
-            70% { box-shadow: 0 0 0 12px rgba(88, 80, 236, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(88, 80, 236, 0); }
-        }
-        .stat-card {
-            background: white;
-            border-radius: 12px;
-            padding: 1rem;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-            border: 1px solid #E5E7EB;
-        }
-        .stat-card i {
-            position: absolute;
-            right: -10px;
-            bottom: -10px;
-            font-size: 3rem;
-            opacity: 0.1;
-        }
-        .data-table-container {
-            max-height: 400px;
-            overflow-y: auto;
-            border-radius: 16px;
-            border: 1px solid #E5E7EB;
-            position: relative;
-        }
-        .table-container {
-            overflow-x: auto;
-            border-radius: 16px;
-            border: 1px solid #E5E7EB;
-            max-height: 450px;
-            overflow-y: auto;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
+
         th, td {
-            padding: 1rem;
-            text-align: left;
-            white-space: nowrap;
+            font-size: 0.5rem;
         }
-        th {
-            background: linear-gradient(to right, #FFF1F1, #FFE5E5);
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 0.75rem;
-            color: #6B7280;
+
+        .scan-button {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.65rem;
         }
-        tr:hover {
-            background: #FFF5F5;
-        }
-        .badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 500;
-        }
-        .scan-button {                      
-            background: var(--success-color);
-            color: white;
-            padding: 0.75rem 1rem;
-            border-radius: 9999px;
-            box-shadow: 0 6px 15px rgba(52, 199, 89, 0.3);       
-            transition: all 0.2s ease;
-        }
-        .scan-button:hover {
-            background: #2DB847;
-            transform: scale(1.05);
-        }
+
         #scanner-container {
-            width: 100%;
-            height: 320px;
-            background: #F0F0F0;
-            border-radius: 12px;
-            position: relative;
+            height: 240px;
         }
+
         .qr-guide {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: white;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 1rem;
-            border-radius: 8px;
-            text-align: center;
-            z-index: 10;
+            font-size: 0.7rem;
+            padding: 0.5rem;
         }
+
+        .data-table-container {
+            max-height: 300px;
+        }
+
+        .table-container {
+            max-height: 350px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .header-gradient {
+            padding: 0.5rem;
+        }
+
+        .header-gradient h2 {
+            font-size: 0.8rem;
+        }
+
+        .info-card {
+            padding: 0.5rem;
+        }
+
+        .info-card h3 {
+            font-size: 0.75rem;
+        }
+
+        .info-card p {
+            font-size: 0.65rem;
+        }
+
+        .stat-card {
+            padding: 0.75rem;
+        }
+
+        .stat-card p {
+            font-size: 0.65rem;
+        }
+
+        .stat-card .text-lg {
+            font-size: 0.9rem;
+        }
+
+        .scan-button {
+            padding: 0.4rem 0.6rem;
+            font-size: 0.6rem;
+        }
+
+        #scanner-container {
+            height: 200px;
+        }
+
+        .qr-guide {
+            font-size: 0.65rem;
+            padding: 0.4rem;
+        }
+
+        th, td {
+            padding: 0.25rem;
+            font-size: 0.6rem;
+        }
+
         .wrap-text {
-            white-space: normal; 
-            word-break: break-word; 
-             max-width: 180px;
+            max-width: 120px;
         }
-    </style>
+    }
+</style>
 </head>
 <body>
-    <div class="container ">
+    <div class="container">
         <div class="card">
-            <header class="header-gradient text-white flex justify-between items-center">
-                <a href="../xuatkho.php" class="flex items-center gap-2 hover:opacity-80 transition-opacity">
+            <header class="sticky top-0 z-20 bg-gradient-to-r from-red-700 to-red-500 text-white w-full flex items-center py-3 px-6">
+                <a href="../xuatkho.php" class="text-white text-xl hover:scale-110 transition-transform flex items-center gap-1 hover:bg-red-600 rounded-full p-2">
                     <i class="fas fa-arrow-left text-xl"></i>
                    
                 </a>
-                <h2 class="text-2xl font-bold flex items-center gap-2">
+                <h2 class="text-lg md:text-2xl font-bold gap-2">
                     <i class="fas fa-clipboard-list"></i> Chi Tiết Phiếu Xuất Kho
                 </h2>
             </header>
+            <div class="bg-blue-50 border-b border-blue-100 p-3 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-info-circle icon-blue"></i>
+                        <span class="text-blue-700 font-medium">Ngày tạo phiếu</span>
+                    </div>
+                    <div class="text-sm text-gray-600">
+                        <i class="fas fa-calendar-alt icon-gray"></i> <?php echo $ngayXuat; ?>
+                    </div>
+                </div>
 
-            <div class="">
+            <div class="card">
                 <!-- Info Section -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 p-6">
-                    <div class="info-card bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm flex flex-col">
+                    <div class="info-card bg-gray-50 p-2 rounded-lg border border-gray-200 shadow-sm flex flex-col">
                         <h3 class="text-sm font-semibold text-gray-500 mb-4 flex items-center gap-2">
-                            <i class="fas fa-file-invoice text-red-500"></i> Thông tin phiếu
+                            <i class="fas fa-file-invoice font-bold text-red-500"></i> Thông tin phiếu
                         </h3>
-                        <p class="flex justify-between mb-3">
+                        <p class="flex justify-between text-xs mb-3">
                             <span class="text-gray-600"><i class="fas fa-hashtag text-red-400 mr-2"></i>Mã phiếu:</span>
-                            <span class="font-medium badge bg-red-100 text-red-700"><?php echo htmlspecialchars($phieuXuat['MaXuatHang']); ?></span>
+                            <span class="font-bold badge bg-red-100 text-red-700"><?php echo htmlspecialchars($phieuXuat['MaXuatHang']); ?></span>
                         </p>
-                        <p class="flex justify-between mb-3">
-                            <span class="text-gray-600"><i class="fas fa-shopping-cart text-orange-400 mr-2"></i>Mã đơn hàng:</span>
-                            <span class="font-medium"><?php echo htmlspecialchars($phieuXuat['MaDonHang']); ?></span>
+                        <p class="flex text-xs justify-between mb-3">
+                            <span class="text-gray-600 "><i class="fas fa-shopping-cart text-orange-400 mr-2"></i>Mã đơn hàng:</span>
+                            <span class="font-bold"><?php echo htmlspecialchars($phieuXuat['MaDonHang']); ?></span>
                         </p>
-                        <p class="flex justify-between">
-                            <span class="text-gray-600"><i class="fas fa-boxes text-purple-400 mr-2"></i>Mã vật tư:</span>
-                            <span class="font-medium"><?php echo htmlspecialchars($phieuXuat['MaVatTu']); ?></span>
+                        <p class="flex text-xs justify-between">
+                            <span class="text-gray-600 "><i class="fas fa-boxes text-purple-400 mr-2"></i>Mã vật tư:</span>
+                            <span class="font-bold"><?php echo htmlspecialchars($phieuXuat['MaVatTu']); ?></span>
                         </p>
                     </div>
                     <div class="info-card bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm flex flex-col">
                         <h3 class="text-sm font-semibold text-gray-500 mb-4 flex items-center gap-2">
                             <i class="fas fa-tshirt text-blue-500"></i> Thông tin sản phẩm
                         </h3>
-                        <p class="flex justify-between mb-3">
+                        <p class="flex text-xs justify-between mb-3">
                             <span class="text-gray-600"><i class="fas fa-layer-group text-blue-400 mr-2"></i>Vải:</span>
-                            <span class="font-medium">
+                            <span class="font-bold">
                                 <?php                             
                                     echo htmlspecialchars($phieuXuat['MaVai'] . ' (' .htmlspecialchars($phieuXuat['TenVai'] . ')'));
                                 ?>
                             </span>
                         </p>
-                        <p class="flex justify-between mb-3">
+                        <p class="flex text-xs justify-between mb-3">
                             <span class="text-gray-600"><i class="fas fa-palette text-pink-400 mr-2"></i>Màu:</span>
-                            <span class="font-medium"><?php    $fabricName = explode('-', $phieuXuat['TenMau'])[0]; // Take part before '-'
+                            <span class="font-bold"><?php    $fabricName = explode('-', $phieuXuat['TenMau'])[0]; // Take part before '-'
                              echo $fabricName; ?></span>
                         </p>
-                        <p class="flex justify-between">
+                        <p class="flex text-xs justify-between">
                             <span class="text-gray-600"><i class="fas fa-ruler-combined text-yellow-500 mr-2"></i>Khổ:</span>
-                            <span class="font-medium"><?php echo htmlspecialchars($phieuXuat['Kho']); ?></span>
+                            <span class="font-bold"><?php echo htmlspecialchars($phieuXuat['Kho']); ?></span>
                         </p>
                     </div>
                     <div class="info-card bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm flex flex-col">
                         <h3 class="text-sm font-semibold text-gray-500 mb-4 flex items-center gap-2">
                             <i class="fas fa-truck-loading text-green-500"></i> Thông tin xuất kho
                         </h3>
-                        <p class="flex justify-between mb-3">
+                        <p class="flex text-xs justify-between mb-3">
                             <span class="text-gray-600"><i class="fas fa-user-tie text-indigo-400 mr-2"></i>Nhân viên:</span>
-                            <span class="font-medium"><?php echo htmlspecialchars($phieuXuat['TenNhanVien']); ?></span>
+                            <span class="font-bold"><?php echo htmlspecialchars($phieuXuat['TenNhanVien']); ?></span>
                         </p>
-                        <p class="flex justify-between mb-3">
+                        <p class="flex text-xs justify-between mb-3">
                             <span class="text-gray-600"><i class="fas fa-box-open text-green-500 mr-2"></i>Tổng SL xuất:</span>
-                            <span class="font-medium"><?php echo number_format($phieuXuat['TongSoLuongXuat'], 0, ',', '.') . ' ' . htmlspecialchars($phieuXuat['TenDVT']); ?></span>
+                            <span class="font-bold"><?php echo number_format($phieuXuat['TongSoLuongXuat'], 0, ',', '.') . ' ' . htmlspecialchars($phieuXuat['TenDVT']); ?></span>
                         </p>
-                        <p class="flex justify-between">
+                        <p class="flex text-xs justify-between">
                             <span class="text-gray-600"><i class="fas fa-calendar-check text-blue-400 mr-2"></i>Ngày xuất:</span>
-                            <span class="font-medium"><?php echo $ngayXuat; ?></span>
+                            <span class="font-bold"><?php echo $ngayXuat; ?></span>
                         </p>
                     </div>
 
@@ -483,35 +667,35 @@ $chiTietXuatWithQR = array_map(function($ct) {
                         <h3 class="text-sm font-semibold text-gray-500 mb-4 flex items-center gap-2">
                             <i class="fas fa-user-friends text-yellow-500"></i> Thông tin khách hàng
                         </h3>
-                        <p class="flex justify-between mb-3">
+                        <p class="flex text-xs justify-between mb-3">
                             <span class="text-gray-600"><i class="fas fa-building text-red-400 mr-2"></i>Tên khách hàng:</span>
-                            <span class="font-medium"><?php echo htmlspecialchars($phieuXuat['TenKhachHang'] ?? 'Không xác định'); ?></span>
+                            <span class="font-bold"><?php echo htmlspecialchars($phieuXuat['TenKhachHang'] ?? 'Không xác định'); ?></span>
                         </p>
-                        <p class="flex justify-between mb-3">
+                        <p class="flex text-xs justify-between mb-3">
                             <span class="text-gray-600"><i class="fas fa-briefcase text-blue-400 mr-2"></i>Tên hoạt động:</span>
-                            <span class="font-medium wrap-text"><?php echo htmlspecialchars($phieuXuat['TenHoatDong'] ?? 'Không xác định'); ?></span>
+                            <span class="font-bold text-right wrap-text"><?php echo htmlspecialchars($phieuXuat['TenHoatDong'] ?? 'Không xác định'); ?></span>
                         </p>
-                        <p class="flex justify-between mb-3">
+                        <p class="flex text-xs justify-between mb-3">
                             <span class="text-gray-600"><i class="fas fa-map-marker-alt text-red-400 mr-2"></i>Địa chỉ:</span>
-                            <span class="font-medium wrap-text"><?php echo htmlspecialchars($phieuXuat['DiaChi'] ?? 'Không xác định'); ?></span>
+                            <span class="font-bold text-right wrap-text"><?php echo htmlspecialchars($phieuXuat['DiaChi'] ?? 'Không xác định'); ?></span>
                         </p>
-                        <p class="flex justify-between mb-3">
+                        <p class="flex text-xs justify-between mb-3">
                             <span class="text-gray-600"><i class="fas fa-user text-green-400 mr-2"></i>Người liên hệ:</span>
-                            <span class="font-medium"><?php echo htmlspecialchars($phieuXuat['TenNguoiLienHe'] ?? 'Không xác định'); ?></span>
+                            <span class="font-bold"><?php echo htmlspecialchars($phieuXuat['TenNguoiLienHe'] ?? 'Không xác định'); ?></span>
                         </p>
-                        <p class="flex justify-between">
+                        <p class="flex text-xs justify-between">
                             <span class="text-gray-600"><i class="fas fa-phone text-yellow-400 mr-2"></i>Số điện thoại:</span>
-                            <span class="font-medium"><?php echo htmlspecialchars($phieuXuat['SoDienThoai'] ?? 'Không xác định'); ?></span>
+                            <span class="font-bold"><?php echo htmlspecialchars($phieuXuat['SoDienThoai'] ?? 'Không xác định'); ?></span>
                         </p>
                     </div>
                 </div>
             
                 <!-- Progress Section -->
                 <div class="">
-                    <h3 class="section-title text-lg font-bold text-gray-800 flex items-center ml-5">
+                    <h3 class="section-title text-sm font-bold text-gray-800 flex items-center ml-5 mb-5">
                         <i class="fas fa-chart-line text-indigo-500 mr-2"></i> Tiến Độ Xuất Kho
                     </h3>
-                    <div class="bg-white rounded-xl border p-5 card-shadow">
+                    <div class="bg-white rounded-xl text-xs border p-5 card-shadow">
                         <div class="flex justify-between mb-3">
                             <span class="font-semibold text-gray-700 flex items-center">
                                 <span class="bg-indigo-100 p-1 rounded-md text-indigo-500 mr-2"><i class="fas fa-chart-line"></i></span>
@@ -530,19 +714,19 @@ $chiTietXuatWithQR = array_map(function($ct) {
                             <div class="stat-card">
                                 <i class="fas fa-boxes text-blue-300"></i>
                                 <p class="text-xs font-medium text-blue-600">Tổng</p>
-                                <p class="font-bold text-xl text-blue-800"><?php echo number_format($tongXuat, 0, ',', '.'); ?></p>
+                                <p class="font-bold text-lg text-blue-800"><?php echo number_format($tongXuat, 0, ',', '.'); ?></p>
                                 <p class="text-xs text-blue-500"><?php echo htmlspecialchars($phieuXuat['TenDVT']); ?></p>
                             </div>
                             <div class="stat-card">
                                 <i class="fas fa-check-circle text-green-300"></i>
                                 <p class="text-xs font-medium text-green-600">Đã Xuất</p>
-                                <p class="font-bold text-xl text-green-800"><?php echo number_format($daXuat, 0, ',', '.'); ?></p>
+                                <p class="font-bold text-lg text-green-800"><?php echo number_format($daXuat, 0, ',', '.'); ?></p>
                                 <p class="text-xs text-green-500"><?php echo htmlspecialchars($phieuXuat['TenDVT']); ?></p>
                             </div>
                             <div class="stat-card">
                                 <i class="fas fa-hourglass-half text-red-300"></i>
                                 <p class="text-xs font-medium text-red-600">Còn Lại</p>
-                                <p class="font-bold text-xl text-red-800"><?php echo number_format($conLai, 0, ',', '.'); ?></p>
+                                <p class="font-bold text-lg text-red-800"><?php echo number_format($conLai, 0, ',', '.'); ?></p>
                                 <p class="text-xs text-red-500"><?php echo htmlspecialchars($phieuXuat['TenDVT']); ?></p>
                             </div>
                         </div>
@@ -551,32 +735,32 @@ $chiTietXuatWithQR = array_map(function($ct) {
 
                 <!-- Details Table -->
                 <div class="card ">
-                   <div class="flex justify-between items-center mb-4 mt-5 px-5">
-                        <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
-                            <i class="fas fa-list text-red-500"></i> Chi Tiết Xuất Hàng
+                   <div class="flex justify-between items-center mb-4 mt-2 px-5">
+                        <h3 class="text-sm font-bold text-gray-800 flex items-center gap-2">
+                          Chi Tiết Xuất Hàng
                             <!-- <span class="badge bg-red-100 text-red-700"><?php echo count($chiTietXuat); ?> cây</span> -->
                         </h3>
-                        <button id="btnQuetMa" class="scan-button flex items-center gap-2">
+                        <button id="btnQuetMa" class="scan-button text-xs flex items-center gap-2">
                             <i class="fas fa-qrcode"></i> Quét Mã QR
                         </button>
                     </div>                   
-                    <div class="data-table-container card-shadow">
+                    <div class="data-table-container ">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead>
                             <tr class="table-header-sticky bg-red-50">
-                                <th class="text-left text-xs font-medium text-gray-600 uppercase tracking-wider p-4">
+                                <th class="text-left text-xs font-medium text-gray-600 uppercase tracking-wider px-2">
                                     <i class="fas fa-hashtag text-red-500 mr-2"></i> STT
                                 </th>
-                                <th class="text-left text-xs font-medium text-gray-600 uppercase tracking-wider p-4">
+                                <th class="text-left text-xs font-medium text-gray-600 uppercase tracking-wider px-2">
                                     <i class="fas fa-box-open text-orange-500 mr-2"></i> SL Xuất
                                 </th>
-                                <th class="text-left text-xs font-medium text-gray-600 uppercase tracking-wider p-4">
+                                <th class="text-left text-xs font-medium text-gray-600 uppercase tracking-wider px-2">
                                     <i class="fas fa-barcode text-blue-500 mr-2"></i> Số Lot
                                 </th>
-                                <th class="text-left text-xs font-medium text-gray-600 uppercase tracking-wider p-4">
+                                <th class="text-left text-xs font-medium text-gray-600 uppercase tracking-wider px-2">
                                     <i class="fas fa-puzzle-piece text-purple-500 mr-2"></i> Thành Phần
                                 </th>
-                                <th class="text-left text-xs font-medium text-gray-600 uppercase tracking-wider p-4">
+                                <th class="text-left text-xs font-medium text-gray-600 uppercase tracking-wider px-2">
                                     <i class="fas fa-info-circle text-gray-500 mr-2"></i> Trạng Thái
                                 </th>
                             </tr>
@@ -592,18 +776,18 @@ $chiTietXuatWithQR = array_map(function($ct) {
                                 $trangThaiBorder = ($ct['TrangThai'] == 1) ? 'border-green-200' : 'border-red-200';
                             ?>
                                 <tr class="hover:bg-red-50 transition-colors" data-ma-ctxhtp="<?php echo htmlspecialchars($ct['MaCTXHTP']); ?>">
-                                    <td class="text-sm text-gray-700 p-4"><?php echo $stt++; ?></td>
-                                    <td class="text-sm text-gray-700 p-4">
+                                    <td class="text-xs text-gray-700 p-4"><?php echo $stt++; ?></td>
+                                    <td class="text-xs text-gray-700 p-4">
                                         <span class="font-medium"><?php echo number_format($ct['SoLuong'], 0, ',', '.'); ?></span>
                                         <span class="text-gray-500 text-xs ml-1"><?php echo htmlspecialchars($ct['TenDVT']); ?></span>
                                     </td>
-                                    <td class="text-sm text-gray-700 p-4">
+                                    <td class="text-xs text-gray-700 p-4">
                                         <div class="flex items-center"><i class="fas fa-layer-group text-blue-400 mr-1"></i><?php echo htmlspecialchars($ct['SoLot']); ?></div>
                                     </td>
-                                    <td class="text-sm text-gray-700 p-4">
+                                    <td class="text-xs text-gray-700 p-4">
                                         <div class="flex items-center"><i class="fas fa-tag text-purple-400 mr-1"></i><?php echo htmlspecialchars($ct['TenThanhPhan']); ?></div>
                                     </td>
-                                    <td class="text-sm p-4">
+                                    <td class="text-xs p-4">
                                         <span class="<?php echo $trangThaiClass; ?> font-medium flex items-center gap-1 px-3 py-1 rounded-full border <?php echo $trangThaiBg; ?> <?php echo $trangThaiBorder; ?>">
                                             <i class="fas <?php echo $trangThaiIcon; ?>"></i><?php echo htmlspecialchars($trangThaiHienThi); ?>
                                         </span>
@@ -622,7 +806,7 @@ $chiTietXuatWithQR = array_map(function($ct) {
     <div id="scannerModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
         <div class="bg-white p-6 rounded-lg w-full max-w-2xl mx-4">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold">Quét Mã QR</h3>
+                <h3 class="text-sm font-bold">Quét Mã QR</h3>
                 <button id="closeModal" class="text-gray-500 hover:text-gray-700">
                     <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -635,7 +819,7 @@ $chiTietXuatWithQR = array_map(function($ct) {
                     <p>Vui lòng chờ và cho phép quyền truy cập camera.</p>
                 </div>
             </div>
-            <p class="text-sm text-gray-600 mt-4 text-center">Chỉnh góc quay để mã QR nằm trong khung.</p>
+            <p class="text-xs text-gray-600 mt-4 text-center">Chỉnh góc quay để mã QR nằm trong khung.</p>
             <div class="flex justify-center gap-4 mt-4">
                 <button id="switchCamera" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg flex items-center">
                     <i class="fas fa-sync-alt mr-2"></i> Đổi Camera
@@ -651,7 +835,7 @@ $chiTietXuatWithQR = array_map(function($ct) {
     
 
     <!-- <div id="logArea" class="fixed bottom-0 left-0 w-full bg-gray-900 text-white p-4 max-h-40 overflow-y-auto z-50 hidden">
-        <h4 class="text-sm font-bold mb-2">Log Debug:</h4>
+        <h4 class="text-xs font-bold mb-2">Log Debug:</h4>
         <div id="logContent" class="text-xs"></div>
     </div> -->
 

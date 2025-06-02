@@ -830,8 +830,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             -webkit-tap-highlight-color: transparent;
         }
         .form-container {
-            max-height: calc(100vh - 200px);
-            overflow-y: auto;
             -webkit-overflow-scrolling: touch;
         }
         .info-card {
@@ -864,9 +862,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
         .data-table th, .data-table td {
             border: 1px solid #e5e7eb;
-            padding: 8px;
+            padding: 5px;
             text-align: left;
-            font-size: 14px;
+            font-size: 12px;
         }
         .data-table th {
             background-color: #f3f4f6;
@@ -879,7 +877,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 white-space: nowrap;
             }
             .data-table th, .data-table td {
-                min-width: 100px;
+                min-width: 80px;
             }
         }
 
@@ -911,46 +909,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         <i class="fas fa-check-circle text-green-500 mr-2"></i>
                         <span class="text-gray-700">Đã nhập:</span>
                     </div>
-                    <span id="tongDaNhapDisplay" class="text-right font-semibold"><?php echo number_format($tongSoLuongNhap, 2); ?> <?php echo $tenDVT; ?></span>
+                    <span id="tongDaNhapDisplay" class="text-right text-green-700 font-semibold"><?php echo number_format($tongSoLuongNhap, 2); ?> <?php echo $tenDVT; ?></span>
                     <div class="flex items-center">
                         <i class="fas fa-hourglass-half text-orange-500 mr-2"></i>
                         <span class="text-gray-700">Còn lại:</span>
                     </div>
-                    <span id="soLuongConLaiDisplay" class="text-right font-semibold"><?php echo number_format($soLuongConLai, 2); ?> <?php echo $tenDVT; ?></span>
+                    <span id="soLuongConLaiDisplay" class="text-right text-red-800 font-semibold"><?php echo number_format($soLuongConLai, 2); ?> <?php echo $tenDVT; ?></span>
                 </div>
             </div>
 
             <form id="nhapHangForm" class="form-container">
                 <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Tên Khách Hàng</label>
+                        <input type="text" value="<?php echo htmlspecialchars($don['TenKhachHang'] ?? ''); ?>" readonly 
+                            class="input-field w-full p-2 text-xs rounded-lg bg-gray-100 text-gray-600">
+                        <input type="hidden" name="MaKhachHang" value="<?php echo htmlspecialchars($don['MaKhachHang'] ?? ''); ?>">
+                    </div>
                     <!-- Dòng 1: Mã Số Mẻ và Mã Đơn Hàng -->
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Mã Số Mẻ</label>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Mã Số Mẻ</label>
                             <input type="text" value="<?php echo htmlspecialchars($don['MaSoMe'] ?? ''); ?>" readonly 
-                                class="input-field w-full p-2.5 rounded-lg bg-gray-100 text-gray-600">
+                                class="input-field w-full p-2 rounded-lg bg-gray-100 text-xs text-gray-600">
                             <input type="hidden" name="MaSoMe" value="<?php echo htmlspecialchars($don['MaSoMe'] ?? ''); ?>">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Mã Đơn Hàng</label>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Mã Đơn Hàng</label>
                             <input type="text" value="<?php echo htmlspecialchars($don['MaDonHang'] ?? ''); ?>" readonly 
-                                class="input-field w-full p-2.5 rounded-lg bg-gray-100 text-gray-600">
+                                class="input-field w-full p-2 rounded-lg bg-gray-100 text-xs text-gray-600">
                             <input type="hidden" name="MaDonHang" value="<?php echo htmlspecialchars($don['MaDonHang'] ?? ''); ?>">
                         </div>
                     </div>
-                 
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Mã Vật Tư</label>
+                        <input type="text" value="<?php echo htmlspecialchars($don['MaVatTu'] ?? ''); ?>" readonly 
+                            class="input-field w-full p-2 text-xs rounded-lg bg-gray-100 text-gray-600">
+                        <input type="hidden" name="MaVatTu" value="<?php echo htmlspecialchars($don['MaVatTu'] ?? ''); ?>">
+                    </div>
+                    
 
                     <!-- Dòng 2: Mã Vải và Tên Vải -->
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Mã Vải</label>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Mã Vải</label>
                             <input type="text" value="<?php echo htmlspecialchars($don['MaVai'] ?? ''); ?>" readonly 
-                                class="input-field w-full p-2.5 rounded-lg bg-gray-100 text-gray-600">
+                                class="input-field w-full p-2 rounded-lg bg-gray-100 text-xs text-gray-600">
                             <input type="hidden" name="MaVai" value="<?php echo htmlspecialchars($don['MaVai'] ?? ''); ?>">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Tên Vải</label>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Tên Vải</label>
                             <input type="text" value="<?php echo htmlspecialchars($don['TenVai'] ?? ''); ?>" readonly 
-                                class="input-field w-full p-2.5 rounded-lg bg-gray-100 text-gray-600">
+                                class="input-field w-full p-2 rounded-lg bg-gray-100 text-xs text-gray-600">
                             <input type="hidden" name="TenVai" value="<?php echo htmlspecialchars($don['TenVai'] ?? ''); ?>">
                         </div>
                     </div>                 
@@ -958,58 +969,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     <!-- Dòng 3: Khổ và Đơn Vị Tính -->
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Khổ</label>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Khổ</label>
                             <input type="text" value="<?php echo htmlspecialchars($don['Kho'] ?? ''); ?>" readonly 
-                                class="input-field w-full p-2.5 rounded-lg bg-gray-100 text-gray-600">
+                                class="input-field w-full p-2 rounded-lg bg-gray-100 text-xs text-gray-600">
                             <input type="hidden" name="Kho" value="<?php echo htmlspecialchars($don['Kho'] ?? ''); ?>">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Đơn Vị Tính</label>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Đơn Vị Tính</label>
                             <input type="text" value="<?php echo htmlspecialchars($don['TenDVT'] ?? ''); ?>" readonly 
-                                class="input-field w-full p-2.5 rounded-lg bg-gray-100 text-gray-600">
+                                class="input-field w-full p-2 rounded-lg bg-gray-100 text-xs text-gray-600">
                             <input type="hidden" name="MaDVT" value="<?php echo htmlspecialchars($don['MaDVT'] ?? ''); ?>">
                         </div>
                     </div>
                  
-                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Tên Khách Hàng</label>
-                        <input type="text" value="<?php echo htmlspecialchars($don['TenKhachHang'] ?? ''); ?>" readonly 
-                            class="input-field w-full p-2.5 rounded-lg bg-gray-100 text-gray-600">
-                        <input type="hidden" name="MaKhachHang" value="<?php echo htmlspecialchars($don['MaKhachHang'] ?? ''); ?>">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Mã Vật Tư</label>
-                        <input type="text" value="<?php echo htmlspecialchars($don['MaVatTu'] ?? ''); ?>" readonly 
-                            class="input-field w-full p-2.5 rounded-lg bg-gray-100 text-gray-600">
-                        <input type="hidden" name="MaVatTu" value="<?php echo htmlspecialchars($don['MaVatTu'] ?? ''); ?>">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Tên Màu</label>
-                        <input type="text" value="<?php echo htmlspecialchars($don['TenMau'] ?? ''); ?>" readonly 
-                            class="input-field w-full p-2.5 rounded-lg bg-gray-100 text-gray-600">
-                        <input type="hidden" name="MaMau" value="<?php echo htmlspecialchars($don['MaMau'] ?? ''); ?>">
-                    </div>
- 
-                     <!-- Thành Phần -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Thành Phần</label>
-                        <input type="text" name="TenThanhPhan" id="TenThanhPhan" 
-                            value="<?php echo htmlspecialchars($tenThanhPhan); ?>" 
-                            class="input-field w-full p-2.5 rounded-lg">
-                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Tên Màu</label>
+                            <input type="text" value="<?php echo htmlspecialchars($don['TenMau'] ?? ''); ?>" readonly 
+                                class="input-field w-full p-2 text-xs rounded-lg bg-gray-100 text-gray-600">
+                            <input type="hidden" name="MaMau" value="<?php echo htmlspecialchars($don['MaMau'] ?? ''); ?>">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Thành Phần</label>
+                            <input type="text" name="TenThanhPhan" id="TenThanhPhan" 
+                                value="<?php echo htmlspecialchars($tenThanhPhan); ?>" 
+                                class="input-field w-full p-2 text-xs rounded-lg text-gray-600">
+                        </div>
 
+                    </div>
                   <!-- Dòng 4: Số Lượng, Số KG Cân -->
                   <div class="grid <?php echo ($don['MaDVT'] !== '1' && $tenDVT !== 'KG') ? 'grid-cols-2' : 'grid-cols-1'; ?> gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Số Lượng (<?php echo $tenDVT; ?>)</label>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Số Lượng (<?php echo $tenDVT; ?>)</label>
                             <input type="number" step="0.01" name="SoLuong" id="soLuong" 
-                                class="input-field w-full p-2.5 rounded-lg">
+                                class="input-field w-full p-2 text-xs rounded-lg">
                         </div>
                         <?php if ($don['MaDVT'] !== '1' && $tenDVT !== 'KG'): ?>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Số KG Cân</label>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Số Kg Cân</label>
                             <input type="number" step="0.01" name="SoKgCan" id="soKGCan" 
-                                class="input-field w-full p-2.5 rounded-lg">
+                                class="input-field w-full p-2 text-xs rounded-lg">
                         </div>
                         <?php else: ?>
                         <input type="hidden" name="SoKgCan" id="soKGCan">
@@ -1020,27 +1019,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     <!-- Khuvuc Và Ghi Chú -->
                      <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Khu Vực</label>
-                            <input type="text" name="MaKhuVuc" id="MaKhuVuc" class="input-field w-full p-2.5 rounded-lg" list="MaKhuVucList">
-                            <datalist id="MaKhuVucList">
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Số Lot</label>
+                            <input type="text" name="SoLot" id="soLot" class="input-field w-full p-2 text-xs rounded-lg" oninput="this.value = this.value.toUpperCase();">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Khu Vực</label>
+                            <select name="MaKhuVuc" id="MaKhuVuc" class="input-field w-full p-2 text-xs rounded-lg">
+                                <option value="">-- Chọn khu vực --</option>
                                 <?php
                                 foreach ($MaKhuVucList as $row) {
                                     $MaKhuVuc = htmlspecialchars($row['MaKhuVuc']);
-                                    echo "<option value=\"$MaKhuVuc\">";
+                                    echo "<option value=\"$MaKhuVuc\">$MaKhuVuc</option>";
                                 }
                                 ?>
-                            </datalist>
+                            </select>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Ghi chú</label>
-                            <input type="text" name="GhiChu" id="GhiChu" class="input-field w-full p-2.5 rounded-lg" oninput="this.value = this.value.toUpperCase();">
-                        </div>
+                    </div>
+                    <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Ghi chú</label>
+                            <input type="text" name="GhiChu" id="GhiChu" class="input-field w-full p-2 text-xs rounded-lg" oninput="this.value = this.value.toUpperCase();">
                     </div>
                     
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Số Lot</label>
-                        <input type="text" name="SoLot" id="soLot" class="input-field w-full p-2.5 rounded-lg" oninput="this.value = this.value.toUpperCase();">
-                    </div>
+                    
                                
                     <!-- Hidden fields -->
                     <input type="hidden" name="MaNguoiLienHe" value="<?php echo htmlspecialchars($don['MaNguoiLienHe'] ?? ''); ?>">
@@ -1051,30 +1051,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 </div>
 
                 <!-- Buttons giữ nguyên -->
-                <div class="mt-6 flex justify-end gap-3">
+                <div class="mt-6 flex text-xs justify-end gap-3">
                     <button type="submit" 
-                        class="btn px-6 py-2.5 bg-green-600 text-white rounded-lg shadow-md hover:bg-blue-700">
+                        class="btn px-4 py-2 bg-green-600 text-white rounded-lg shadow-md hover:bg-blue-700">
                         <i class="fas fa-check mr-2"></i>Xác Nhận
                     </button>
                     <a href="../nhapkho.php" 
-                        class="btn px-6 py-2.5 bg-red-600 text-white rounded-lg shadow-md hover:bg-gray-700">
+                        class="btn px-4 py-2 bg-red-600 text-white rounded-lg shadow-md hover:bg-gray-700">
                         <i class="fas fa-times mr-2"></i>Hủy
                     </a>
                 </div>
             </form>
 
             <!-- Table giữ nguyên -->
-            <div class="mt-6">
+            <div class="mt-6 mx-auto mb-20">
                 <h3 class="text-lg font-semibold mb-2">Danh sách hàng nhập kho</h3>
                 <table class="data-table">
                     <thead>
                         <tr>
                             <th>STT</th>
+                            <th>Số Lot</th>
                             <th>Số Lượng</th>
                             <?php if ($don['MaDVT'] !== '1' && $tenDVT !== 'KG'): ?>
                                 <th>Số KG Cân</th>
                             <?php endif; ?>
-                            <th>Số Lot</th>
                             <th>Thành Phần</th>
                             <th>Khu Vực</th>
                             <th>Ghi Chú</th>
@@ -1084,16 +1084,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     <tbody id="dataTableBody"></tbody>
                 </table>
                 <div class="flex items-center gap-3 mt-4">
-                    <select id="labelType" class="input-field p-2 rounded-lg">
+                    <select id="labelType" class="input-field p-1 text-xs rounded-lg">
                         <option value="system">Tem Hệ Thống</option>
                         <option value="khachle">Tem Khách Lẻ</option>
                     </select>
                     <button id="saveToDB" 
-                        class="btn px-4 py-2.5 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700">
+                        class="btn px-4 py-2 text-xs bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700">
                         <i class="fas fa-save mr-2"></i>Nhập
                     </button>
                     <button id="XemChiTietNhap" 
-                        class="btn px-4 py-2.5 bg-green-600 text-white rounded-lg shadow-md hover:bg-green-700 flex items-center">
+                        class="btn px-4 py-2 text-xs bg-green-600 text-white rounded-lg shadow-md hover:bg-green-700 flex items-center">
                         <i class="fas fa-eye mr-2"></i>Xem
                     </button>
                 </div>

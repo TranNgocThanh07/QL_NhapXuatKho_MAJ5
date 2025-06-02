@@ -229,11 +229,11 @@ $ngayXuat = date('d/m/Y', strtotime($phieuXuat['NgayXuat']));
                         </p>
                         <p class="flex justify-between mb-2">
                             <span class="text-gray-600"><i class="fas fa-briefcase" style="color: #64748B;"></i>Tên hoạt động:</span>
-                            <span class="font-medium long-text"><?php echo htmlspecialchars($phieuXuat['TenHoatDong'] ?? 'N/A'); ?></span>
+                            <span class="font-medium text-right long-text"><?php echo htmlspecialchars($phieuXuat['TenHoatDong'] ?? 'N/A'); ?></span>
                         </p>
                         <p class="flex justify-between mb-2">
                             <span class="text-gray-600"><i class="fas fa-map-marker-alt" style="color: #F97316;"></i> Địa chỉ:</span>
-                            <span class="font-medium long-text"><?php echo htmlspecialchars($phieuXuat['DiaChi'] ?? 'N/A'); ?></span>
+                            <span class="font-medium text-right long-text"><?php echo htmlspecialchars($phieuXuat['DiaChi'] ?? 'N/A'); ?></span>
                         </p>
                         <p class="flex justify-between mb-2">
                             <span class="text-gray-600"><i class="fas fa-user-check" style="color: #6EE7B7;"></i> Người liên hệ:</span>

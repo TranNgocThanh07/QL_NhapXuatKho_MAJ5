@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $totalPages = ceil($totalRecords / $recordsPerPage);
 
             // Lấy dữ liệu cho trang hiện tại
-            $sql = "SELECT TP_DonSanXuat.MaSoMe, TP_DonSanXuat.MaKhachHang, TP_DonSanXuat.MaDonHang, 
+            $sql = "SELECT TP_DonSanXuat.MaSoMe, TP_DonSanXuat.MaKhachHang, TP_DonSanXuat.MaDonHang, TP_DonSanXuat.MaVatTu, 
                            TP_DonSanXuat.TenVai, TP_DonSanXuat.TongSoLuongGiao, TP_DonSanXuat.MaDVT, 
                            TP_DonSanXuat.TrangThai, TP_DonSanXuat.NgayNhan,
                            TP_KhachHang.TenKhachHang, TP_DonViTinh.TenDVT 
@@ -161,7 +161,7 @@ $totalRecords = $stmtCount->fetch(PDO::FETCH_ASSOC)['total'];
 $totalPages = ceil($totalRecords / $recordsPerPage);
 
 // Lấy dữ liệu cho trang hiện tại
-$sql = "SELECT TP_DonSanXuat.MaSoMe, TP_DonSanXuat.MaKhachHang, TP_DonSanXuat.MaDonHang, 
+$sql = "SELECT TP_DonSanXuat.MaSoMe, TP_DonSanXuat.MaKhachHang, TP_DonSanXuat.MaDonHang, TP_DonSanXuat.MaVatTu,
                TP_DonSanXuat.TenVai, TP_DonSanXuat.TongSoLuongGiao, TP_DonSanXuat.MaDVT, 
                TP_DonSanXuat.TrangThai, TP_DonSanXuat.NgayNhan,
                TP_KhachHang.TenKhachHang, TP_DonViTinh.TenDVT 
@@ -264,7 +264,7 @@ $donSanXuat = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <i class="fas fa-arrow-circle-down mr-2"></i> Nhập Hàng
                     </a>
                     <a id="btnNhapHangTon" href="#" class="inline-flex items-center px-4 py-2 border border-transparent text-xs font-medium rounded-full shadow-sm text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-all duration-300" style="display: <?php echo $trangThai == 3 ? 'inline-flex' : 'none'; ?>;">
-                        <i class="fas fa-box-open mr-2"></i> Nhập Hàng Tồn
+                        <i class="fas fa-box-open mr-2"></i> Nhập Tồn
                     </a>
                 </div>
 
@@ -273,14 +273,14 @@ $donSanXuat = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <table class="min-w-full divide-y divide-gray-200 rounded-lg overflow-hidden">
                         <thead class="bg-red-50">
                             <tr>
-                                <th scope="col" class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Chọn</th>
-                                <th scope="col" class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">STT</th>
-                                <th scope="col" class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Mã Số Mẻ</th>
-                                <th scope="col" class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Mã Đơn Hàng</th>
-                                <th scope="col" class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Tên Khách Hàng</th>
-                                <th scope="col" class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Tên Vải</th>
-                                <th scope="col" class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Số Lượng Giao</th>
-                                <th scope="col" class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Ngày Nhận</th>
+                                <th scope="col" class="px-2 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Chọn</th>
+                                <th scope="col" class="px-2 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">STT</th>
+                                <th scope="col" class="px-2 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Mã Số Mẻ</th>
+                                <th scope="col" class="px-2 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Mã Đơn Hàng</th>
+                                <th scope="col" class="px-2 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Mã Vật Tư</th>
+                                <th scope="col" class="px-2 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Tên Vải</th>
+                                <th scope="col" class="px-2 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Số Lượng Giao</th>
+                                <th scope="col" class="px-2 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Ngày Nhận</th>
                             </tr>
                         </thead>
                         <tbody id="donSanXuatTable" class="bg-white divide-y divide-gray-100">
@@ -295,7 +295,7 @@ $donSanXuat = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     <td class="px-6 py-4 text-left whitespace-nowrap text-xs text-gray-700"><?php echo $stt++; ?></td>
                                     <td class="px-6 py-4 text-left whitespace-nowrap text-xs text-gray-700"><?php echo htmlspecialchars($don['MaSoMe']); ?></td>
                                     <td class="px-6 py-4 text-left whitespace-nowrap text-xs text-gray-700"><?php echo htmlspecialchars($don['MaDonHang']); ?></td>
-                                    <td class="px-6 py-4 text-left whitespace-nowrap text-xs text-gray-700"><?php echo htmlspecialchars($don['TenKhachHang']); ?></td>
+                                    <td class="px-6 py-4 text-left whitespace-nowrap text-xs text-gray-700"><?php echo htmlspecialchars($don['MaVatTu']); ?></td>
                                     <td class="px-6 py-4 text-left whitespace-nowrap text-xs text-gray-700"><?php echo htmlspecialchars($don['TenVai']); ?></td>
                                     <td class="px-6 py-4 text-left whitespace-nowrap text-xs font-bold text-green-700"><?php echo htmlspecialchars($don['TongSoLuongGiao']); ?> <?php echo htmlspecialchars($don['TenDVT']); ?></td>
                                     <td class="px-6 py-4 text-left whitespace-nowrap text-xs text-gray-700"><?php echo date('d/m/Y', strtotime($don['NgayNhan'])); ?></td>
@@ -402,7 +402,7 @@ $donSanXuat = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${stt++}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${don.MaSoMe || ''}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${don.MaDonHang || ''}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${don.TenKhachHang || ''}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${don.MaVatTu || ''}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${don.TenVai || ''}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${don.TongSoLuongGiao || ''} ${don.TenDVT || ''}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${don.NgayNhan ? new Date(don.NgayNhan).toLocaleDateString('vi-VN') : ''}</td>
