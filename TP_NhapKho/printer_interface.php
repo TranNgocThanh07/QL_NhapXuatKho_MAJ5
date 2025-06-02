@@ -680,11 +680,34 @@ function printWithBitmap($socket, $file, $labelType) {
             padding: 0.75rem;
             gap: 1rem;
         }
+        .carousel-slide {
+        gap: 0.5rem;
+        padding: 0.75rem;
+        }
+        
+        .image-frame {
+        max-width: 300px; /* Tăng từ 100px lên 150px */
+    }
+        
+       
+        .carousel-btn {
+            width: 36px;
+            height: 36px;
+        }
     }
     
     @media (max-width: 480px) {
         .container {
             padding: 0.5rem;
+        }
+            .carousel-slide {
+            justify-content: center; /* Căn giữa các items */
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .image-frame {
+            max-width: 250px;
         }
     }
     @media (max-width: 768px) {
@@ -768,7 +791,7 @@ function printWithBitmap($socket, $file, $labelType) {
     }
 
 .card-body {
-    padding: var(--space-6); /* Padding 1.5rem */
+    padding: var(--space-2); /* Padding 1.5rem */
     display: flex;
     flex-direction: column;
     align-items: center; /* Căn giữa nội dung */
@@ -779,7 +802,7 @@ function printWithBitmap($socket, $file, $labelType) {
         }
         
         .card-body {
-            padding: var(--space-5);
+            padding: var(--space-3);
         }
     }
     @media (max-width: 768px) {
@@ -1045,26 +1068,136 @@ function printWithBitmap($socket, $file, $labelType) {
     /* Preview Container */
     .preview-container {
         background: var(--bg-card);
-        padding: var(--space-6);
         border-radius: var(--radius);
         border: 2px dashed var(--border-color);
         margin-bottom: var(--space-6);
         text-align: center;
         transition: all 0.2s ease;
         width: 100%; /* Chiếm toàn bộ chiều rộng của parent */
-        min-height: 300px; /* Đảm bảo container đủ lớn */
+        min-height: 460px; /* Tăng từ 300px lên 350px */
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
     }
+        /* Carousel Container */
+    .carousel-container {
+        position: relative;
+        overflow: hidden;
+        width: 100%;
+        max-width: 1200px;
+        background: var(--bg-card);
+        touch-action: pan-Y;
+    }
+
+    .carousel-track {
+        display: flex;
+        transition: transform 0.4s ease;
+        width: 100%; /* Đảm bảo track khớp với container */
+        flex-wrap: nowrap; /* Ngăn các slide xuống dòng */
+    }
+
+    .carousel-slide {
+        min-width: 100%; /* Mỗi slide chiếm đúng 100% chiều rộng của container */
+        flex: 0 0 100%; /* Đảm bảo slide không co giãn */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: var(--space-3); /* Giảm padding để tránh tràn */
+        box-sizing: border-box;
+    }
+
+    .image-frame {
+        max-width: 100%; /* Giới hạn chiều rộng của ảnh */
+        width: 100%; /* Đảm bảo ảnh không vượt quá container */
+        aspect-ratio: 3/4;
+        overflow: hidden;
+        cursor: pointer;
+        transition: all 0.4s ease;
+        background: var(--gray-50);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .image-frame img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        background: white;
+    }
+
+    .image-frame.empty {
+        border-style: dashed;
+        color: var(--text-muted);
+        font-size: 0.875rem;
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .page-number {
+        position: absolute;
+        top: 4px;
+        right: 0px;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 2px 6px;
+        border-radius: 5px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    /* Carousel Controls */
+    .carousel-controls {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.25rem;
+        margin-top: 0.25rem;
+    }
+
+    .carousel-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border: 2px solid var(--border-color);
+        border-radius: 50%;
+        background: var(--bg-card);
+        color: var(--text-primary);
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .carousel-btn:hover:not(:disabled) {
+        border-color: var(--primary-color);
+        background: var(--primary-light);
+        color: var(--primary-color);
+    }
+
+    .carousel-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .slide-indicator {
+        font-weight: 600;
+        color: var(--text-primary);
+        min-width: 100px;
+        text-align: center;
+    }
     @media (min-width: 1024px) {
         #bmp-preview {
-            max-width: 600px; /* Tăng kích thước tối đa trên màn hình lớn */
-            min-width: 500px; /* Đảm bảo hình ảnh không quá nhỏ */
+        max-width: 700px; /* Tăng từ 600px lên 700px */
+        min-width: 600px; /* Tăng từ 500px lên 600px */
         }
         .preview-container {
-            min-height: 400px; /* Tăng chiều cao container */
+            min-height: 450px; /* Tăng từ 400px lên 450px */
         }
     }
     .preview-container:hover {
@@ -1240,22 +1373,38 @@ function printWithBitmap($socket, $file, $labelType) {
                 </div>
                 <div class="card-body">
                     <div class="preview-container" style="text-align: center; margin-bottom: 1.5rem;">
-                    <h3>Xem trước tem</h3>
-                    <div id="preview-list" style="display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center;">
-                        <!-- Danh sách hình ảnh xem trước sẽ được thêm bằng JavaScript -->
-                    </div>
-                    <div style="margin-top: 1rem;">
-                        <button class="btn btn-primary" onclick="selectPreviousPage()">Trang trước</button>
-                        <span id="page-indicator" style="margin: 0 1rem;">Trang 1</span>
-                        <button class="btn btn-primary" onclick="selectNextPage()">Trang sau</button>
-                    </div>
+                        <div class="carousel-container">
+                            <div class="carousel-track" id="carousel-track">
+                                <!-- Slides sẽ được tạo bằng JavaScript -->
+                            </div>
+                        </div>
+                        <div class="carousel-controls">
+                            <button class="carousel-btn" id="prev-slide" onclick="previousSlide()">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M15 18l-6-6 6-6"/>
+                                </svg>
+                            </button>
+                            <div class="slide-indicator" id="slide-indicator">
+                                Slide 1 / 1
+                            </div>
+                            <button class="carousel-btn" id="next-slide" onclick="nextSlide()">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 18l6-6-6-6"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <div style="margin-top: 1rem; text-align: center;">
+                            <span id="page-indicator" style="font-size: 0.875rem; color: var(--text-secondary);">
+                                Trang đang xem: <span id="selected-page-number">1</span>
+                            </span>
+                        </div>
                 </div>
                 <form id="print-form" method="post" style="text-align: center;">
                     <input type="hidden" name="action" value="print_with_label">
                     <input type="hidden" name="page_index" id="page_index" value="0">
                     <input type="hidden" name="label_type" id="label_type">
                     <button type="submit" class="btn btn-primary">
-                        🖨️ In Tem
+                        🖨️ In tất cả
                     </button>
                 </form>
                 </div>
@@ -1453,12 +1602,171 @@ document.addEventListener('DOMContentLoaded', function() {
     const pageIndicator = document.getElementById('page-indicator');
     let currentPage = 0;
 
+    let currentSlide = 0;
+    let slidesData = [];
+
+    // Hàm tạo slides từ dữ liệu BMP
+    function createSlides() {
+        slidesData = [];
+        if (bmpDataArray.length === 0) {
+            slidesData.push([]); // Tạo slide trống nếu không có dữ liệu
+        } else {
+            bmpDataArray.forEach((image, index) => {
+                slidesData.push([image]); // Mỗi slide chứa một ảnh
+            });
+        }
+    }
+    function setupCarouselSwipe() {
+    const carouselTrack = document.getElementById('carousel-track');
+    let touchStartX = 0;
+    let touchEndX = 0;
+    let touchStartY = 0;
+    let touchEndY = 0;
+    const minSwipeDistance = 50; // Khoảng cách tối thiểu để coi là vuốt (px)
+    const maxYSwipeDistance = 100; // Giới hạn độ lệch dọc để tránh nhầm với cuộn dọc
+
+    if (!carouselTrack) return;
+
+    carouselTrack.addEventListener('touchstart', function(e) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    carouselTrack.addEventListener('touchmove', function(e) {
+        touchEndX = e.touches[0].clientX;
+        touchEndY = e.touches[0].clientY;
+    }, { passive: true });
+
+    carouselTrack.addEventListener('touchend', function(e) {
+        const deltaX = touchEndX - touchStartX;
+        const deltaY = Math.abs(touchEndY - touchStartY);
+
+        // Chỉ xử lý nếu không phải là cuộn dọc
+        if (deltaY < maxYSwipeDistance) {
+            if (deltaX > minSwipeDistance) {
+                // Vuốt sang phải -> slide trước
+                window.previousSlide();
+            } else if (deltaX < -minSwipeDistance) {
+                // Vuốt sang trái -> slide sau
+                window.nextSlide();
+            }
+        }
+
+        // Reset giá trị
+        touchStartX = 0;
+        touchEndX = 0;
+        touchStartY = 0;
+        touchEndY = 0;
+    }, { passive: true });
+}
+    
+    // Hàm hiển thị carousel
+    function displayCarousel() {
+        const carouselTrack = document.getElementById('carousel-track');
+        const slideIndicator = document.getElementById('slide-indicator');
+        const selectedPageNumber = document.getElementById('selected-page-number');
+        
+        if (!carouselTrack) return;
+        
+        carouselTrack.innerHTML = '';
+        
+        slidesData.forEach((slideImages, slideIndex) => {
+            const slide = document.createElement('div');
+            slide.className = 'carousel-slide';
+            
+            const frame = document.createElement('div');
+            frame.className = 'image-frame';
+            
+            if (slideIndex === currentSlide) {
+                frame.classList.add('selected');
+            }
+            
+            const globalIndex = slideIndex;
+            
+            if (slideImages.length > 0) {
+                const img = document.createElement('img');
+                img.src = slideImages[0];
+                img.alt = `Trang ${globalIndex + 1}`;
+                
+                const pageNumber = document.createElement('div');
+                pageNumber.className = 'page-number';
+                pageNumber.textContent = globalIndex + 1;
+                
+                frame.appendChild(img);
+                frame.appendChild(pageNumber);
+                frame.onclick = () => selectPage(globalIndex);
+            } else {
+                frame.classList.add('empty');
+                frame.textContent = 'Không có ảnh';
+            }
+            
+            slide.appendChild(frame);
+            carouselTrack.appendChild(slide);
+        });
+        
+        // Cập nhật vị trí carousel
+        updateCarouselPosition();
+        
+        // Cập nhật indicators
+        if (slideIndicator) {
+            slideIndicator.textContent = `Slide ${currentSlide + 1} / ${slidesData.length}`;
+        }
+        
+        // Cập nhật trang được chọn
+        if (selectedPageNumber) {
+            selectedPageNumber.textContent = currentSlide + 1;
+        }
+        
+        // Cập nhật input page_index
+        if (pageIndexInput) {
+            pageIndexInput.value = currentSlide;
+        }
+        
+        // Cập nhật trạng thái nút
+        updateCarouselButtons();
+    }
+    function updateCarouselPosition() {
+        const carouselTrack = document.getElementById('carousel-track');
+        if (carouselTrack) {
+            const translateX = -currentSlide * 100;
+            carouselTrack.style.transform = `translateX(${translateX}%)`;
+        }
+    }
+    
+    // Hàm cập nhật trạng thái nút carousel
+    function updateCarouselButtons() {
+        const prevBtn = document.getElementById('prev-slide');
+        const nextBtn = document.getElementById('next-slide');
+        
+        if (prevBtn) {
+            prevBtn.disabled = currentSlide === 0;
+        }
+        
+        if (nextBtn) {
+            nextBtn.disabled = currentSlide >= slidesData.length - 1;
+        }
+    }
+    window.previousSlide = function() {
+        if (currentSlide > 0) {
+            currentSlide--;
+            selectPage(currentSlide); // Đồng bộ với selectPage
+        }
+    };
+    
+    window.nextSlide = function() {
+        if (currentSlide < slidesData.length - 1) {
+            currentSlide++;
+            selectPage(currentSlide); // Đồng bộ với selectPage
+        }
+    };
+
     // Cấu hình retry
     const RETRY_CONFIG = {
         maxRetries: 2,
         retryDelay: 2000,
         timeoutDuration: 10000
     };
+    
 
     // Hàm hiển thị thông báo
     function showMessage(message, type) {
@@ -1472,28 +1780,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Hàm hiển thị danh sách xem trước
     function displayPreviews() {
-        previewList.innerHTML = '';
-        bmpDataArray.forEach((base64Url, index) => {
-            const img = document.createElement('img');
-            img.src = base64Url; // base64Url đã có dạng data:image/bmp;base64,...
-            img.alt = `Trang ${index + 1}`;
-            img.style.maxWidth = '200px';
-            img.style.maxHeight = '300px';
-            img.style.border = index === currentPage ? '2px solid var(--primary-color)' : '1px solid var(--border-color)';
-            img.style.borderRadius = 'var(--radius-sm)';
-            img.style.cursor = 'pointer';
-            img.onclick = () => selectPage(index);
-            previewList.appendChild(img);
-        });
-        pageIndicator.textContent = `Trang ${currentPage + 1} / ${bmpDataArray.length}`;
-        pageIndexInput.value = currentPage;
+        createSlides();
+        displayCarousel();
     }
 
     // Chọn trang
     function selectPage(index) {
-        if (index >= 0 && index < bmpDataArray.length) {
-            currentPage = index;
-            displayPreviews();
+        if (index >= 0 && index < slidesData.length) {
+            currentSlide = index; // Đồng bộ currentSlide
+            displayCarousel();
+            
+            // Cập nhật input form
+            if (pageIndexInput) {
+                pageIndexInput.value = currentSlide;
+            }
         }
     }
 
@@ -1513,7 +1813,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (bmpDataArray.length > 0) {
         printSection.classList.remove('hidden');
         labelTypeInput.value = labelType;
-        displayPreviews();
+        createSlides();
+        displayCarousel();
+        setupCarouselSwipe();
     } else {
         console.error('Không tìm thấy dữ liệu BMP trong sessionStorage');
         printSection.classList.add('hidden');
@@ -1600,22 +1902,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Xóa đoạn mã dư thừa
-    // const labelType = sessionStorage.getItem('labelType') || 'system'; // Xóa dòng này
 
-    // Hiển thị print section nếu có dữ liệu (sửa đoạn này để xóa logic dư thừa)
-    // Đoạn mã sau bị dư thừa vì đã xử lý ở trên
-    /*
-    if (filePath || (bmpData && fileName)) {
-        if (printSection) {
-            printSection.classList.remove('hidden');
-            ...
-        }
-    } else {
-        if (printSection) printSection.classList.add('hidden');
-        showMessage('❌ Không tìm thấy dữ liệu tem để hiển thị', 'danger']);
-    }
-    */
 
     // Ngăn zoom trên thiết bị di động
     document.addEventListener('touchmove', function(e) {
