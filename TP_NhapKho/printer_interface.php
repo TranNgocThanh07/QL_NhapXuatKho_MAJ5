@@ -14,21 +14,16 @@ $timeout = 10;
  * @return resource|bool Trả về socket hoặc false nếu thất bại
  */
 function retrySocketConnection($ip, $port, $timeout, $maxRetries = 3, $initialDelay = 1000) {
-    $socket = false;
-    $errno = 0;
-    $errstr = '';
-
     for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
         $startTime = microtime(true);
-        $socket = @fsockopen($ip, $port, $errno, $errstr, $timeout);
-        $endTime = microtime(true);
-        $responseTime = round(($endTime - $startTime) * 1000, 2);
-        
+        $socket = stream_socket_client("tcp://$ip:$port", $errno, $errstr, $timeout, STREAM_CLIENT_CONNECT);
+        $responseTime = round((microtime(true) - $startTime) * 1000, 2);
+
         if ($socket) {
             stream_set_timeout($socket, $timeout);
             writeDebugLog("Kết nối thành công ở lần thử $attempt", [
-                'ip' => $ip, 
-                'port' => $port, 
+                'ip' => $ip,
+                'port' => $port,
                 'response_time' => $responseTime . 'ms'
             ]);
             return $socket;
@@ -38,23 +33,18 @@ function retrySocketConnection($ip, $port, $timeout, $maxRetries = 3, $initialDe
             'ip' => $ip,
             'port' => $port,
             'error' => $errstr,
-            'errno' => $errno,
-            'response_time' => $responseTime . 'ms'
+            'errno' => $errno
         ]);
 
-        // Nếu lỗi là "Connection refused" (errno 111) thì máy chắc chắn đã tắt
-        // Không cần thử lại nhiều lần
-        if ($errno === 111 || $errno === 10061) { // Linux: 111, Windows: 10061
+        if ($errno === 111 || $errno === 10061) {
             writeDebugLog("Máy in đã tắt hoặc từ chối kết nối", ['errno' => $errno]);
             break;
         }
 
         if ($attempt < $maxRetries) {
-            $delay = $initialDelay * pow(2, $attempt - 1);
-            usleep($delay * 1000);
+            usleep($initialDelay * pow(2, $attempt - 1) * 1000);
         }
     }
-
     return false;
 }
 
@@ -445,65 +435,41 @@ function printTextTest($ip, $port, $timeout)
  * @return array|string Mảng chứa width, height, data hoặc thông báo lỗi
  */
 function convertBmpToBitmap($bmpData, $maxWidth = 420, $maxHeight = 595) {
-    // Kiểm tra cơ bản
-    $len = strlen($bmpData);
-    if ($len < 54) return false;
-    if ($len > 10485760) return false; // 10MB limit
-    
-    // Đọc header một lần
-    $h = substr($bmpData, 0, 54);
-    $w = unpack('V', substr($h, 18, 4))[1];
-    $height = abs(unpack('V', substr($h, 22, 4))[1]);
-    $bpp = unpack('v', substr($h, 28, 2))[1];
-    $offset = unpack('V', substr($h, 10, 4))[1];
-    
-    // Chỉ hỗ trợ 1-bit và 24-bit
-    if ($bpp != 1 && $bpp != 24) return false;
-    
-    $rowSize = (($bpp * $w + 31) >> 5) << 2; // Tối ưu phép chia/nhân
-    $bytesPerRow = ($w + 7) >> 3; // ceil($w / 8)
-    
-    // Kiểm tra dữ liệu đủ
-    if ($len < $offset + ($height * $rowSize)) return false;
-    
-    $bitmap = '';
-    
-    // Tối ưu cho 1-bit BMP (đã là monochrome)
-    if ($bpp == 1) {
-        for ($y = 0; $y < $height; $y++) {
-            $rowStart = $offset + ($y * $rowSize);
-            $row = substr($bmpData, $rowStart, $bytesPerRow);
-            $bitmap = $row . $bitmap; // Reverse order
-        }
-    } else {
-        // 24-bit: chuyển sang 1-bit
-        for ($y = 0; $y < $height; $y++) {
-            $rowStart = $offset + ($y * $rowSize);
-            $row = substr($bmpData, $rowStart, $rowSize);
-            $binaryRow = '';
-            
-            for ($x = 0; $x < $w; $x += 8) {
-                $byte = 0;
-                for ($bit = 0; $bit < 8 && ($x + $bit) < $w; $bit++) {
-                    $pixelPos = ($x + $bit) * 3;
-                    if ($pixelPos + 2 < $rowSize) {
-                        // Sử dụng weighted average thay vì simple average
-                        $b = ord($row[$pixelPos]);
-                        $g = ord($row[$pixelPos + 1]);
-                        $r = ord($row[$pixelPos + 2]);
-                        // Luminance formula: 0.299*R + 0.587*G + 0.114*B
-                        if (($r * 299 + $g * 587 + $b * 114) < 127500) { // < 128 * 1000
-                            $byte |= (128 >> $bit); // 1 << (7 - $bit)
-                        }
-                    }
-                }
-                $binaryRow .= chr($byte);
-            }
-            $bitmap = $binaryRow . $bitmap;
-        }
+    $image = @imagecreatefromstring($bmpData);
+    if (!$image) {
+        return false;
     }
-    
-    return ['width' => $w, 'height' => $height, 'data' => $bitmap];
+
+    $width = imagesx($image);
+    $height = imagesy($image);
+
+    if ($width > $maxWidth || $height > $maxHeight) {
+        return false; // Kích thước vượt quá giới hạn
+    }
+
+    $bitmap = '';
+    $bytesPerRow = ceil($width / 8);
+
+    for ($y = $height - 1; $y >= 0; $y--) {
+        $binaryRow = '';
+        for ($x = 0; $x < $width; $x += 8) {
+            $byte = 0;
+            for ($bit = 0; $bit < 8 && ($x + $bit) < $width; $bit++) {
+                $rgb = imagecolorat($image, $x + $bit, $y);
+                $r = ($rgb >> 16) & 0xFF;
+                $g = ($rgb >> 8) & 0xFF;
+                $b = $rgb & 0xFF;
+                if (($r * 0.299 + $g * 0.587 + $b * 0.114) < 128) {
+                    $byte |= (1 << (7 - $bit));
+                }
+            }
+            $binaryRow .= chr($byte);
+        }
+        $bitmap .= $binaryRow;
+    }
+
+    imagedestroy($image);
+    return ['width' => $width, 'height' => $height, 'data' => $bitmap];
 }
 /**
  * In bitmap bằng phương pháp TSPL BITMAP với dữ liệu nhúng
@@ -677,8 +643,12 @@ function printWithBitmap($socket, $file, $labelType) {
 
     @media (max-width: 768px) {
         .container {
-            padding: 0.75rem;
-            gap: 1rem;
+            padding: 0.5rem;
+            gap: 0.75rem;
+        }
+        .preview-container {
+            min-height: 250px; /* Giảm thêm chiều cao trên tablet */
+            padding: var(--space-2);
         }
         .carousel-slide {
         gap: 0.5rem;
@@ -686,8 +656,9 @@ function printWithBitmap($socket, $file, $labelType) {
         }
         
         .image-frame {
-        max-width: 300px; /* Tăng từ 100px lên 150px */
-    }
+            max-width: 90%; /* Giảm chiều rộng để tránh tràn */
+            margin: 0 auto; /* Căn giữa khung ảnh */
+        }
         
        
         .carousel-btn {
@@ -696,20 +667,51 @@ function printWithBitmap($socket, $file, $labelType) {
         }
     }
     
-    @media (max-width: 480px) {
-        .container {
-            padding: 0.5rem;
-        }
-            .carousel-slide {
-            justify-content: center; /* Căn giữa các items */
-            align-items: center;
-            gap: 0.75rem;
-        }
-        
-        .image-frame {
-            max-width: 250px;
-        }
+@media (max-width: 480px) {
+    
+    .preview-container {
+        min-height: 200px; /* Chiều cao tối thiểu nhỏ hơn cho điện thoại */
     }
+    .image-frame {
+        max-width: 95%; /* Tăng tỷ lệ chiều rộng để tận dụng không gian */
+    }
+    .image-frame img {
+        max-height: 300px; /* Giảm chiều cao tối đa trên điện thoại nhỏ */
+    }
+    .slide-indicator {
+        font-size: 0.8rem;
+        min-width: 100px;
+    }
+    .carousel-slide {
+        padding: var(--space-1); /* Giảm padding trên điện thoại */
+    }
+    .container {
+        padding: var(--space-2); /* Giảm padding trên điện thoại */
+        gap: var(--space-3);
+    }
+    .card {
+        margin-bottom: var(--space-3); /* Giảm khoảng cách giữa các card */
+    }
+
+    .card-header {
+        padding: var(--space-3) var(--space-4);
+    }
+
+    .card-body {
+        padding: var(--space-2);
+    }
+
+    .btn {
+        padding: var(--space-3) var(--space-4);
+        font-size: 0.85rem; /* Giảm kích thước chữ trên nút */
+        min-height: 40px;
+    }
+
+    .btn-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-2); /* Giảm khoảng cách giữa các nút */
+    }
+}
     @media (max-width: 768px) {
         .header h1 {
             font-size: 1.1rem;
@@ -879,18 +881,16 @@ function printWithBitmap($socket, $file, $labelType) {
         align-items: center;
         justify-content: center;
         gap: var(--space-2);
-        padding: var(--space-2) var(--space-3);
+        padding: var(--space-2) var(--space-2);
         border: 2px solid transparent;
         border-radius: var(--radius);
-        font-size: 0.875rem;
-        font-weight: 600;
+        font: 600 0.875rem/1.6 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         cursor: pointer;
         transition: all 0.2s ease;
-        text-decoration: none;
-        min-height: 44px;
-        min-width: 100px; /* Đảm bảo nút đủ rộng */
-        max-width: 100%; /* Không vượt quá container */
-        white-space: normal; /* Cho phép xuống dòng nếu văn bản dài */
+        min-height: 30px;
+        min-width: 100px;
+        max-width: 100%;
+        white-space: normal;
         text-align: center;
     }
 
@@ -983,7 +983,7 @@ function printWithBitmap($socket, $file, $labelType) {
     }
     .btn {
         padding: var(--space-3) var(--space-4); /* Giảm padding cho nút */
-        min-height: 44px; /* Giảm chiều cao tối thiểu */
+        min-height: 30px; /* Giảm chiều cao tối thiểu */
         font-size: 0.8rem; /* Giảm kích thước chữ */
     }
 }
@@ -1073,21 +1073,21 @@ function printWithBitmap($socket, $file, $labelType) {
         margin-bottom: var(--space-6);
         text-align: center;
         transition: all 0.2s ease;
-        width: 100%; /* Chiếm toàn bộ chiều rộng của parent */
-        min-height: 460px; /* Tăng từ 300px lên 350px */
+        width: 100%;
+        min-height: 400px; /* Giảm chiều cao tối thiểu để phù hợp với điện thoại */
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
+        padding: var(--space-3); /* Thêm padding để tránh sát mép */
     }
         /* Carousel Container */
     .carousel-container {
-        position: relative;
-        overflow: hidden;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch; /* Tăng cường hiệu ứng cuộn trên iOS */
         width: 100%;
-        max-width: 1200px;
-        background: var(--bg-card);
-        touch-action: pan-Y;
+        padding: 0 var(--space-1); /* Thêm padding để tránh sát mép */
     }
 
     .carousel-track {
@@ -1098,19 +1098,14 @@ function printWithBitmap($socket, $file, $labelType) {
     }
 
     .carousel-slide {
-        min-width: 100%; /* Mỗi slide chiếm đúng 100% chiều rộng của container */
-        flex: 0 0 100%; /* Đảm bảo slide không co giãn */
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        padding: var(--space-3); /* Giảm padding để tránh tràn */
-        box-sizing: border-box;
+        scroll-snap-align: center;
+        flex: 0 0 100%;
     }
 
     .image-frame {
-        max-width: 100%; /* Giới hạn chiều rộng của ảnh */
-        width: 100%; /* Đảm bảo ảnh không vượt quá container */
-        aspect-ratio: 3/4;
+        max-width: 100%;
+        width: 100%;
+        aspect-ratio: 3/4; /* Giữ tỷ lệ ảnh */
         overflow: hidden;
         cursor: pointer;
         transition: all 0.4s ease;
@@ -1125,8 +1120,9 @@ function printWithBitmap($socket, $file, $labelType) {
     .image-frame img {
         width: 100%;
         height: 100%;
-        object-fit: contain;
+        object-fit: contain; /* Đảm bảo ảnh không bị méo */
         background: white;
+        max-height: 350px; /* Giới hạn chiều cao ảnh trên điện thoại */
     }
 
     .image-frame.empty {
@@ -1156,8 +1152,8 @@ function printWithBitmap($socket, $file, $labelType) {
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 0.25rem;
-        margin-top: 0.25rem;
+        gap: var(--space-2); /* Tăng khoảng cách giữa các nút */
+        margin-top: var(--space-2);
     }
 
     .carousel-btn {
@@ -1188,8 +1184,9 @@ function printWithBitmap($socket, $file, $labelType) {
     .slide-indicator {
         font-weight: 600;
         color: var(--text-primary);
-        min-width: 100px;
+        min-width: 120px; /* Tăng chiều rộng để tránh tràn */
         text-align: center;
+        font-size: 0.9rem; /* Tăng kích thước chữ */
     }
     @media (min-width: 1024px) {
         #bmp-preview {
@@ -1392,11 +1389,6 @@ function printWithBitmap($socket, $file, $labelType) {
                                     <path d="M9 18l6-6-6-6"/>
                                 </svg>
                             </button>
-                        </div>
-                        <div style="margin-top: 1rem; text-align: center;">
-                            <span id="page-indicator" style="font-size: 0.875rem; color: var(--text-secondary);">
-                                Trang đang xem: <span id="selected-page-number">1</span>
-                            </span>
                         </div>
                 </div>
                 <form id="print-form" method="post" style="text-align: center;">
@@ -2111,67 +2103,52 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     async function checkConnection() {
-        const PING_TIMEOUT = 10000;
-        const MAX_RETRIES = 2;
-        const RETRY_DELAY = 1000;
+    const PING_TIMEOUT = 10000;
+    const MAX_RETRIES = 2;
+    const RETRY_DELAY = 1000;
 
-        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), PING_TIMEOUT);
-            try {
-                const formData = new FormData();
-                formData.append('action', 'test_connection');
-                const response = await fetch(window.location.href, {
-                    method: 'POST',
-                    body: formData,
-                    signal: controller.signal,
-                    cache: 'no-cache',
-                    headers: {
-                        'Cache-Control': 'no-cache, no-store, must-revalidate',
-                        'Pragma': 'no-cache',
-                        'Expires': '0'
-                    }
-                });
-                clearTimeout(timeoutId);
-                if (response.ok) {
-                    const text = await response.text();
-                    return text.includes('alert-success') && text.includes('Kết nối thành công');
-                }
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            } catch (error) {
-                clearTimeout(timeoutId);
-                console.warn(`Thử kết nối máy in lần ${attempt}/${MAX_RETRIES}: ${error.message}`);
-                if (attempt < MAX_RETRIES) {
-                    await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-                }
-            }
-        }
-        return false;
-    }
+    const connectionStatus = document.getElementById('connection-status');
+    const statusIcon = connectionStatus?.querySelector('.status-icon');
+    const statusText = connectionStatus?.querySelector('.status-text');
 
-    let connectionCheckPaused = false;
-    async function updateConnectionStatus() {
-        if (connectionCheckPaused) return;
-        const connectionStatus = document.getElementById('connection-status');
-        if (!connectionStatus) return;
+    if (!connectionStatus || !statusIcon || !statusText) return false;
 
-        const statusIcon = connectionStatus.querySelector('.status-icon');
-        const statusText = connectionStatus.querySelector('.status-text');
-        if (!statusIcon || !statusText) return;
-
-        statusText.textContent = 'Đang kiểm tra...';
-        statusText.style.color = 'var(--warning-color)';
-        statusIcon.innerHTML = '<path d="M12 2v10l4-4"/><circle cx="12" cy="12" r="10"/>';
-
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), PING_TIMEOUT);
         try {
-            const isConnected = await checkConnection();
-            if (isConnected) {
-                statusIcon.innerHTML = '<path d="M20 6 9 17l-5-5"/>';
-                statusText.textContent = 'Đã kết nối';
-                statusText.style.color = 'var(--success-color)';
-                connectionStatus.classList.add('connected');
-                connectionStatus.classList.remove('disconnected');
-            } else {
+            const formData = new FormData();
+            formData.append('action', 'test_connection');
+            const response = await fetch(window.location.href, {
+                method: 'POST',
+                body: formData,
+                signal: controller.signal,
+                cache: 'no-cache',
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache',
+                    'Expires': '0'
+                }
+            });
+            clearTimeout(timeoutId);
+            if (response.ok) {
+                const text = await response.text();
+                const isSuccess = text.includes('alert-success') && text.includes('Kết nối thành công');
+                if (isSuccess) {
+                    statusIcon.innerHTML = '<path d="M20 6 9 17l-5-5"/>';
+                    statusText.textContent = 'Đã kết nối';
+                    statusText.style.color = 'var(--success-color)';
+                    connectionStatus.classList.add('connected');
+                    connectionStatus.classList.remove('disconnected');
+                    return true;
+                }
+                throw new Error('Kết nối không thành công');
+            }
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        } catch (error) {
+            clearTimeout(timeoutId);
+            console.warn(`Thử kết nối máy in lần ${attempt}/${MAX_RETRIES}: ${error.message}`);
+            if (attempt === MAX_RETRIES) {
                 statusIcon.innerHTML = '<path d="M6 18L18 6M6 6l12 12"/>';
                 statusText.textContent = 'Mất kết nối';
                 statusText.style.color = 'var(--danger-color)';
@@ -2179,16 +2156,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 connectionStatus.classList.add('disconnected');
                 connectionCheckPaused = true;
                 setTimeout(() => { connectionCheckPaused = false; }, 10000);
+                return false;
             }
-        } catch (error) {
-            console.error('Lỗi kiểm tra kết nối máy in:', error);
-            statusIcon.innerHTML = '<path d="M12 9v4m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/>';
-            statusText.textContent = 'Lỗi kiểm tra kết nối';
-            statusText.style.color = 'var(--warning-color)';
-            connectionStatus.classList.remove('connected');
-            connectionStatus.classList.add('disconnected');
+            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
         }
     }
+    return false;
+}
+    let connectionCheckPaused = false;
+    async function updateConnectionStatus() {
+    if (connectionCheckPaused) return;
+
+    const connectionStatus = document.getElementById('connection-status');
+    if (!connectionStatus) return;
+
+    const statusIcon = connectionStatus.querySelector('.status-icon');
+    const statusText = connectionStatus.querySelector('.status-text');
+    if (!statusIcon || !statusText) return;
+
+    // Đặt trạng thái ban đầu
+    statusText.textContent = 'Đang kiểm tra...';
+    statusText.style.color = 'var(--warning-color)';
+    statusIcon.innerHTML = '<path d="M12 2v10l4-4"/><circle cx="12" cy="12" r="10"/>';
+
+    const isConnected = await checkConnection();
+}
 
     updateConnectionStatus();
     setInterval(updateConnectionStatus, 10000);
@@ -2233,6 +2225,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+
+
     <noscript>
         <div class="alert alert-warning">
             ⚠️ JavaScript bị tắt. Một số tính năng như xem trước tem sẽ không hoạt động. Vui lòng bật JavaScript để có trải nghiệm tốt nhất.

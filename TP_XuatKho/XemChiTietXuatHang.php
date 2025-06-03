@@ -259,7 +259,7 @@ $ngayXuat = date('d/m/Y', strtotime($phieuXuat['NgayXuat']));
                 <?php endif; ?>
 
                 <!-- Danh sách chi tiết -->
-                <div class="p-6 pt-2">
+                <div class="p-4 pt-2">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
                         <i class="fas fa-list-ul icon-red"></i> Chi Tiết Xuất Hàng
                         <span class="text-sm bg-red-100 text-red-700 px-2 py-1 rounded-full">
