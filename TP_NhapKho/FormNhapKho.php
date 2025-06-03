@@ -1070,11 +1070,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     <thead>
                         <tr>
                             <th>STT</th>
-                            <th>Số Lot</th>
                             <th>Số Lượng</th>
                             <?php if ($don['MaDVT'] !== '1' && $tenDVT !== 'KG'): ?>
                                 <th>Số KG Cân</th>
                             <?php endif; ?>
+                              <th>Số Lot</th>
                             <th>Thành Phần</th>
                             <th>Khu Vực</th>
                             <th>Ghi Chú</th>
@@ -1140,20 +1140,70 @@ async function getTongSoLuongNhap(maSoMe) {
 // Xử lý sự kiện submit form nhập kho, kiểm tra và thêm dữ liệu vào tempData
 document.getElementById('nhapHangForm').addEventListener('submit', async function(e) {
     e.preventDefault();
-    const soLuong = parseFloat(document.getElementById('soLuong').value) || 0;
-    const soKGCanInput = document.getElementById('soKGCan').value;
-    const soKGCan = soKGCanInput && !isNaN(soKGCanInput) && soKGCanInput.trim() !== '' ? parseFloat(soKGCanInput) : null;
-    const soLot = document.getElementById('soLot').value.trim();
-    const tenThanhPhan = document.getElementById('TenThanhPhan').value.trim();
-    const maKhuVuc = document.getElementById('MaKhuVuc').value.trim();
-    const ghiChu = document.getElementById('GhiChu').value.trim();
 
+    // Lấy giá trị từ form
+    const soLuongElement = document.getElementById('soLuong');
+    const soKGCanElement = document.getElementById('soKGCan');
+    const soLotElement = document.getElementById('soLot');
+    const tenThanhPhanElement = document.getElementById('TenThanhPhan');
+    const maKhuVucElement = document.getElementById('MaKhuVuc');
+    const ghiChuElement = document.getElementById('GhiChu');
+
+    // Kiểm tra sự tồn tại của các phần tử
     let errorMessages = [];
+    if (!soLuongElement) errorMessages.push("Không tìm thấy trường số lượng.");
+    if (!soKGCanElement) errorMessages.push("Không tìm thấy trường số KG cân.");
+    if (!soLotElement) errorMessages.push("Không tìm thấy trường số Lot.");
+    if (!tenThanhPhanElement) errorMessages.push("Không tìm thấy trường thành phần.");
+    if (!maKhuVucElement) errorMessages.push("Không tìm thấy trường mã khu vực.");
+    if (!ghiChuElement) errorMessages.push("Không tìm thấy trường ghi chú.");
+
+    if (errorMessages.length > 0) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Lỗi cấu hình form!',
+            html: `<div class="text-left space-y-2">${errorMessages.map(msg => `<div><i class="fas fa-exclamation-circle mr-2 text-red-600"></i>${msg}</div>`).join('')}</div>`,
+            confirmButtonText: 'OK',
+            customClass: {
+                popup: 'rounded-xl',
+                title: 'text-lg font-semibold',
+                confirmButton: 'bg-blue-600 hover:bg-blue-700 text-white rounded-lg'
+            },
+            buttonsStyling: false,
+            width: '320px',
+        });
+        return;
+    }
+
+    const soLuong = parseFloat(soLuongElement.value) || 0;
+    const soKGCanInput = soKGCanElement.value;
+    const soKGCan = soKGCanInput && !isNaN(soKGCanInput) && soKGCanInput.trim() !== '' ? parseFloat(soKGCanInput) : null;
+    const soLot = soLotElement.value.trim();
+    const tenThanhPhan = tenThanhPhanElement.value.trim();
+    const maKhuVuc = maKhuVucElement.value.trim();
+    const ghiChu = ghiChuElement.value.trim();
+
+    // Kiểm tra dữ liệu đầu vào
+    errorMessages = [];
     if (soLuong <= 0) errorMessages.push("Số lượng phải lớn hơn 0.");
     if (soKGCan !== null && soKGCan < 0) errorMessages.push("Số KG Cân không được âm.");
     if (!soLot) errorMessages.push("Số Lot không được để trống.");
     if (!tenThanhPhan) errorMessages.push("Thành phần không được để trống.");
     if (!maKhuVuc) errorMessages.push("Mã khu vực không được để trống.");
+
+    // Kiểm tra số cây tối đa trong bảng tạm (tempData)
+    const currentTotalTrees = tempData.length;
+    const newTotalTrees = currentTotalTrees + 1; // Mỗi lần submit thêm 1 cây
+    if (newTotalTrees > 20) {
+        errorMessages.push(`
+            <div style="background-color: #fff8e1; border: 1px solid #ffe0a3; padding: 14px 18px; border-radius: 10px; color: #7c5700; font-size: 14px; line-height: 1.6; margin: 12px 0; box-shadow: 0 2px 6px rgba(0,0,0,0.05); font-family: 'Segoe UI', Tahoma, sans-serif;">
+                <div style="margin-bottom: 6px;">🧵 Hiện tại bạn đã nhập: <strong>${currentTotalTrees}</strong> cây .</div>
+                <div style="margin-bottom: 6px;">➕ Bạn đang nhập thêm 1 cây, tổng cộng ${newTotalTrees}</strong> cây.</div>
+                <div style="color: #b10000; font-weight: bold;">❌ Bạn chỉ được phép nhập tối đa 20 cây trong bảng .</div>
+            </div>
+        `);
+    }
+
 
     if (errorMessages.length > 0) {
         Swal.fire({
@@ -1167,8 +1217,7 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
                 confirmButton: 'bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg'
             },
             buttonsStyling: false,
-            width: '90%',
-            padding: '1rem'
+            width: '320px',
         });
         return;
     }
@@ -1179,16 +1228,26 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
         Swal.fire({
             icon: 'warning',
             title: 'Mã khu vực không hợp lệ!',
-            text: 'Vui lòng chọn một giá trị từ danh sách gợi ý.'
+            text: 'Vui lòng chọn một giá trị từ danh sách gợi ý.',
+            confirmButtonText: 'OK',
+            customClass: {
+                popup: 'rounded-xl',
+                title: 'text-lg font-semibold',
+                confirmButton: 'bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg'
+            },
+            buttonsStyling: false,
+            width: '320px',
         });
         return;
     }
+
     const formData = new FormData(this);
     const tongSoLuongNhapMoi = soLuong;
     const soLuongGiao = <?php echo $soLuongGiao; ?>;
     const maSoMe = formData.get('MaSoMe');
 
     try {
+        // Kiểm tra số lượng nhập so với số lượng giao
         const tongSoLuongDaNhapDB = await getTongSoLuongNhap(maSoMe);
         const tongSoLuongDaNhapTrongTemp = tempData.reduce((sum, item) => sum + item.SoLuong, 0);
         const tongSoLuongHienTai = tongSoLuongDaNhapDB + tongSoLuongDaNhapTrongTemp;
@@ -1225,19 +1284,19 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
                     confirmButton: 'bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg'
                 },
                 buttonsStyling: false,
-                width: '90%',
-                padding: '1rem'
+                width: '320px',
             });
             return;
         }
 
         const maQRBase = `${formData.get('MaKhachHang')}_${formData.get('MaVai')}_${formData.get('MaMau')}_${formData.get('MaDVT')}_${formData.get('Kho')}_${soLuong}_${soLot}_${tenThanhPhan}`;
 
+        // Thêm 1 cây vào tempData
         tempSTT++;
         const maCTNHTP = generateMaCTNHTP(tempSTT);
         tempData.push({
             STT: tempSTT,
-            MaSoMe: formData.get('MaSoMe'),
+            MaSoMe: maSoMe,
             MaNguoiLienHe: formData.get('MaNguoiLienHe'),
             MaCTNHTP: maCTNHTP,
             MaDonHang: formData.get('MaDonHang'),
@@ -1262,11 +1321,11 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
         });
 
         updateTable();
-        document.getElementById('soLuong').value = '';
-        document.getElementById('soKGCan').value = '';
-        //document.getElementById('soLot').value = '';
-        document.getElementById('MaKhuVuc').value = '';
-        document.getElementById('GhiChu').value = '';           
+        soLuongElement.value = '';
+        soKGCanElement.value = '';
+        // soLotElement.value = ''; // Giữ lại nếu không muốn reset
+        maKhuVucElement.value = '';
+        ghiChuElement.value = '';
 
         Swal.fire({
             icon: 'success',
@@ -1278,7 +1337,8 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
                 title: 'text-lg font-semibold',
                 confirmButton: 'bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg'
             },
-            buttonsStyling: false
+            buttonsStyling: false,
+            width: '320px',
         });
     } catch (error) {
         Swal.fire({
@@ -1291,7 +1351,8 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
                 title: 'text-lg font-semibold',
                 confirmButton: 'bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg'
             },
-            buttonsStyling: false
+            buttonsStyling: false,
+            width: '320px',
         });
     }
 });

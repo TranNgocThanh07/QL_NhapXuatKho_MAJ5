@@ -1,9 +1,50 @@
 <?php
 // Xprinter D465B TCP/IP Print Interface - Chỉ sử dụng TSPL BITMAP
-// Cấu hình máy in
-$printer_ip = '192.168.110.198';
-$printer_port = 9100;
-$timeout = 10;
+// Đọc cấu hình từ file (nếu tồn tại) hoặc sử dụng giá trị mặc định
+$config_file = 'printer_config.json';
+if (file_exists($config_file)) {
+    $config = json_decode(file_get_contents($config_file), true);
+    $printer_ip = $config['printer_ip'] ?? '192.168.110.198';
+    $printer_port = $config['printer_port'] ?? 9100;
+    $timeout = $config['timeout'] ?? 10;
+} else {
+    $printer_ip = '192.168.110.198';
+    $printer_port = 9100;
+    $timeout = 10;
+}
+
+
+/**
+ * Trả về phản hồi thành công JSON
+ * @param string $message Thông điệp thành công
+ * @param array $data Dữ liệu bổ sung
+ * @return string JSON success response
+ */
+function handleSuccess($message, $data = []) {
+    return json_encode([
+        'status' => 'success',
+        'message' => '✅ ' . htmlspecialchars($message),
+        ...$data
+    ]);
+}
+
+/**
+ * Lưu cấu hình máy in vào file JSON
+ * @param string $ip Địa chỉ IP máy in
+ * @param int $port Cổng máy in
+ * @param int $timeout Thời gian timeout
+ * @return bool Trả về true nếu lưu thành công, false nếu thất bại
+ */
+function savePrinterConfig($ip, $port, $timeout) {
+    $config_file = 'printer_config.json';
+    $config = [
+        'printer_ip' => $ip,
+        'printer_port' => $port,
+        'timeout' => $timeout
+    ];
+    $result = file_put_contents($config_file, json_encode($config, JSON_PRETTY_PRINT));
+    return $result !== false;
+}
 /**
  * Thử kết nối lại với máy in qua TCP
  * @param string $ip Địa chỉ IP máy in
@@ -60,6 +101,40 @@ if (isset($_GET['filePath']) && !empty($_GET['filePath'])) {
 
 // Xử lý các yêu cầu POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+header('Content-Type: application/json; charset=UTF-8');
+
+    if (isset($_POST['action']) && $_POST['action'] === 'update_config') {
+        $printer_select = $_POST['printer_select'] ?? '';
+        $custom_ip = filter_var($_POST['printer_ip'] ?? '', FILTER_VALIDATE_IP);
+        $new_ip = $printer_ip; // Giá trị mặc định
+
+        $ip_map = [
+            'printer1' => '192.168.1.100',
+            'printer2' => '192.168.1.101',
+            'printer3' => '192.168.1.102'
+        ];
+
+        if ($printer_select === 'custom' && $custom_ip !== false) {
+            $new_ip = $custom_ip;
+        } elseif (isset($ip_map[$printer_select])) {
+            $new_ip = $ip_map[$printer_select];
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Lựa chọn máy in không hợp lệ']);
+            exit;
+        }
+
+        if (savePrinterConfig($new_ip, $printer_port, $timeout)) {
+            echo json_encode(['status' => 'success', 'new_ip' => htmlspecialchars($new_ip)]);
+            exit;
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Không thể lưu cấu hình']);
+            exit;
+        }
+    }
+
+
+
     if (isset($_POST['action']) && $_POST['action'] === 'print_all_pages') {
         $labelType = $_POST['label_type'] ?? 'default';
         $bmpDataArray = isset($_POST['bmp_data_array']) ? json_decode($_POST['bmp_data_array'], true) : [];
@@ -320,7 +395,11 @@ function handleError($message, $context = []) {
     $context['line'] = isset($caller['line']) ? $caller['line'] : 'unknown';
     
     writeDebugLog("Lỗi: $message", $context);
-    return '<div class="alert alert-danger">❌ ' . htmlspecialchars($message) . '</div>';
+    return json_encode([
+        'status' => 'error',
+        'message' => '❌ ' . htmlspecialchars($message),
+        'context' => $context
+    ]);
 }
 
 /**
@@ -1912,56 +1991,92 @@ document.addEventListener('DOMContentLoaded', function() {
         lastTouchEnd = now;
     }, false);
 
-    // Xử lý form cấu hình
-    const configForm = document.getElementById('config-form');
-    if (configForm) {
-        const printerSelect = configForm.querySelector('#printer_select');
-        const ipInput = configForm.querySelector('#printer_ip');
-        const ipErrorMessage = configForm.querySelector('#custom_ip_group .error-message');
-        const portErrorMessage = port;
+  // Xử lý form cấu hình
+const configForm = document.getElementById('config-form');
+if (configForm) {
+    const printerSelect = configForm.querySelector('#printer_select');
+    const ipInput = configForm.querySelector('#printer_ip');
+    const ipErrorMessage = configForm.querySelector('#custom_ip_group .error-message');
 
-        window.toggleCustomIP = function() {
-            const customIpGroup = document.getElementById('custom_ip_group');
-            if (printerSelect.value === 'custom') {
-                customIpGroup.style.display = 'block';
-                ipInput.setAttribute('required', 'required');
+    // Hàm toggle hiển thị trường IP tùy chỉnh
+    window.toggleCustomIP = function() {
+        const customIpGroup = document.getElementById('custom_ip_group');
+        if (printerSelect.value === 'custom') {
+            customIpGroup.style.display = 'block';
+            ipInput.setAttribute('required', 'required');
+        } else {
+            customIpGroup.style.display = 'none';
+            ipInput.removeAttribute('required');
+            const ipMap = {
+                'printer1': '192.168.1.100',
+                'printer2': '192.168.1.101',
+                'printer3': '192.168.1.102'
+            };
+            if (ipMap[printerSelect.value]) {
+                ipInput.value = ipMap[printerSelect.value]; // Đồng bộ giá trị input
+            }
+        }
+    };
+
+    // Khởi tạo trạng thái ban đầu
+    toggleCustomIP();
+
+    // Kiểm tra tính hợp lệ của IP nhập tay
+    if (ipInput && ipErrorMessage) {
+        ipInput.addEventListener('input', function() {
+            if (ipInput.validity.valid || ipInput.value === '') {
+                ipInput.style.borderColor = 'var(--primary-color)';
+                ipErrorMessage.style.display = 'none';
             } else {
-                customIpGroup.style.display = 'none';
-                ipInput.removeAttribute('required');
+                ipInput.style.borderColor = 'var(--danger-color)';
+                ipErrorMessage.style.display = 'block';
+            }
+        });
+    }
+
+    let isSubmitting = false; // Ngăn gửi nhiều lần
+
+    // Xử lý submit form cấu hình
+    configForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        if (isSubmitting) return;
+
+        isSubmitting = true;
+        const submitBtn = e.submitter;
+        const originalText = submitBtn.innerHTML;
+
+        const updateButtonState = (isLoading, message = 'Đang xử lý...') => {
+            if (isLoading) {
+                submitBtn.innerHTML = `<span class="loading"></span> ${message}`;
+                submitBtn.disabled = true;
+            } else {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
             }
         };
 
-        toggleCustomIP();
-
-        if (ipInput && ipErrorMessage) {
-            ipInput.addEventListener('input', function() {
-                if (ipInput.validity.valid || ipInput.value === '') {
-                    ipInput.style.borderColor = 'var(--primary-color)';
-                    ipErrorMessage.style.display = 'none';
-                } else {
-                    ipInput.style.borderColor = 'var(--danger-color)';
-                    ipErrorMessage.style.display = 'block';
+        try {
+            updateButtonState(true);
+            const formData = new FormData(configForm);
+            const response = await fetch(window.location.href, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'Accept': 'application/json'
                 }
             });
-        }
 
-        // Xử lý portInput nếu có
-        const portInput = configForm.querySelector('#printer_port');
-        const portErrorMessageElement = configForm.querySelector('#printer_port + .error-message');
-        if (portInput && portErrorMessageElement) {
-            portInput.addEventListener('input', function() {
-                const value = parseInt(portInput.value);
-                if (value >= 1 && value <= 65535) {
-                    portInput.style.borderColor = 'var(--primary-color)';
-                    portErrorMessageElement.style.display = 'none';
-                } else {
-                    portInput.style.borderColor = 'var(--danger-color)';
-                    portErrorMessageElement.style.display = 'block';
-                }
-            });
+            await response.json(); // Chỉ kiểm tra phản hồi, không cần xử lý thêm
+            window.location.reload(); // Load lại trang
+        } catch (error) {
+            console.error('Lỗi cập nhật cấu hình:', error);
+            window.location.reload(); // Load lại trang nếu lỗi
+        } finally {
+            updateButtonState(false);
+            isSubmitting = false;
         }
-    }
-
+    });
+}
     // Hàm retry với exponential backoff
     async function retryRequest(requestFn, retries = RETRY_CONFIG.maxRetries) {
         for (let attempt = 1; attempt <= retries; attempt++) {

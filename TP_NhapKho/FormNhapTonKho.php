@@ -1178,6 +1178,21 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
     if (!tenThanhPhan) errorMessages.push("Thành phần không được để trống.");
     if (!maKhuVuc) errorMessages.push("Mã khu vực không được để trống.");
 
+    // Kiểm tra số cây tối đa (20 cây)
+    const currentTotalTrees = tempData.length; // Số cây hiện tại trong tempData
+    const newTotalTrees = currentTotalTrees + soCay; // Tổng số cây sau khi thêm
+   if (newTotalTrees > 20) {
+    errorMessages.push(`
+        <div style="background-color: #fff8e1; border: 1px solid #ffe0a3; padding: 14px 18px; border-radius: 10px; color: #7c5700; font-size: 14px; line-height: 1.6; margin: 12px 0; box-shadow: 0 2px 6px rgba(0,0,0,0.05); font-family: 'Segoe UI', Tahoma, sans-serif;">
+            <div style="margin-bottom: 6px;">🧵 Hiện tại bạn đã nhập: <strong>${currentTotalTrees}</strong> cây .</div>
+            <div style="margin-bottom: 6px;">➕ Bạn đang nhập thêm: <strong>${soCay}</strong> cây .</div>
+            <div style="color: #b10000; font-weight: bold;">❌ Tổng cộng: <strong>${newTotalTrees}</strong> cây vải. Bạn chỉ được phép nhập tối đa <strong>20</strong> cây mỗi lần.</div>
+        </div>
+    `);
+}
+
+
+
     if (errorMessages.length > 0) {
         Swal.fire({
             icon: 'warning',
@@ -1244,7 +1259,7 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
     document.getElementById('soLuong').value = '';
     document.getElementById('soCay').value = '';
     document.getElementById('soKGCan').value = '';
-    //document.getElementById('soLot').value = '';
+    // document.getElementById('soLot').value = ''; // Giữ lại nếu không muốn reset
     document.getElementById('MaKhuVuc').value = ''; 
     document.getElementById('GhiChu').value = '';
 
