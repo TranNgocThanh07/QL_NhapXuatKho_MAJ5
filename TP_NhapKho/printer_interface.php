@@ -514,41 +514,87 @@ function printTextTest($ip, $port, $timeout)
  * @return array|string Mảng chứa width, height, data hoặc thông báo lỗi
  */
 function convertBmpToBitmap($bmpData, $maxWidth = 420, $maxHeight = 595) {
-    $image = @imagecreatefromstring($bmpData);
-    if (!$image) {
-        return false;
-    }
-
-    $width = imagesx($image);
-    $height = imagesy($image);
-
-    if ($width > $maxWidth || $height > $maxHeight) {
-        return false; // Kích thước vượt quá giới hạn
-    }
-
-    $bitmap = '';
-    $bytesPerRow = ceil($width / 8);
-
-    for ($y = $height - 1; $y >= 0; $y--) {
-        $binaryRow = '';
-        for ($x = 0; $x < $width; $x += 8) {
-            $byte = 0;
-            for ($bit = 0; $bit < 8 && ($x + $bit) < $width; $bit++) {
-                $rgb = imagecolorat($image, $x + $bit, $y);
-                $r = ($rgb >> 16) & 0xFF;
-                $g = ($rgb >> 8) & 0xFF;
-                $b = $rgb & 0xFF;
-                if (($r * 0.299 + $g * 0.587 + $b * 0.114) < 128) {
-                    $byte |= (1 << (7 - $bit));
-                }
-            }
-            $binaryRow .= chr($byte);
+    $len = strlen($bmpData);
+    if ($len < 54) return false;
+    if ($len > 10485760) return false; // 10MB limit
+    
+    // Đọc header một lần với unpack tối ưu
+    $header = unpack('a2sig/Vsize/v2reserved/Voffset/Vheader_size/Vwidth/Vheight/vplanes/vbpp', $bmpData);
+    
+    $w = $header['width'];
+    $height = abs($header['height']);
+    $bpp = $header['bpp'];
+    $offset = $header['offset'];
+    
+    // Chỉ hỗ trợ 1-bit và 24-bit
+    if ($bpp !== 1 && $bpp !== 24) return false;
+    
+    $rowSize = (($bpp * $w + 31) >> 5) << 2;
+    $bytesPerRow = ($w + 7) >> 3;
+    
+    // Kiểm tra dữ liệu đủ
+    if ($len < $offset + ($height * $rowSize)) return false;
+    
+    // Pre-allocate array thay vì concat string
+    $bitmapRows = [];
+    
+    if ($bpp === 1) {
+        // 1-bit BMP: copy trực tiếp từng row
+        for ($y = 0; $y < $height; $y++) {
+            $rowStart = $offset + ($y * $rowSize);
+            $bitmapRows[] = substr($bmpData, $rowStart, $bytesPerRow);
         }
-        $bitmap .= $binaryRow;
+    } else {
+        // 24-bit: tối ưu conversion
+        // Pre-calculate lookup table cho luminance
+        static $lumTable = null;
+        if ($lumTable === null) {
+            $lumTable = [];
+            for ($i = 0; $i < 256; $i++) {
+                $lumTable[$i] = [
+                    $i * 114,  // Blue weight
+                    $i * 587,  // Green weight  
+                    $i * 299   // Red weight
+                ];
+            }
+        }
+        
+        for ($y = 0; $y < $height; $y++) {
+            $rowStart = $offset + ($y * $rowSize);
+            $row = substr($bmpData, $rowStart, $rowSize);
+            $binaryRow = '';
+            
+            for ($x = 0; $x < $w; $x += 8) {
+                $byte = 0;
+                $maxBit = min(8, $w - $x);
+                
+                for ($bit = 0; $bit < $maxBit; $bit++) {
+                    $pixelPos = ($x + $bit) * 3;
+                    if ($pixelPos + 2 < $rowSize) {
+                        $b = ord($row[$pixelPos]);
+                        $g = ord($row[$pixelPos + 1]);
+                        $r = ord($row[$pixelPos + 2]);
+                        
+                        // Sử dụng lookup table
+                        $luminance = $lumTable[$r][2] + $lumTable[$g][1] + $lumTable[$b][0];
+                        
+                        if ($luminance < 127500) {
+                            $byte |= (128 >> $bit);
+                        }
+                    }
+                }
+                $binaryRow .= chr($byte);
+            }
+            $bitmapRows[] = $binaryRow;
+        }
     }
-
-    imagedestroy($image);
-    return ['width' => $width, 'height' => $height, 'data' => $bitmap];
+    
+    // Reverse array và join một lần thay vì concat từng dòng
+    return [
+        'width' => $w, 
+        'height' => $height, 
+        'data' => implode('', array_reverse($bitmapRows))
+    ];
 }
 /**
  * In bitmap bằng phương pháp TSPL BITMAP với dữ liệu nhúng
