@@ -29,10 +29,7 @@ function generateQRCode($content, $size) {
 
 // Hàm tạo PDF Tem Hệ Thống
 function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
-    $font = 'arial';
-    $pdf->AddFont($font, '', 'arial.php');
-    $pdf->SetFont($font, '', 6);
-    $pdf->SetFont($font, 'B', 6);
+    $font = 'freesans';
 
     foreach ($pdfData as $item) {
         if (!isset($item['SoLot'], $item['SoLuong'], $item['TenThanhPhan'])) {
@@ -125,7 +122,7 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->SetFont($font, 'B', 6);
                             $pdf->MultiCell($cellWidth, $cellHeight / 2, '(PRODUCT NAME)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
                         } elseif ($col == 1) {
-                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->SetFont($font, 'B', 9);
                             $tenVai = $don['TenVai'];
                             if (strpos($tenVai, $don['MaVai'] . ' (') === 0) {
                                 $tenVai = preg_replace('/^' . preg_quote($don['MaVai'], '/') . '\s*\(/', '(', $tenVai);
@@ -142,7 +139,7 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->SetFont($font, 'B', 6);
                             $pdf->MultiCell($cellWidth, $cellHeight / 2, '(INGREDIENTS)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
                         } elseif ($col == 1) {
-                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->SetFont($font, 'B', 9);
                             $pdf->MultiCell($cellWidth, $cellHeight, $item['TenThanhPhan'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         }
                         break;
@@ -153,7 +150,7 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->SetFont($font, 'B', 6);
                             $pdf->MultiCell($cellWidth, $cellHeight / 2, '(COLOR)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
                         } elseif ($col == 1) {
-                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->SetFont($font, 'B', 9);
                             $displayTenMau = strpos($tenMau, '*') !== false ? substr($tenMau, 0, strpos($tenMau, '*')) : $tenMau;
                             $pdf->MultiCell($cellWidth, $cellHeight, trim($displayTenMau), 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         }
@@ -165,7 +162,7 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->SetFont($font, 'B', 6);
                             $pdf->MultiCell($cellWidth, $cellHeight / 2, '(SIZE)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
                         } elseif ($col == 1) {
-                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->SetFont($font, 'B', 9);
                             $pdf->MultiCell($cellWidth, $cellHeight, $item['Kho'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         }
                         break;
@@ -176,7 +173,7 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->SetFont($font, 'B', 6);
                             $pdf->MultiCell($cellWidth, $cellHeight / 2, '(SAP CODE)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
                         } elseif ($col == 1) {
-                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->SetFont($font, 'B', 9);
                             $pdf->MultiCell($cellWidth, $cellHeight, $item['MaVatTu'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         }
                         break;
@@ -187,7 +184,7 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->SetFont($font, 'B', 6);
                             $pdf->MultiCell($cellWidth, $cellHeight / 2, '(ORDER CODE)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
                         } elseif ($col == 1) {
-                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->SetFont($font, 'B', 9);
                             $pdf->MultiCell($cellWidth, $cellHeight, $item['MaDonHang'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         }
                         break;
@@ -198,7 +195,7 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->SetFont($font, 'B', 6);
                             $pdf->MultiCell($cellWidth, $cellHeight / 2, '(LOT NO.)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
                         } elseif ($col == 1) {
-                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->SetFont($font, 'B', 9);
                             $pdf->MultiCell($cellWidth, $cellHeight, $item['SoLot'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         }
                         break;
@@ -209,10 +206,10 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->SetFont($font, 'B', 6);
                             $pdf->MultiCell($cellWidth, $cellHeight / 2, '(QUANTITY)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
                         } elseif ($col == 1) {
-                            $pdf->SetFont($font, 'B', 10);
+                            $pdf->SetFont($font, 'B', 9);
                             $pdf->MultiCell($cellWidth, $cellHeight, number_format((float)$item['SoLuong'], 1) . " " . $tenDVT, 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         } elseif ($col == 2) {
-                            $pdf->SetFont($font, 'B', 10);
+                            $pdf->SetFont($font, 'B', 9);
                             $soKgCanDisplay = isset($item['SoKgCan']) && $item['SoKgCan'] !== null ? "≈" . " " . number_format((float)$item['SoKgCan'], 1) . " KG" : '';
                             $pdf->MultiCell($cellWidth, $cellHeight, $soKgCanDisplay, 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         }
@@ -261,10 +258,7 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
 
 // Hàm tạo PDF Tem Khách Lẻ
 function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
-    $font = 'arial';
-    $pdf->AddFont($font, '', 'arial.php');
-    $pdf->SetFont($font, '', 6);
-    $pdf->SetFont($font, 'B', 6);
+    $font = 'freesans';
 
     foreach ($pdfData as $item) {
         if (!isset($item['SoLot'], $item['SoLuong'], $item['TenThanhPhan'])) {
@@ -344,7 +338,7 @@ function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->SetFont($font, 'B', 6);
                             $pdf->MultiCell($cellWidth, $cellHeight / 2, '(PRODUCT NAME)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
                         } elseif ($col == 1) {
-                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->SetFont($font, 'B', 9);
                             $tenVai = $don['TenVai'];
                             if (strpos($tenVai, $don['MaVai'] . ' (') === 0) {
                                 $tenVai = preg_replace('/^' . preg_quote($don['MaVai'], '/') . '\s*\(/', '(', $tenVai);
@@ -361,7 +355,7 @@ function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->SetFont($font, 'B', 6);
                             $pdf->MultiCell($cellWidth, $cellHeight / 2, '(INGREDIENTS)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
                         } elseif ($col == 1) {
-                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->SetFont($font, 'B', 9);
                             $pdf->MultiCell($cellWidth, $cellHeight, $item['TenThanhPhan'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         }
                         break;
@@ -372,7 +366,7 @@ function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->SetFont($font, 'B', 6);
                             $pdf->MultiCell($cellWidth, $cellHeight / 2, '(COLOR)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
                         } elseif ($col == 1) {
-                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->SetFont($font, 'B', 9);
                             $displayTenMau = strpos($tenMau, '*') !== false ? substr($tenMau, 0, strpos($tenMau, '*')) : $tenMau;
                             $pdf->MultiCell($cellWidth, $cellHeight, trim($displayTenMau), 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         }
@@ -384,7 +378,7 @@ function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->SetFont($font, 'B', 6);
                             $pdf->MultiCell($cellWidth, $cellHeight / 2, '(SIZE)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
                         } elseif ($col == 1) {
-                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->SetFont($font, 'B', 9);
                             $pdf->MultiCell($cellWidth, $cellHeight, $item['Kho'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         }
                         break;
@@ -395,7 +389,7 @@ function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->SetFont($font, 'B', 6);
                             $pdf->MultiCell($cellWidth, $cellHeight / 2, '(LOT NO.)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
                         } elseif ($col == 1) {
-                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->SetFont($font, 'B', 9);
                             $pdf->MultiCell($cellWidth, $cellHeight, $item['SoLot'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         }
                         break;
@@ -406,10 +400,10 @@ function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->SetFont($font, 'B', 6);
                             $pdf->MultiCell($cellWidth, $cellHeight / 2, '(QUANTITY)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
                         } elseif ($col == 1) {
-                            $pdf->SetFont($font, 'B', 10);
+                            $pdf->SetFont($font, 'B', 9);
                             $pdf->MultiCell($cellWidth, $cellHeight, number_format((float)$item['SoLuong'], 1) . " " . $tenDVT, 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         } elseif ($col == 2) {
-                            $pdf->SetFont($font, 'B', 10);
+                            $pdf->SetFont($font, 'B', 9);
                             $soKgCanDisplay = isset($item['SoKgCan']) && $item['SoKgCan'] !== null ? "≈" . " " . number_format((float)$item['SoKgCan'], 1) . " KG" : '';
                             $pdf->MultiCell($cellWidth, $cellHeight, $soKgCanDisplay, 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         }

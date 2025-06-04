@@ -46,10 +46,7 @@ function generateQRCode($content, $size) {
 
 // Hàm tạo PDF Tem Hệ Thống
 function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
-    $font = 'arial';
-    $pdf->AddFont($font, '', 'arial.php');
-    $pdf->SetFont($font, '', 6);
-    $pdf->SetFont($font, 'B', 6);
+    $font = 'freesans';
 
     foreach ($pdfData as $item) {
         if (!isset($item['SoLot'], $item['SoLuong'], $item['TenThanhPhan'])) {
@@ -142,7 +139,7 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->SetFont($font, 'B', 6);
                             $pdf->MultiCell($cellWidth, $cellHeight / 2, '(PRODUCT NAME)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
                         } elseif ($col == 1) {
-                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->SetFont($font, 'B', 9);
                             $tenVai = $don['TenVai'];
                             if (strpos($tenVai, $don['MaVai'] . ' (') === 0) {
                                 $tenVai = preg_replace('/^' . preg_quote($don['MaVai'], '/') . '\s*\(/', '(', $tenVai);
@@ -159,7 +156,7 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->SetFont($font, 'B', 6);
                             $pdf->MultiCell($cellWidth, $cellHeight / 2, '(INGREDIENTS)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
                         } elseif ($col == 1) {
-                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->SetFont($font, 'B', 9);
                             $pdf->MultiCell($cellWidth, $cellHeight, $item['TenThanhPhan'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         }
                         break;
@@ -170,7 +167,7 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->SetFont($font, 'B', 6);
                             $pdf->MultiCell($cellWidth, $cellHeight / 2, '(COLOR)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
                         } elseif ($col == 1) {
-                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->SetFont($font, 'B', 9);
                             $displayTenMau = strpos($tenMau, '*') !== false ? substr($tenMau, 0, strpos($tenMau, '*')) : $tenMau;
                             $pdf->MultiCell($cellWidth, $cellHeight, trim($displayTenMau), 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         }
@@ -182,7 +179,7 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->SetFont($font, 'B', 6);
                             $pdf->MultiCell($cellWidth, $cellHeight / 2, '(SIZE)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
                         } elseif ($col == 1) {
-                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->SetFont($font, 'B', 9);
                             $pdf->MultiCell($cellWidth, $cellHeight, $item['Kho'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         }
                         break;
@@ -193,7 +190,7 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->SetFont($font, 'B', 6);
                             $pdf->MultiCell($cellWidth, $cellHeight / 2, '(SAP CODE)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
                         } elseif ($col == 1) {
-                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->SetFont($font, 'B', 9);
                             $pdf->MultiCell($cellWidth, $cellHeight, $item['MaVatTu'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         }
                         break;
@@ -204,7 +201,7 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->SetFont($font, 'B', 6);
                             $pdf->MultiCell($cellWidth, $cellHeight / 2, '(ORDER CODE)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
                         } elseif ($col == 1) {
-                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->SetFont($font, 'B', 9);
                             $pdf->MultiCell($cellWidth, $cellHeight, $item['MaDonHang'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         }
                         break;
@@ -215,7 +212,7 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->SetFont($font, 'B', 6);
                             $pdf->MultiCell($cellWidth, $cellHeight / 2, '(LOT NO.)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
                         } elseif ($col == 1) {
-                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->SetFont($font, 'B', 9);
                             $pdf->MultiCell($cellWidth, $cellHeight, $item['SoLot'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         }
                         break;
@@ -226,10 +223,10 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->SetFont($font, 'B', 6);
                             $pdf->MultiCell($cellWidth, $cellHeight / 2, '(QUANTITY)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
                         } elseif ($col == 1) {
-                            $pdf->SetFont($font, 'B', 10);
+                            $pdf->SetFont($font, 'B', 9);
                             $pdf->MultiCell($cellWidth, $cellHeight, number_format((float)$item['SoLuong'], 1) . " " . $tenDVT, 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         } elseif ($col == 2) {
-                            $pdf->SetFont($font, 'B', 10);
+                            $pdf->SetFont($font, 'B', 9);
                             $soKgCanDisplay = isset($item['SoKgCan']) && $item['SoKgCan'] !== null ? "≈" . " " . number_format((float)$item['SoKgCan'], 1) . " KG" : '';
                             $pdf->MultiCell($cellWidth, $cellHeight, $soKgCanDisplay, 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         }
@@ -278,10 +275,7 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
 
 // Hàm tạo PDF Tem Khách Lẻ
 function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
-    $font = 'arial';
-    $pdf->AddFont($font, '', 'arial.php');
-    $pdf->SetFont($font, '', 6);
-    $pdf->SetFont($font, 'B', 6);
+    $font = 'freesans';
 
     foreach ($pdfData as $item) {
         if (!isset($item['SoLot'], $item['SoLuong'], $item['TenThanhPhan'])) {
@@ -361,7 +355,7 @@ function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->SetFont($font, 'B', 6);
                             $pdf->MultiCell($cellWidth, $cellHeight / 2, '(PRODUCT NAME)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
                         } elseif ($col == 1) {
-                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->SetFont($font, 'B', 9);
                             $tenVai = $don['TenVai'];
                             if (strpos($tenVai, $don['MaVai'] . ' (') === 0) {
                                 $tenVai = preg_replace('/^' . preg_quote($don['MaVai'], '/') . '\s*\(/', '(', $tenVai);
@@ -378,7 +372,7 @@ function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->SetFont($font, 'B', 6);
                             $pdf->MultiCell($cellWidth, $cellHeight / 2, '(INGREDIENTS)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
                         } elseif ($col == 1) {
-                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->SetFont($font, 'B', 9);
                             $pdf->MultiCell($cellWidth, $cellHeight, $item['TenThanhPhan'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         }
                         break;
@@ -389,7 +383,7 @@ function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->SetFont($font, 'B', 6);
                             $pdf->MultiCell($cellWidth, $cellHeight / 2, '(COLOR)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
                         } elseif ($col == 1) {
-                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->SetFont($font, 'B', 9);
                             $displayTenMau = strpos($tenMau, '*') !== false ? substr($tenMau, 0, strpos($tenMau, '*')) : $tenMau;
                             $pdf->MultiCell($cellWidth, $cellHeight, trim($displayTenMau), 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         }
@@ -401,7 +395,7 @@ function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->SetFont($font, 'B', 6);
                             $pdf->MultiCell($cellWidth, $cellHeight / 2, '(SIZE)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
                         } elseif ($col == 1) {
-                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->SetFont($font, 'B', 9);
                             $pdf->MultiCell($cellWidth, $cellHeight, $item['Kho'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         }
                         break;
@@ -412,7 +406,7 @@ function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->SetFont($font, 'B', 6);
                             $pdf->MultiCell($cellWidth, $cellHeight / 2, '(LOT NO.)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
                         } elseif ($col == 1) {
-                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->SetFont($font, 'B', 9);
                             $pdf->MultiCell($cellWidth, $cellHeight, $item['SoLot'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         }
                         break;
@@ -423,10 +417,10 @@ function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->SetFont($font, 'B', 6);
                             $pdf->MultiCell($cellWidth, $cellHeight / 2, '(QUANTITY)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
                         } elseif ($col == 1) {
-                            $pdf->SetFont($font, 'B', 10);
+                            $pdf->SetFont($font, 'B', 9);
                             $pdf->MultiCell($cellWidth, $cellHeight, number_format((float)$item['SoLuong'], 1) . " " . $tenDVT, 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         } elseif ($col == 2) {
-                            $pdf->SetFont($font, 'B', 10);
+                            $pdf->SetFont($font, 'B', 9);
                             $soKgCanDisplay = isset($item['SoKgCan']) && $item['SoKgCan'] !== null ? "≈" . " " . number_format((float)$item['SoKgCan'], 1) . " KG" : '';
                             $pdf->MultiCell($cellWidth, $cellHeight, $soKgCanDisplay, 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         }
@@ -1936,7 +1930,8 @@ document.getElementById('saveToDB').addEventListener('click', async function() {
                 buttonsStyling: false,
                 width: '90%',
                 padding: '1rem'
-            }).then(() => {
+            }).then(async () => {
+                // Hiển thị thông báo đang tạo tem
                 Swal.fire({
                     title: 'Đang tạo tem PDF...',
                     text: 'Xin vui lòng chờ chuyển đến in tem PDF.',
@@ -1946,71 +1941,21 @@ document.getElementById('saveToDB').addEventListener('click', async function() {
                     }
                 });
 
-                generatePDF(tempData, labelType).finally(() => {
-                    Swal.close();
-                });
+                // Lưu trạng thái "đã nhập đủ" nếu soLuongConLai === 0
+                if (parseFloat(data.data.soLuongConLai) === 0) {
+                    sessionStorage.setItem('showCompletedMessage', 'true');
+                    sessionStorage.setItem('maSoMe', maSoMe);
+                }
 
+                // Tạo và in tem
+                await generatePDF(tempData, labelType);
+
+                // Cập nhật giao diện
                 document.getElementById('tongSoLuongGiaoDisplay').textContent = parseFloat(data.data.soLuongGiao).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + data.data.donViTinh;
                 document.getElementById('tongDaNhapDisplay').textContent = parseFloat(data.data.tongSoLuongNhap).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + data.data.donViTinh;
                 document.getElementById('soLuongConLaiDisplay').textContent = parseFloat(data.data.soLuongConLai).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + data.data.donViTinh;
 
-                if (parseFloat(data.data.soLuongConLai) === 0) {
-                    const updateStatusFormData = new FormData();
-                    updateStatusFormData.append('action', 'updateDonStatus');
-                    updateStatusFormData.append('maSoMe', maSoMe);
-
-                    fetch(window.location.href, {
-                        method: 'POST',
-                        body: updateStatusFormData
-                    })
-                    .then(updateResponse => updateResponse.json())
-                    .then(updateData => {
-                        if (updateData.success) {
-                            Swal.fire({
-                                icon: 'info',
-                                title: 'Đã nhập đủ',
-                                text: 'Đơn hàng này đã nhập đủ số lượng và trạng thái nhập đủ hàng đã được cập nhật.',
-                                confirmButtonText: 'OK',
-                                customClass: {
-                                    popup: 'rounded-xl',
-                                    title: 'text-lg font-semibold',
-                                    confirmButton: 'bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg'
-                                },
-                                buttonsStyling: false
-                            }).then(() => {
-                                window.location.href = '../nhapkho.php';
-                            });
-                        } else {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Lỗi cập nhật trạng thái',
-                                text: 'Có lỗi xảy ra khi cập nhật trạng thái đơn hàng: ' + updateData.message,
-                                confirmButtonText: 'OK',
-                                customClass: {
-                                    popup: 'rounded-xl',
-                                    title: 'text-lg font-semibold',
-                                    confirmButton: 'bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg'
-                                },
-                                buttonsStyling: false
-                            });
-                        }
-                    })
-                    .catch(updateError => {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Lỗi mạng',
-                            text: 'Lỗi kết nối khi cập nhật trạng thái đơn hàng: ' + updateError.message,
-                            confirmButtonText: 'OK',
-                            customClass: {
-                                popup: 'rounded-xl',
-                                title: 'text-lg font-semibold',
-                                confirmButton: 'bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg'
-                            },
-                            buttonsStyling: false
-                        });
-                    });
-                }
-
+                // Xóa dữ liệu tạm và cập nhật bảng
                 tempData = [];
                 tempSTT = 0;
                 updateTable();
@@ -2042,6 +1987,62 @@ document.getElementById('saveToDB').addEventListener('click', async function() {
             },
             buttonsStyling: false
         });
+    }
+});
+// Kiểm tra trạng thái "đã nhập đủ" khi trang tải
+document.addEventListener('DOMContentLoaded', async function() {
+    const showCompletedMessage = sessionStorage.getItem('showCompletedMessage');
+    const maSoMe = sessionStorage.getItem('maSoMe');
+
+    if (showCompletedMessage === 'true' && maSoMe) {
+        try {
+            // Kiểm tra trạng thái đơn hàng
+            const updateStatusFormData = new FormData();
+            updateStatusFormData.append('action', 'updateDonStatus');
+            updateStatusFormData.append('maSoMe', maSoMe);
+
+            const updateResponse = await fetch(window.location.href, {
+                method: 'POST',
+                body: updateStatusFormData
+            });
+            const updateData = await updateResponse.json();
+
+            // Hiển thị thông báo "Đã nhập đủ"
+            Swal.fire({
+                icon: 'info',
+                title: 'Đã nhập đủ',
+                text: updateData.success 
+                    ? 'Đơn hàng này đã nhập đủ số lượng và trạng thái nhập đủ hàng đã được cập nhật.'
+                    : 'Có lỗi xảy ra khi cập nhật trạng thái đơn hàng: ' + updateData.message,
+                confirmButtonText: 'OK',
+                customClass: {
+                    popup: 'rounded-xl',
+                    title: 'text-lg font-semibold',
+                    confirmButton: 'bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg'
+                },
+                buttonsStyling: false
+            }).then(() => {
+                // Xóa trạng thái trong sessionStorage
+                sessionStorage.removeItem('showCompletedMessage');
+                sessionStorage.removeItem('maSoMe');
+
+                // Chuyển hướng về nhapkho.php
+                window.location.href = '../nhapkho.php';
+            });
+        } catch (error) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Lỗi mạng',
+                text: 'Lỗi kết nối khi cập nhật trạng thái đơn hàng: ' + error.message,
+                confirmButtonText: 'OK',
+                customClass: {
+                    popup: 'rounded-xl',
+                    title: 'text-lg font-semibold',
+                    confirmButton: 'bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg'
+                },
+                buttonsStyling: false
+            });
+        }
     }
 });
 //xem hàng mới

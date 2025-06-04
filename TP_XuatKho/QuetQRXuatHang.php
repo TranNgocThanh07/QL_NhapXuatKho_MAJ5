@@ -504,11 +504,7 @@ $chiTietXuatWithQR = array_map(function($ct) {
             padding: 0.5rem 0.75rem;
             font-size: 0.65rem;
         }
-
-        #scanner-container {
-            height: 240px;
-        }
-
+   
         .qr-guide {
             font-size: 0.7rem;
             padding: 0.5rem;
@@ -559,11 +555,7 @@ $chiTietXuatWithQR = array_map(function($ct) {
         .scan-button {
             padding: 0.4rem 0.6rem;
             font-size: 0.6rem;
-        }
-
-        #scanner-container {
-            height: 200px;
-        }
+        }     
 
         .qr-guide {
             font-size: 0.65rem;
