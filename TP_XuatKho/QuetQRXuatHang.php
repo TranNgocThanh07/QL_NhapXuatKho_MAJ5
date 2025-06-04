@@ -280,7 +280,7 @@ $chiTietXuatWithQR = array_map(function($ct) {
     <title>Chi Tiết Phiếu Xuất - MAJ5</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
     :root {
         --primary-color: #FF3B30;
@@ -535,7 +535,7 @@ $chiTietXuatWithQR = array_map(function($ct) {
         }
 
         .data-table-container {
-            max-height: 300px;
+            max-height: 1000px;
         }
 
         .table-container {
@@ -593,6 +593,42 @@ $chiTietXuatWithQR = array_map(function($ct) {
 
         .wrap-text {
             max-width: 120px;
+        }
+
+       #successModal {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        #successModal.show {
+            opacity: 1;
+        }
+        #successModal > div {
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+        }
+        #successModal.show > div {
+            transform: scale(1);
+        }
+        .notification-container {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            font-size: 0.875rem;
+            max-width: 300px;
+        }
+        .notification-container.success {
+            background-color: #34C759;
+            color: white;
+        }
+        .notification-container.error {
+            background-color: #FF3B30;
+            color: white;
         }
     }
 </style>
@@ -819,14 +855,21 @@ $chiTietXuatWithQR = array_map(function($ct) {
     </div>
 
     <!-- Success Modal -->
-    <div id="successModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white p-6 rounded-lg w-full max-w-md mx-4">
+    <div id="successModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden transition-opacity duration-300">
+        <div class="bg-white p-6 rounded-lg w-full max-w-md mx-4 transform scale-95 transition-transform duration-300">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-sm font-bold text-green-600">Hoàn Tất Đơn Hàng</h3>
+                <h3 class="text-sm font-bold text-green-600 flex items-center gap-2">
+                    <i class="fas fa-check-circle"></i> Hoàn Tất Đơn Hàng
+                </h3>
+                <button id="closeSuccessModal" class="text-gray-500 hover:text-gray-700">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
             </div>
             <p class="text-sm text-gray-600 mb-4">Đã quét thành công toàn bộ đơn xuất hàng!</p>
             <div class="flex justify-center">
-                <button id="successOkButton" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
+                <button id="successOkButton" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors duration-200">
                     <i class="fas fa-check mr-2"></i> OK
                 </button>
             </div>
@@ -871,64 +914,106 @@ $chiTietXuatWithQR = array_map(function($ct) {
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Lưu trữ tham chiếu DOM
+    const successModal = document.getElementById('successModal');
+    const successOkButton = document.getElementById('successOkButton');
+    const closeSuccessModal = document.getElementById('closeSuccessModal');
+    const scannerModal = document.getElementById('scannerModal');
+    const scanButton = document.getElementById('scanButton');
+    const switchCameraButton = document.getElementById('switchCamera');
+    const closeModalButton = document.getElementById('closeModal');
+    const btnQuetMa = document.getElementById('btnQuetMa');
+    const progressPercent = document.getElementById('progressPercent');
+    const progressText = document.getElementById('progressText');
+    const progressValue = document.querySelector('.progress-value');
+    const qrGuide = document.querySelector('#scanner-container .qr-guide');
+
     let html5QrCode = null;
     let currentCameraId = null;
     let camerasAvailable = [];
     let isScanning = false;
+    let notificationTimeout = null;
+    let isOrderComplete = false; // Biến kiểm tra đơn hàng hoàn tất
 
     const chiTietList = <?php echo json_encode(array_column($chiTietXuatWithQR, 'MaQR')); ?>;
     const maCTXHTPList = <?php echo json_encode(array_column($chiTietXuatWithQR, 'MaCTXHTP')); ?>;
     const maXuatHang = '<?php echo htmlspecialchars($maXuatHang); ?>';
     const tenDVT = '<?php echo htmlspecialchars($phieuXuat['TenDVT']); ?>';
 
+    // Container thông báo cố định
+    const notificationContainer = document.createElement('div');
+    notificationContainer.className = 'fixed top-4 right-4 p-4 rounded-lg shadow-lg z-[1000] hidden';
+    notificationContainer.style.transition = 'opacity 0.5s ease';
+    document.body.appendChild(notificationContainer);
+
+    // Hàm hiển thị thông báo
     function showNotification(message, type, isOrderCompleted = false) {
-        if (isOrderCompleted) {
-            // Hiển thị modal thành công
-            const successModal = document.getElementById('successModal');
-            if (successModal) {
-                successModal.classList.remove('hidden');
-            }
-        } else {
-            // Thông báo bình thường
-            const notification = document.createElement('div');
-            notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`;
-            notification.innerHTML = message;
-            document.body.appendChild(notification);
-            setTimeout(() => {
-                notification.style.opacity = '0';
-                notification.style.transition = 'opacity 0.5s ease';
-                setTimeout(() => document.body.removeChild(notification), 500);
-            }, 3000);
+        console.log('showNotification called:', { message, type, isOrderCompleted }); // Debug
+
+        if (isOrderCompleted && successModal) {
+            successModal.classList.remove('hidden');
+            requestAnimationFrame(() => successModal.classList.add('show'));
+            console.log('Success modal shown'); // Debug
+            return;
         }
+
+        // Xóa timeout trước đó
+        if (notificationTimeout) clearTimeout(notificationTimeout);
+
+        // Cập nhật container
+        notificationContainer.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-[1000] ${
+            type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+        }`;
+        notificationContainer.innerHTML = message || 'Không có thông báo';
+        notificationContainer.classList.remove('hidden');
+
+        requestAnimationFrame(() => {
+            notificationContainer.style.opacity = '1';
+            notificationTimeout = setTimeout(() => {
+                notificationContainer.style.opacity = '0';
+                setTimeout(() => notificationContainer.classList.add('hidden'), 500);
+            }, 3000);
+        });
     }
 
-    // Xử lý nút OK trong modal thành công
-    const successOkButton = document.getElementById('successOkButton');
+    // Xử lý nút OK và nút đóng trong modal
     if (successOkButton) {
-        successOkButton.addEventListener('click', function() {
-            window.location.href = '../xuathang.php';
+        successOkButton.addEventListener('click', () => {
+            successModal.classList.remove('show');
+            setTimeout(() => {
+                successModal.classList.add('hidden');
+                window.location.href = '../xuatkho.php';
+            }, 300);
+        });
+    }
+
+    if (closeSuccessModal) {
+        closeSuccessModal.addEventListener('click', () => {
+            successModal.classList.remove('show');
+            setTimeout(() => successModal.classList.add('hidden'), 300);
         });
     }
 
     function isOrderCompleted() {
-        const conLaiElement = document.querySelector('.stat-card:nth-child(3) .text-xl');
-        if (!conLaiElement) return false;
-        const conLai = parseInt(conLaiElement.textContent.replace(/\./g, ''), 10);
-        return conLai === 0;
+        const conLaiElement = document.querySelector('.stat-card:nth-child(3) .text-lg');
+        const result = conLaiElement ? parseInt(conLaiElement.textContent.replace(/\./g, ''), 10) === 0 : false;
+        console.log('isOrderCompleted:', result); // Debug
+        return result;
     }
 
     function updateStatus(maCTXHTP) {
+        console.log('updateStatus called with maCTXHTP:', maCTXHTP); // Debug
         fetch(window.location.href, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: `action=updateStatus&maCTXHTP=${encodeURIComponent(maCTXHTP)}`
         })
         .then(response => {
-            if (!response.ok) throw new Error('Lỗi kết nối server');
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             return response.json();
         })
         .then(data => {
-            console.log('Phản hồi từ server:', data);
+            console.log('updateStatus response:', data); // Debug
             if (data.success) {
                 const row = document.querySelector(`tr[data-ma-ctxhtp="${maCTXHTP}"] td:nth-child(5) span`);
                 if (row) {
@@ -943,71 +1028,73 @@ document.addEventListener('DOMContentLoaded', function() {
                 const tongXuatElement = document.querySelector('.stat-card:nth-child(1) .text-lg');
                 const daXuatElement = document.querySelector('.stat-card:nth-child(2) .text-lg');
                 const conLaiElement = document.querySelector('.stat-card:nth-child(3) .text-lg');
-                const progressPercent = document.getElementById('progressPercent');
-                const progressText = document.getElementById('progressText');
-                const progressValue = document.querySelector('.progress-value');
 
                 if (!tongXuatElement || !daXuatElement || !conLaiElement || !progressPercent || !progressText || !progressValue) {
-                    console.error('Không tìm thấy các phần tử để cập nhật tiến độ');
-                    showNotification('Lỗi: Không tìm thấy các phần tử để cập nhật tiến độ', 'error');
+                    showNotification('Lỗi: Không tìm thấy phần tử để cập nhật tiến độ', 'error');
+                    console.error('DOM elements missing for progress update');
                     return;
                 }
 
-                tongXuatElement.textContent = newTongXuat.toLocaleString('vi-VN');
-                daXuatElement.textContent = newDaXuat.toLocaleString('vi-VN');
-                conLaiElement.textContent = newConLai.toLocaleString('vi-VN');
+                requestAnimationFrame(() => {
+                    tongXuatElement.textContent = newTongXuat.toLocaleString('vi-VN');
+                    daXuatElement.textContent = newDaXuat.toLocaleString('vi-VN');
+                    conLaiElement.textContent = newConLai.toLocaleString('vi-VN');
 
-                const newPercent = newTongXuat > 0 ? (newDaXuat / newTongXuat * 100).toFixed(1) : 0;
-                progressPercent.textContent = `${newPercent}%`;
-                progressText.innerHTML = `
-                    <i class="fas fa-box-open text-indigo-400 mr-2"></i>
-                    ${newDaXuat.toLocaleString('vi-VN')} / ${newTongXuat.toLocaleString('vi-VN')} ${tenDVT}
-                `;
-                progressValue.style.width = `${newPercent}%`;
-                progressValue.classList.toggle('pulse', newPercent < 100);
+                    const newPercent = newTongXuat > 0 ? (newDaXuat / newTongXuat * 100).toFixed(1) : 0;
+                    progressPercent.textContent = `${newPercent}%`;
+                    progressText.innerHTML = `
+                        <i class="fas fa-box-open text-indigo-400 mr-2"></i>
+                        ${newDaXuat.toLocaleString('vi-VN')} / ${newTongXuat.toLocaleString('vi-VN')} ${tenDVT}
+                    `;
+                    progressValue.style.width = `${newPercent}%`;
+                    progressValue.classList.toggle('pulse', newPercent < 100);
+                });
 
+                // Cập nhật đơn sản xuất
                 fetch(window.location.href, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: `action=updateDonSanXuat&maCTXHTP=${encodeURIComponent(maCTXHTP)}`
                 })
                 .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
+                .then(dataDonSanXuat => {
+                    console.log('updateDonSanXuat response:', dataDonSanXuat); // Debug
+                    if (dataDonSanXuat.success) {
                         showNotification(
                             `Quét chi tiết thành công! Tổng: ${newTongXuat.toLocaleString('vi-VN')} ${tenDVT}, Đã xuất: ${newDaXuat.toLocaleString('vi-VN')} ${tenDVT}, Còn lại: ${newConLai.toLocaleString('vi-VN')} ${tenDVT}`,
                             'success'
                         );
-
-                        if (data.remaining === 0) {
-                            showNotification(
-                                `Đã quét thành công toàn bộ đơn xuất hàng!`,
-                                'success',
-                                true // Kích hoạt modal thành công
-                            );
-                            updateOrderStatus();
+                        if (data.remaining === 0 || isOrderCompleted()) {
+                            isOrderComplete = true; // Đánh dấu đơn hàng hoàn tất
                             stopScanner();
-                            document.getElementById('scannerModal').classList.add('hidden');
+                            scannerModal.classList.remove('show');
+                            setTimeout(() => scannerModal.classList.add('hidden'), 300);
+                            showNotification('', 'success', true); // Hiển thị successModal
+                            updateOrderStatus();
                         }
                     } else {
-                        showNotification(data.message || 'Lỗi khi cập nhật đơn sản xuất', 'error');
+                        showNotification(dataDonSanXuat.message || 'Lỗi khi cập nhật đơn sản xuất', 'error');
                     }
                 })
                 .catch(err => {
                     showNotification('Lỗi khi cập nhật đơn sản xuất: ' + err.message, 'error');
+                    console.error('updateDonSanXuat error:', err);
                 });
             } else {
                 showNotification(data.message || 'Lỗi khi cập nhật trạng thái', 'error');
             }
         })
         .catch(err => {
-            showNotification('Lỗi: ' + err.message, 'error');
+            showNotification('Lỗi kết nối server: ' + err.message, 'error');
+            console.error('updateStatus error:', err);
         });
     }
 
     function updateOrderStatus() {
+        console.log('updateOrderStatus called'); // Debug
         if (!maXuatHang) {
             showNotification('Không tìm thấy mã đơn hàng để cập nhật trạng thái!', 'error');
+            console.error('maXuatHang is empty');
             return;
         }
         fetch(window.location.href, {
@@ -1017,35 +1104,49 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(response => response.json())
         .then(data => {
+            console.log('updateOrderStatus response:', data); // Debug
             if (!data.success) {
                 showNotification('Lỗi khi cập nhật trạng thái đơn hàng: ' + data.message, 'error');
-            } else {
-                console.log('Trạng thái đơn hàng cập nhật thành công');
             }
         })
         .catch(err => {
             showNotification('Lỗi khi cập nhật trạng thái đơn hàng: ' + err.message, 'error');
+            console.error('updateOrderStatus error:', err);
         });
     }
 
-    document.getElementById('btnQuetMa').addEventListener('click', function() {
-        if (isOrderCompleted()) {
+    btnQuetMa.addEventListener('click', function() {
+        console.log('btnQuetMa clicked'); // Debug
+        if (isOrderCompleted() || isOrderComplete) {
             showNotification('Đơn đã hoàn thành!', 'success');
             return;
         }
-        document.getElementById('scannerModal').classList.remove('hidden');
-        initializeScanner();
+        if (scannerModal) {
+            scannerModal.classList.remove('hidden');
+            requestAnimationFrame(() => scannerModal.classList.add('show'));
+            initializeScanner();
+        } else {
+            showNotification('Lỗi: Không tìm thấy modal quét mã QR!', 'error');
+            console.error('scannerModal not found');
+        }
     });
 
-    document.getElementById('closeModal').addEventListener('click', function() {
+    closeModalButton.addEventListener('click', function() {
         stopScanner();
-        document.getElementById('scannerModal').classList.add('hidden');
+        scannerModal.classList.remove('show');
+        setTimeout(() => scannerModal.classList.add('hidden'), 300);
     });
 
-    document.getElementById('switchCamera').addEventListener('click', switchCamera);
-    document.getElementById('scanButton').addEventListener('click', startScanOnce);
+    switchCameraButton.addEventListener('click', switchCamera);
+    scanButton.addEventListener('click', startScanOnce);
 
     function initializeScanner() {
+        console.log('initializeScanner called'); // Debug
+        if (typeof Html5Qrcode === 'undefined') {
+            showNotification('Lỗi: Thư viện QR code chưa được tải!', 'error');
+            console.error('Html5Qrcode library not loaded');
+            return;
+        }
         if (!html5QrCode) {
             html5QrCode = new Html5Qrcode("scanner-container", { verbose: false });
         }
@@ -1053,29 +1154,36 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function getCamerasAndInitialize() {
+        console.log('getCamerasAndInitialize called'); // Debug
         Html5Qrcode.getCameras()
             .then(devices => {
+                console.log('Cameras found:', devices); // Debug
                 camerasAvailable = devices;
                 if (devices.length === 0) {
-                    const qrGuide = document.getElementById('qrGuide');
-                    if (qrGuide) qrGuide.innerHTML = '<p>Không tìm thấy camera</p>';
+                    qrGuide.innerHTML = '<p>Không tìm thấy camera</p>';
                     showNotification('Không tìm thấy camera trên thiết bị!', 'error');
                     return;
                 }
                 if (!currentCameraId) {
                     const rearCamera = devices.find(device => device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('rear'));
                     currentCameraId = rearCamera ? rearCamera.id : devices[0].id;
+                    console.log('Selected camera:', currentCameraId); // Debug
                 }
                 startCameraPreview();
             })
             .catch(err => {
-                const qrGuide = document.getElementById('qrGuide');
-                if (qrGuide) qrGuide.innerHTML = '<p>Lỗi lấy danh sách camera: ' + err + '</p>';
+                qrGuide.innerHTML = '<p>Lỗi lấy danh sách camera: ' + err + '</p>';
                 showNotification('Không thể lấy danh sách camera: ' + err, 'error');
+                console.error('getCameras error:', err);
             });
     }
 
     function startCameraPreview() {
+        console.log('startCameraPreview called'); // Debug
+        if (isOrderComplete) {
+            console.log('Order already completed, skipping camera preview'); // Debug
+            return;
+        }
         const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
         html5QrCode.start(
             currentCameraId,
@@ -1083,50 +1191,52 @@ document.addEventListener('DOMContentLoaded', function() {
             () => {},
             () => {}
         ).then(() => {
-            const qrGuide = document.getElementById('qrGuide');
-            if (qrGuide) qrGuide.innerHTML = '<p>Camera đã sẵn sàng. Nhấn "Quét" để bắt đầu quét mã QR</p>';
-            document.getElementById('scanButton').disabled = false;
-            document.getElementById('scanButton').classList.remove('bg-gray-500');
-            document.getElementById('scanButton').classList.add('bg-green-600', 'hover:bg-green-700');
+            qrGuide.innerHTML = '<p>Camera đã sẵn sàng. Nhấn "Quét" để bắt đầu quét mã QR</p>';
+            scanButton.disabled = false;
+            scanButton.classList.remove('bg-gray-500');
+            scanButton.classList.add('bg-green-600', 'hover:bg-green-700');
+            console.log('Camera started successfully'); // Debug
         }).catch(err => {
-            const qrGuide = document.getElementById('qrGuide');
-            if (qrGuide) qrGuide.innerHTML = '<p>Lỗi khởi động camera: ' + err + '</p>';
+            qrGuide.innerHTML = '<p>Lỗi khởi động camera: ' + err + '</p>';
             showNotification('Không thể khởi động camera: ' + err, 'error');
-            // Đảm bảo nút Quét được kích hoạt lại ngay cả khi khởi động camera thất bại
             isScanning = false;
-            document.getElementById('scanButton').disabled = false;
-            document.getElementById('scanButton').classList.remove('bg-gray-500');
-            document.getElementById('scanButton').classList.add('bg-green-600', 'hover:bg-green-700');
+            scanButton.disabled = false;
+            scanButton.classList.remove('bg-gray-500');
+            scanButton.classList.add('bg-green-600', 'hover:bg-green-700');
+            console.error('startCamera error:', err);
         });
     }
 
     function stopScanner() {
+        console.log('stopScanner called'); // Debug
         if (html5QrCode && html5QrCode.isScanning) {
             html5QrCode.stop()
                 .then(() => {
                     isScanning = false;
-                    document.getElementById('scanButton').disabled = false;
-                    document.getElementById('scanButton').classList.remove('bg-gray-500');
-                    document.getElementById('scanButton').classList.add('bg-green-600', 'hover:bg-green-700');
+                    scanButton.disabled = false;
+                    scanButton.classList.remove('bg-gray-500');
+                    scanButton.classList.add('bg-green-600', 'hover:bg-green-700');
+                    console.log('Scanner stopped successfully'); // Debug
                 })
                 .catch(err => {
                     showNotification('Lỗi khi dừng scanner: ' + err.message, 'error');
-                    // Đảm bảo trạng thái được đặt lại ngay cả khi dừng scanner thất bại
                     isScanning = false;
-                    document.getElementById('scanButton').disabled = false;
-                    document.getElementById('scanButton').classList.remove('bg-gray-500');
-                    document.getElementById('scanButton').classList.add('bg-green-600', 'hover:bg-green-700');
+                    scanButton.disabled = false;
+                    scanButton.classList.remove('bg-gray-500');
+                    scanButton.classList.add('bg-green-600', 'hover:bg-green-700');
+                    console.error('stopScanner error:', err);
                 });
         } else {
-            // Nếu scanner không hoạt động, vẫn đặt lại trạng thái
             isScanning = false;
-            document.getElementById('scanButton').disabled = false;
-            document.getElementById('scanButton').classList.remove('bg-gray-500');
-            document.getElementById('scanButton').classList.add('bg-green-600', 'hover:bg-green-700');
+            scanButton.disabled = false;
+            scanButton.classList.remove('bg-gray-500');
+            scanButton.classList.add('bg-green-600', 'hover:bg-green-700');
+            console.log('Scanner was not running'); // Debug
         }
     }
 
     function switchCamera() {
+        console.log('switchCamera called'); // Debug
         if (camerasAvailable.length <= 1) {
             showNotification('Thiết bị chỉ có 1 camera', 'error');
             return;
@@ -1134,20 +1244,22 @@ document.addEventListener('DOMContentLoaded', function() {
         stopScanner();
         const nextCameraIndex = camerasAvailable.findIndex(device => device.id === currentCameraId);
         currentCameraId = camerasAvailable[(nextCameraIndex + 1) % camerasAvailable.length].id;
+        console.log('Switched to camera:', currentCameraId); // Debug
         setTimeout(startCameraPreview, 300);
     }
 
     function startScanOnce() {
-        if (isScanning) return;
-        if (isOrderCompleted()) {
-            showNotification('Đơn đã hoàn thành!', 'success');
+        console.log('startScanOnce called'); // Debug
+        if (isScanning || isOrderCompleted() || isOrderComplete) {
+            if (isOrderCompleted() || isOrderComplete) {
+                showNotification('Đơn đã hoàn thành!', 'success');
+            }
             return;
         }
-        const qrGuide = document.getElementById('qrGuide');
-        if (qrGuide) qrGuide.innerHTML = '<p>Đang quét... Đặt mã QR vào khung</p>';
-        document.getElementById('scanButton').disabled = true;
-        document.getElementById('scanButton').classList.remove('bg-green-600', 'hover:bg-green-700');
-        document.getElementById('scanButton').classList.add('bg-gray-500');
+        qrGuide.innerHTML = '<p>Đang quét... Đặt mã QR vào khung</p>';
+        scanButton.disabled = true;
+        scanButton.classList.remove('bg-green-600', 'hover:bg-green-700');
+        scanButton.classList.add('bg-gray-500');
         isScanning = true;
         if (html5QrCode.isScanning) {
             html5QrCode.stop().then(() => setTimeout(startSingleScan, 300));
@@ -1157,48 +1269,58 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function startSingleScan() {
+        console.log('startSingleScan called'); // Debug
+        if (isOrderComplete) {
+            console.log('Order already completed, skipping scan'); // Debug
+            return;
+        }
         const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
         html5QrCode.start(
             currentCameraId,
             config,
             (decodedText) => {
+                console.log('QR code scanned:', decodedText); // Debug
                 html5QrCode.stop().then(() => onScanSuccess(decodedText));
             },
-            (errorMessage) => {
-                // Xử lý lỗi quét (ví dụ: không nhận diện được mã QR)
+            () => {
                 isScanning = false;
-                document.getElementById('scanButton').disabled = false;
-                document.getElementById('scanButton').classList.remove('bg-gray-500');
-                document.getElementById('scanButton').classList.add('bg-green-600', 'hover:bg-green-700');
-                const qrGuide = document.getElementById('qrGuide');              
-                startCameraPreview(); // Khởi động lại preview
+                scanButton.disabled = false;
+                scanButton.classList.remove('bg-gray-500');
+                scanButton.classList.add('bg-green-600', 'hover:bg-green-700');
+                qrGuide.innerHTML = '<p>Camera đã sẵn sàng. Nhấn "Quét" để bắt đầu quét mã QR</p>';
+                startCameraPreview();
             }
         ).catch(err => {
-            const qrGuide = document.getElementById('qrGuide');
-            if (qrGuide) qrGuide.innerHTML = '<p>Lỗi bắt đầu quét: ' + err + '</p>';
+            qrGuide.innerHTML = '<p>Lỗi bắt đầu quét: ' + err + '</p>';
             showNotification('Không thể bắt đầu quét: ' + err, 'error');
             isScanning = false;
-            document.getElementById('scanButton').disabled = false;
-            document.getElementById('scanButton').classList.remove('bg-gray-500');
-            document.getElementById('scanButton').classList.add('bg-green-600', 'hover:bg-green-700');
+            scanButton.disabled = false;
+            scanButton.classList.remove('bg-gray-500');
+            scanButton.classList.add('bg-green-600', 'hover:bg-green-700');
             startCameraPreview();
+            console.error('startSingleScan error:', err);
         });
     }
 
     function onScanSuccess(decodedText) {
+        console.log('onScanSuccess called with:', decodedText); // Debug
         decodedText = decodedText.trim();
-        const qrGuide = document.getElementById('qrGuide');
-        // Đặt lại trạng thái nút Quét
         isScanning = false;
-        document.getElementById('scanButton').disabled = false;
-        document.getElementById('scanButton').classList.remove('bg-gray-500');
-        document.getElementById('scanButton').classList.add('bg-green-600', 'hover:bg-green-700');
+        scanButton.disabled = false;
+        scanButton.classList.remove('bg-gray-500');
+        scanButton.classList.add('bg-green-600', 'hover:bg-green-700');
+
+        if (isOrderComplete) {
+            showNotification('Đơn đã hoàn thành!', 'success');
+            return;
+        }
 
         if (decodedText.length > 0) {
             const matchingIndices = [];
             chiTietList.forEach((maQR, index) => {
                 if (maQR === decodedText) matchingIndices.push(index);
             });
+            console.log('Matching indices:', matchingIndices); // Debug
             if (matchingIndices.length > 0) {
                 let foundUnscanned = false;
                 for (let index of matchingIndices) {
@@ -1206,24 +1328,27 @@ document.addEventListener('DOMContentLoaded', function() {
                     const row = document.querySelector(`tr[data-ma-ctxhtp="${maCTXHTP}"]`);
                     if (row && row.querySelector('.text-chua-xuat')) {
                         updateStatus(maCTXHTP);
-                        if (qrGuide) qrGuide.innerHTML = '<p>Quét thành công chi tiết! Nhấn "Quét" để tiếp tục.</p>';
+                        qrGuide.innerHTML = '<p>Quét thành công chi tiết! Nhấn "Quét" để tiếp tục.</p>';
                         foundUnscanned = true;
+                        startCameraPreview();
                         break;
                     }
                 }
                 if (!foundUnscanned) {
-                    showNotification('Đơn hàng này chi tiết này đã quét đủ, quét chi tiết khác!', 'error');
-                    if (qrGuide) qrGuide.innerHTML = '<p>Đã quét đủ chi tiết với mã này! Nhấn "Quét" để quét mã khác.</p>';
+                    showNotification('Chi tiết này đã được quét, vui lòng quét chi tiết khác!', 'error');
+                    qrGuide.innerHTML = '<p>Đã quét đủ chi tiết với mã này! Nhấn "Quét" để quét mã khác.</p>';
+                    startCameraPreview(); // Chỉ khởi động lại camera nếu chưa hoàn tất
                 }
             } else {
-                showNotification('QR không khớp với đơn hàng!', 'error');
-                if (qrGuide) qrGuide.innerHTML = '<p>QR không khớp! Nhấn "Quét" để thử lại.</p>';
+                showNotification('Mã QR không khớp với đơn hàng!', 'error');
+                qrGuide.innerHTML = '<p>Mã QR không khớp! Nhấn "Quét" để thử lại.</p>';
+                startCameraPreview(); // Chỉ khởi động lại camera nếu chưa hoàn tất
             }
         } else {
             showNotification('Vui lòng quét một mã QR hợp lệ!', 'error');
-            if (qrGuide) qrGuide.innerHTML = '<p>Không phải mã QR! Nhấn "Quét" để thử lại.</p>';
+            qrGuide.innerHTML = '<p>Không phải mã QR! Nhấn "Quét" để thử lại.</p>';
+            startCameraPreview(); // Chỉ khởi động lại camera nếu chưa hoàn tất
         }
-        startCameraPreview();
     }
 });
 </script>
