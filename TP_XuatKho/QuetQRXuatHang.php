@@ -18,7 +18,28 @@ try {
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         header('Content-Type: application/json');
 
-        
+        if ($_POST['action'] === 'updateOrderStatus') {
+            $maXuatHang = $_POST['maXuatHang'] ?? '';
+            $status = $_POST['status'] ?? '';
+            if (empty($maXuatHang) || empty($status)) {
+                echo json_encode(['success' => false, 'message' => 'Thiếu thông tin mã xuất hàng hoặc trạng thái']);
+                exit;
+            }
+            $pdo->beginTransaction();
+            $sqlUpdateOrder = "UPDATE TP_XuatHang 
+                            SET TrangThai = :status 
+                            WHERE MaXuatHang = :maXuatHang";
+            $stmtUpdateOrder = $pdo->prepare($sqlUpdateOrder);
+            $stmtUpdateOrder->execute([':status' => $status, ':maXuatHang' => $maXuatHang]);
+            if ($stmtUpdateOrder->rowCount() === 0) {
+                $pdo->rollBack();
+                echo json_encode(['success' => false, 'message' => 'Lỗi khi cập nhật trạng thái đơn hàng']);
+                exit;
+            }
+            $pdo->commit();
+            echo json_encode(['success' => true, 'message' => 'Cập nhật trạng thái đơn hàng thành công']);
+            exit;
+        }
         if ($_POST['action'] === 'updateStatus') {
             $maCTXHTP = $_POST['maCTXHTP'] ?? '';
             if (empty($maCTXHTP)) {
@@ -247,6 +268,8 @@ $chiTietXuatWithQR = array_map(function($ct) {
     $ct['qrCode'] = generateQRCodeBase64($ct['MaCTXHTP']);
     return $ct;
 }, $chiTietXuat);
+
+
 ?>
 
 <!DOCTYPE html>
@@ -355,7 +378,7 @@ $chiTietXuatWithQR = array_map(function($ct) {
     }
 
     .data-table-container {
-        max-height: 400px;
+        max-height: 1000px;
         overflow-y: auto;
         border-radius: 16px;
         border: 1px solid #E5E7EB;
@@ -424,6 +447,7 @@ $chiTietXuatWithQR = array_map(function($ct) {
         background: #F0F0F0;
         border-radius: 12px;
         position: relative;
+        overflow: hidden;
     }
 
     .qr-guide {
@@ -794,6 +818,20 @@ $chiTietXuatWithQR = array_map(function($ct) {
         </div>
     </div>
 
+    <!-- Success Modal -->
+    <div id="successModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white p-6 rounded-lg w-full max-w-md mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-sm font-bold text-green-600">Hoàn Tất Đơn Hàng</h3>
+            </div>
+            <p class="text-sm text-gray-600 mb-4">Đã quét thành công toàn bộ đơn xuất hàng!</p>
+            <div class="flex justify-center">
+                <button id="successOkButton" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-check mr-2"></i> OK
+                </button>
+            </div>
+        </div>
+    </div>
     <!-- QR Scanner Modal -->
     <div id="scannerModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
         <div class="bg-white p-6 rounded-lg w-full max-w-2xl mx-4">
@@ -843,16 +881,33 @@ document.addEventListener('DOMContentLoaded', function() {
     const maXuatHang = '<?php echo htmlspecialchars($maXuatHang); ?>';
     const tenDVT = '<?php echo htmlspecialchars($phieuXuat['TenDVT']); ?>';
 
-    function showNotification(message, type) {
-        const notification = document.createElement('div');
-        notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`;
-        notification.innerHTML = message;
-        document.body.appendChild(notification);
-        setTimeout(() => {
-            notification.style.opacity = '0';
-            notification.style.transition = 'opacity 0.5s ease';
-            setTimeout(() => document.body.removeChild(notification), 500);
-        }, 3000);
+    function showNotification(message, type, isOrderCompleted = false) {
+        if (isOrderCompleted) {
+            // Hiển thị modal thành công
+            const successModal = document.getElementById('successModal');
+            if (successModal) {
+                successModal.classList.remove('hidden');
+            }
+        } else {
+            // Thông báo bình thường
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`;
+            notification.innerHTML = message;
+            document.body.appendChild(notification);
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transition = 'opacity 0.5s ease';
+                setTimeout(() => document.body.removeChild(notification), 500);
+            }, 3000);
+        }
+    }
+
+    // Xử lý nút OK trong modal thành công
+    const successOkButton = document.getElementById('successOkButton');
+    if (successOkButton) {
+        successOkButton.addEventListener('click', function() {
+            window.location.href = '../xuathang.php';
+        });
     }
 
     function isOrderCompleted() {
@@ -873,6 +928,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return response.json();
         })
         .then(data => {
+            console.log('Phản hồi từ server:', data);
             if (data.success) {
                 const row = document.querySelector(`tr[data-ma-ctxhtp="${maCTXHTP}"] td:nth-child(5) span`);
                 if (row) {
@@ -884,29 +940,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 const newTongXuat = parseInt(data.tongSoLuongXuat || 0, 10);
                 const newConLai = parseInt(data.soLuongConLai || 0, 10);
 
-                const tongXuatElement = document.querySelector('.stat-card:nth-child(1) .text-xl');
-                const daXuatElement = document.querySelector('.stat-card:nth-child(2) .text-xl');
-                const conLaiElement = document.querySelector('.stat-card:nth-child(3) .text-xl');
-                if (tongXuatElement) tongXuatElement.textContent = newTongXuat.toLocaleString('vi-VN');
-                if (daXuatElement) daXuatElement.textContent = newDaXuat.toLocaleString('vi-VN');
-                if (conLaiElement) conLaiElement.textContent = newConLai.toLocaleString('vi-VN');
-
+                const tongXuatElement = document.querySelector('.stat-card:nth-child(1) .text-lg');
+                const daXuatElement = document.querySelector('.stat-card:nth-child(2) .text-lg');
+                const conLaiElement = document.querySelector('.stat-card:nth-child(3) .text-lg');
                 const progressPercent = document.getElementById('progressPercent');
                 const progressText = document.getElementById('progressText');
                 const progressValue = document.querySelector('.progress-value');
 
+                if (!tongXuatElement || !daXuatElement || !conLaiElement || !progressPercent || !progressText || !progressValue) {
+                    console.error('Không tìm thấy các phần tử để cập nhật tiến độ');
+                    showNotification('Lỗi: Không tìm thấy các phần tử để cập nhật tiến độ', 'error');
+                    return;
+                }
+
+                tongXuatElement.textContent = newTongXuat.toLocaleString('vi-VN');
+                daXuatElement.textContent = newDaXuat.toLocaleString('vi-VN');
+                conLaiElement.textContent = newConLai.toLocaleString('vi-VN');
+
                 const newPercent = newTongXuat > 0 ? (newDaXuat / newTongXuat * 100).toFixed(1) : 0;
-                if (progressPercent) progressPercent.textContent = `${newPercent}%`;
-                if (progressText) {
-                    progressText.innerHTML = `
-                        <i class="fas fa-box-open text-indigo-400 mr-2"></i>
-                        ${newDaXuat.toLocaleString('vi-VN')} / ${newTongXuat.toLocaleString('vi-VN')} ${tenDVT}
-                    `;
-                }
-                if (progressValue) {
-                    progressValue.style.width = `${newPercent}%`;
-                    progressValue.classList.toggle('pulse', newPercent < 100);
-                }
+                progressPercent.textContent = `${newPercent}%`;
+                progressText.innerHTML = `
+                    <i class="fas fa-box-open text-indigo-400 mr-2"></i>
+                    ${newDaXuat.toLocaleString('vi-VN')} / ${newTongXuat.toLocaleString('vi-VN')} ${tenDVT}
+                `;
+                progressValue.style.width = `${newPercent}%`;
+                progressValue.classList.toggle('pulse', newPercent < 100);
 
                 fetch(window.location.href, {
                     method: 'POST',
@@ -924,7 +982,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (data.remaining === 0) {
                             showNotification(
                                 `Đã quét thành công toàn bộ đơn xuất hàng!`,
-                                'success'
+                                'success',
+                                true // Kích hoạt modal thành công
                             );
                             updateOrderStatus();
                             stopScanner();
@@ -960,6 +1019,8 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (!data.success) {
                 showNotification('Lỗi khi cập nhật trạng thái đơn hàng: ' + data.message, 'error');
+            } else {
+                console.log('Trạng thái đơn hàng cập nhật thành công');
             }
         })
         .catch(err => {
@@ -1109,9 +1170,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('scanButton').disabled = false;
                 document.getElementById('scanButton').classList.remove('bg-gray-500');
                 document.getElementById('scanButton').classList.add('bg-green-600', 'hover:bg-green-700');
-                const qrGuide = document.getElementById('qrGuide');
-                if (qrGuide) qrGuide.innerHTML = '<p>Không nhận diện được mã QR! Nhấn "Quét" để thử lại.</p>';
-                showNotification('Vui lòng quét một mã QR hợp lệ!', 'error');
+                const qrGuide = document.getElementById('qrGuide');              
                 startCameraPreview(); // Khởi động lại preview
             }
         ).catch(err => {
