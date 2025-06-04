@@ -12,7 +12,7 @@ include '../db_config.php';
 // Truy vấn thông tin đơn sản xuất
 $maSoMe = $_GET['maSoMe'] ?? '';
 $sql = "SELECT 
-            dsx.MaSoMe, dsx.MaDonHang, dsx.MaVai, dsx.TenVai, dsx.Kho, 
+            dsx.MaSoMe, dsx.MaDonHang,dsx.MaVatTu, dsx.MaVai, dsx.TenVai, dsx.Kho, 
             dsx.SoLuongDatHang, dsx.NgayNhan, dsx.NgayGiao, dsx.SoKgQuyDoi, 
             dsx.Loss, dsx.TongSoLuongGiao, dsx.DinhMuc, dsx.DoBenMau, 
             dsx.DoLechMau, dsx.DinhLuong, dsx.GhiChu, dsx.TrangThai, 
@@ -51,7 +51,8 @@ $sqlChiTiet = "SELECT ct.*, m.TenMau, dvt.TenDVT
                FROM TP_ChiTietDonSanXuat ct
                LEFT JOIN TP_Mau m ON ct.MaMau = m.MaMau
                LEFT JOIN TP_DonViTinh dvt ON ct.MaDVT = dvt.MaDVT
-               WHERE ct.MaSoMe = ?";
+               WHERE ct.MaSoMe = ?
+               ORDER BY ct.SoLot ASC, ct.SoKgCan ASC";
 $stmtChiTiet = $pdo->prepare($sqlChiTiet);
 $stmtChiTiet->execute([$maSoMe]);
 $chiTietList = $stmtChiTiet->fetchAll(PDO::FETCH_ASSOC);
@@ -417,6 +418,7 @@ $percentCompleted = $don && $don['SoLuongDatHang'] > 0 ? min(100, round(($don['D
                         <div>
                             <p class="flex items-start mb-2"><i class="fas fa-tag text-blue-500 mr-2 mt-1"></i><span><span class="font-semibold text-gray-700">Mã Số Mẻ:</span> <span class="text-red-600"><?php echo safeHtml($don['MaSoMe']); ?></span></p>
                             <p class="flex items-start mb-2"><i class="fas fa-file-alt text-blue-500 mr-2 mt-1"></i><span><span class="font-semibold text-gray-700">Mã Đơn Hàng:</span> <?php echo safeHtml($don['MaDonHang']); ?></p>
+                             <p class="flex items-start mb-2"><i class="fas fa-user text-blue-500 mr-2 mt-1"></i><span><span class="font-semibold text-gray-700">Mã Vật Tư:</span> <?php echo safeHtml($don['MaVatTu']); ?></p>
                             <p class="flex items-start mb-2"><i class="fas fa-user text-blue-500 mr-2 mt-1"></i><span><span class="font-semibold text-gray-700">Khách Hàng:</span> <?php echo safeHtml($don['TenKhachHang']); ?></p>
                             <p class="flex items-start mb-2"><i class="fas fa-tshirt text-blue-500 mr-2 mt-1"></i><span><span class="font-semibold text-gray-700">Vải:</span> <?php echo safeHtml($don['TenVai']); ?> (<?php echo safeHtml($don['MaVai']); ?>)</p>
                             <p class="flex items-start mb-2"><i class="fas fa-ruler text-blue-500 mr-2 mt-1"></i><span><span class="font-semibold text-gray-700">Khổ:</span> <?php echo safeHtml($don['Kho']); ?></p>
