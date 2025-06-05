@@ -110,7 +110,7 @@ header('Content-Type: application/json; charset=UTF-8');
         $new_ip = $printer_ip; // Giá trị mặc định
 
         $ip_map = [
-            'printer1' => '192.168.1.100',
+            'printer1' => '192.168.110.199',
             'printer2' => '192.168.1.101',
             'printer3' => '192.168.1.102'
         ];
@@ -1540,7 +1540,7 @@ function printWithBitmap($socket, $file, $labelType) {
                         <div class="form-group">
                             <label class="form-label" for="printer_select">Máy in:</label>
                             <select id="printer_select" name="printer_select" class="form-select" onchange="toggleCustomIP()">
-                                <option value="printer1" <?php echo ($printer_ip == '192.168.1.100') ? 'selected' : ''; ?>>Máy in 1 (192.168.1.100)</option>
+                                <option value="printer1" <?php echo ($printer_ip == '192.168.110.199') ? 'selected' : ''; ?>>Máy in 1 (192.168.110.199)</option>
                                 <option value="printer2" <?php echo ($printer_ip == '192.168.1.101') ? 'selected' : ''; ?>>Máy in 2 (192.168.1.101)</option>
                                 <option value="printer3" <?php echo ($printer_ip == '192.168.1.102') ? 'selected' : ''; ?>>Máy in 3 (192.168.1.102)</option>
                                 <option value="custom">Nhập IP thủ công</option>
@@ -1549,11 +1549,11 @@ function printWithBitmap($socket, $file, $labelType) {
                         <div class="form-group" id="custom_ip_group" style="display: none;">
                             <label class="form-label" for="printer_ip">IP Address máy in:</label>
                             <input type="text" id="printer_ip" name="printer_ip" class="form-input"
-                                value="<?php echo htmlspecialchars($printer_ip); ?>" placeholder="192.168.1.100"
+                                value="<?php echo htmlspecialchars($printer_ip); ?>" placeholder="192.168.110.199"
                                 pattern="^(\d{1,3}\.){3}\d{1,3}$">
                             <span class="error-message"
                                 style="display: none; color: var(--danger-color); font-size: 0.875rem;">
-                                Vui lòng nhập địa chỉ IP hợp lệ (ví dụ: 192.168.1.100)
+                                Vui lòng nhập địa chỉ IP hợp lệ (ví dụ: 192.168.110.199)
                             </span>
                         </div>
                         <div class="form-group">
@@ -2054,7 +2054,7 @@ if (configForm) {
             customIpGroup.style.display = 'none';
             ipInput.removeAttribute('required');
             const ipMap = {
-                'printer1': '192.168.1.100',
+                'printer1': '192.168.110.199',
                 'printer2': '192.168.1.101',
                 'printer3': '192.168.1.102'
             };
