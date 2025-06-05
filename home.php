@@ -61,17 +61,7 @@
                 font-size: 0.75rem; /* Giảm kích thước chữ trong bảng */
                 padding: 0.5rem;
             }
-            /* Ẩn các cột không cần thiết trên mobile */
-            .hidden.sm\:table-cell,
-            .hidden.md\:table-cell,
-            .hidden.lg\:table-cell {
-                display: none;
-            }
-            /* Chỉ hiển thị cột Thời gian và Trạng Thái trên mobile */
-            .min-w-full th:not(:first-child):not(:last-child),
-            .min-w-full td:not(:first-child):not(:last-child) {
-                display: none;
-            }
+
         }
 
         @media (min-width: 641px) and (max-width: 768px) {
@@ -89,10 +79,7 @@
                 font-size: 0.875rem;
                 padding: 0.75rem;
             }
-            /* Ẩn cột Khách Hàng trên tablet */
-            .hidden.lg\:table-cell {
-                display: none;
-            }
+            
         }
 
         /* Đảm bảo bảng cuộn ngang mượt mà trên mobile */
@@ -275,13 +262,13 @@
                                     <th scope="col" class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         <i class="fas fa-clock mr-1 text-blue-500"></i> Thời gian
                                     </th>
-                                    <th scope="col" class="hidden sm:table-cell px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th scope="col" class=" sm:table-cell px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         <i class="fas fa-barcode mr-1 text-gray-500"></i> Mã Phiếu
                                     </th>
-                                    <th scope="col" class="hidden md:table-cell px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th scope="col" class=" md:table-cell px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         <i class="fas fa-user mr-1 text-purple-500"></i> Nhân Viên
                                     </th>
-                                    <th scope="col" class="hidden lg:table-cell px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th scope="col" class=" lg:table-cell px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         <i class="fas fa-users mr-1 text-teal-500"></i> Khách Hàng
                                     </th>
                                     <th scope="col" class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -312,13 +299,13 @@
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         <i class="fas fa-clock mr-1 text-blue-500"></i> <?php echo $thoiGian; ?>
                                     </td>
-                                    <td class="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <td class=" sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         <i class="fas fa-barcode mr-1 text-gray-500"></i> <?php echo htmlspecialchars($maPhieu); ?>
                                     </td>
-                                    <td class="hidden md:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <td class=" md:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         <i class="fas fa-user mr-1 text-purple-500"></i> <?php echo htmlspecialchars($tenNhanVien); ?>
                                     </td>
-                                    <td class="hidden lg:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <td class=" lg:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         <i class="fas fa-users mr-1 text-teal-500"></i> <?php echo htmlspecialchars($tenKhachHang); ?><br>
                                         <span class="text-xs text-gray-400"><?php echo htmlspecialchars($tenHoatDong); ?></span><br>
                                         <span class="text-xs text-gray-400"><?php echo htmlspecialchars($diaChi); ?></span>
