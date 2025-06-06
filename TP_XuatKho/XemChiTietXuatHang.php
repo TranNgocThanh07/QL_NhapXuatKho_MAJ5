@@ -258,14 +258,35 @@ $ngayXuat = date('d/m/Y', strtotime($phieuXuat['NgayXuat']));
                 </div>
                 <?php endif; ?>
 
+                 <!-- Summary Footer -->
+                    <div class="mt-1 flex flex-col text-xs md:flex-row justify-between gap-4 p-4 pt-2">
+                        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm md:w-1/3">
+                            <div class="flex items-center gap-2 text-gray-700 font-medium mb-2">
+                                <i class="fas fa-chart-pie icon-blue"></i> Tổng kết
+                            </div>
+                            <p class="text-sm text-gray-600 flex justify-between mb-1">
+                                <span>Tổng số mục:</span>
+                                <span class="font-medium"><?php echo count($chiTietXuat); ?></span>
+                            </p>
+                            <p class="text-sm text-gray-600 flex justify-between mb-1">
+                                <span>Đã xuất:</span>
+                                <span class="font-medium text-green-600"><?php echo $phieuXuat['DangXuat']; ?> mục</span>
+                            </p>
+                            <p class="text-sm text-gray-600 flex justify-between">
+                                <span>Chưa xuất:</span>
+                                <span class="font-medium text-red-600"><?php echo count($chiTietXuat) - $phieuXuat['DangXuat']; ?> mục</span>
+                            </p>
+                        </div>
+                    </div>
                 <!-- Danh sách chi tiết -->
-                <div class="p-4 pt-2">
+                <div class="p-4 pt-2 mt-1">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
                         <i class="fas fa-list-ul icon-red"></i> Chi Tiết Xuất Hàng
                         <span class="text-sm bg-red-100 text-red-700 px-2 py-1 rounded-full">
                             <?php echo count($chiTietXuat); ?> mục
                         </span>
                     </h3>
+          
                     <div class="overflow-x-auto rounded-xl border border-gray-200 shadow-sm">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gradient-to-r from-red-50 to-red-100">
@@ -318,28 +339,7 @@ $ngayXuat = date('d/m/Y', strtotime($phieuXuat['NgayXuat']));
                                 <?php endforeach; ?>
                             </tbody>
                         </table>
-                    </div>
-
-                    <!-- Summary Footer -->
-                    <div class="mt-6 flex flex-col text-xs md:flex-row justify-between gap-4">
-                        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm md:w-1/3">
-                            <div class="flex items-center gap-2 text-gray-700 font-medium mb-2">
-                                <i class="fas fa-chart-pie icon-blue"></i> Tổng kết
-                            </div>
-                            <p class="text-sm text-gray-600 flex justify-between mb-1">
-                                <span>Tổng số mục:</span>
-                                <span class="font-medium"><?php echo count($chiTietXuat); ?></span>
-                            </p>
-                            <p class="text-sm text-gray-600 flex justify-between mb-1">
-                                <span>Đã xuất:</span>
-                                <span class="font-medium text-green-600"><?php echo $phieuXuat['DangXuat']; ?> mục</span>
-                            </p>
-                            <p class="text-sm text-gray-600 flex justify-between">
-                                <span>Chưa xuất:</span>
-                                <span class="font-medium text-red-600"><?php echo count($chiTietXuat) - $phieuXuat['DangXuat']; ?> mục</span>
-                            </p>
-                        </div>
-                    </div>
+                    </div>                  
                 </div>
             </div>
         </div>
