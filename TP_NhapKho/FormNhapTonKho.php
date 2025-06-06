@@ -1904,22 +1904,32 @@ document.getElementById('XemChiTietNhap').addEventListener('click', async functi
         const result = await response.json();
 
         if (result.success && result.data.length > 0) {
-            const tableRows = result.data.map((item, index) => `
-                <tr>
-                    <td class="border px-4 py-2">${index + 1}</td>
-                    <td class="border px-4 py-2">${parseFloat(item.SoLuong).toFixed(2)} <?php echo $tenDVT; ?></td>
-                    ${isKgUnit === 'false' ? `<td class="border px-4 py-2">${item.SoKgCan ? parseFloat(item.SoKgCan).toFixed(2) + ' kg' : ''}</td>` : ''}
-                    <td class="border px-4 py-2">${item.SoLot}</td>
-                    <td class="border px-4 py-2">${item.TenThanhPhan}</td>
-                    <td class="border px-4 py-2">${item.MaKhuVuc ||''}</td>
-                    <td class="border px-4 py-2">${item.GhiChu || ''}</td>
-                </tr>
-            `).join('');
+            // Hàm tạo HTML cho bảng
+            function generateTableRows(data) {
+                return data.map((item, index) => `
+                    <tr data-note="${item.GhiChu || ''}">
+                        <td class="border px-4 py-2">${index + 1}</td>
+                        <td class="border px-4 py-2">${parseFloat(item.SoLuong).toFixed(2)} <?php echo $tenDVT; ?></td>
+                        ${isKgUnit === 'false' ? `<td class="border px-4 py-2">${item.SoKgCan ? parseFloat(item.SoKgCan).toFixed(2) + ' kg' : ''}</td>` : ''}
+                        <td class="border px-4 py-2">${item.SoLot}</td>
+                        <td class="border px-4 py-2">${item.TenThanhPhan}</td>
+                        <td class="border px-4 py-2">${item.MaKhuVuc || ''}</td>
+                        <td class="border px-4 py-2">${item.GhiChu || ''}</td>
+                    </tr>
+                `).join('');
+            }
 
             const htmlContent = `
-                <div class="text-left">                 
+                <div class="text-left">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold text-gray-800">Danh sách hàng </h3>
+                        <select id="filterChiTietSwal" onchange="filterChiTietSwal()" class="border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="all">Tất cả chi tiết</option>
+                            <option value="hasNote">Chi tiết có ghi chú</option>
+                        </select>
+                    </div>
                     <div class="overflow-x-auto">
-                        <table class="min-w-[800px] text-sm text-left text-gray-700 border-collapse shadow-sm">
+                        <table id="chiTietTableSwal" class="min-w-[800px] text-sm text-left text-gray-700 border-collapse shadow-sm">
                             <thead class="bg-gray-100">
                                 <tr>
                                     <th class="border px-6 py-3 font-semibold min-w-[60px]">🔢 STT</th>
@@ -1931,7 +1941,7 @@ document.getElementById('XemChiTietNhap').addEventListener('click', async functi
                                     <th class="border px-6 py-3 font-semibold min-w-[150px] whitespace-nowrap">📝 Ghi Chú</th>
                                 </tr>
                             </thead>
-                            <tbody>${tableRows}</tbody>
+                            <tbody>${generateTableRows(result.data)}</tbody>
                         </table>
                     </div>
                 </div>
@@ -1957,7 +1967,11 @@ document.getElementById('XemChiTietNhap').addEventListener('click', async functi
                     closeButton: 'custom-close-button',
                     confirmButton: 'bg-blue-600 hover:bg-blue-700 text-white px-1 py-1 rounded-lg'
                 },
-                buttonsStyling: false
+                buttonsStyling: false,
+                didOpen: () => {
+                    // Đảm bảo combobox được hiển thị và hoạt động ngay sau khi Swal mở
+                    document.getElementById('filterChiTietSwal').value = 'all';
+                }
             });
         } else {
             Swal.fire({
@@ -1988,6 +2002,22 @@ document.getElementById('XemChiTietNhap').addEventListener('click', async functi
         });
     }
 });
+
+// Hàm lọc chi tiết trong Swal
+function filterChiTietSwal() {
+    const filterValue = document.getElementById('filterChiTietSwal').value;
+    const table = document.getElementById('chiTietTableSwal');
+    const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+
+    for (let row of rows) {
+        const note = row.getAttribute('data-note');
+        if (filterValue === 'hasNote') {
+            row.style.display = (note && note.trim() !== '') ? '' : 'none';
+        } else {
+            row.style.display = '';
+        }
+    }
+}
 </script>
 </body>
 </html>

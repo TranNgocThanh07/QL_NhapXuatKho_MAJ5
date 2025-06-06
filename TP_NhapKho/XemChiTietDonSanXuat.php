@@ -726,79 +726,87 @@ $percentCompleted = $don && $don['SoLuongDatHang'] > 0 ? min(100, round(($don['D
                     </div>
                 </div>
 
-                <!-- Chi tiết nhập kho -->
-                <div class="bg-white rounded-xl shadow-sm p-3 sm:p-4 card-hover border border-gray-100">
-                    <h3 class="section-header text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2 mb-4">
+               <!-- Chi tiết nhập kho -->
+            <div class="bg-white rounded-xl shadow-sm p-3 sm:p-4 card-hover border border-gray-100">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="section-header text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2">
                         <div class="icon-circle bg-indigo-100 text-indigo-600">
                             <i class="fas fa-list"></i>
                         </div>
                         <span>Chi Tiết Nhập Kho</span>
                     </h3>
-                    <?php if ($chiTietList): ?>
-                        <div class="responsive-table custom-scrollbar">
-                            <table class="w-full border-collapse">
-                                <thead class="bg-red-50 text-red-800 sticky top-0 z-10">
-                                    <tr>
-                                        <th class="text-left sticky left-0 bg-red-50 z-20 p-2 sm:p-3 font-semibold">STT</th>
-                                        <th class="text-left p-2 sm:p-3 font-semibold">Số Lượng</th>
-                                        <?php if (!empty($don) && isset($don['MaDVT']) && $don['MaDVT'] != '1'): ?>
-                                            <th class="text-left p-2 sm:p-3 font-semibold">Số Kg Cân</th>
-                                        <?php endif; ?>
-                                        <th class="text-left p-2 sm:p-3 font-semibold">Số Lot</th>
-                                        <th class="text-left p-2 sm:p-3 font-semibold">Thành Phần</th>
-                                        <th class="text-left p-2 sm:p-3 font-semibold">Trạng Thái</th>
-                                        <th class="text-left p-2 sm:p-3 font-semibold">Ngày Tạo</th>
-                                        <th class="text-left p-2 sm:p-3 font-semibold">Khu Vực</th>
-                                        <th class="text-left p-2 sm:p-3 font-semibold">Ghi Chú</th>
-                                        <th class="text-left p-2 sm:p-3 font-semibold">In Tem</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($chiTietList as $index => $chiTiet): ?>
-                                        <tr class="border-b border-gray-200 hover:bg-red-100 transition-colors">
-                                            <td class="sticky left-0 bg-white p-2 sm:p-3"><?php echo $index + 1; ?></td>
-                                            <td class="font-bold p-2 sm:p-3 whitespace-normal <?php echo intval($chiTiet['SoLuong']) > 0 ? 'text-green-600' : 'text-red-600'; ?>">
-                                                <?php echo safeHtml($chiTiet['SoLuong']) . ' ' . safeHtml($chiTiet['TenDVT']); ?>
-                                            </td>
-                                            <?php if (!empty($don) && isset($don['MaDVT']) && $don['MaDVT'] != '1'): ?>
-                                                <td class="p-2 sm:p-3"><?php echo safeHtml($chiTiet['SoKgCan']); ?></td>
-                                            <?php endif; ?>
-                                            <td class="p-2 sm:p-3"><?php echo safeHtml($chiTiet['SoLot']); ?></td>
-                                            <td class="p-2 sm:p-3"><?php echo safeHtml($chiTiet['TenThanhPhan']); ?></td>
-                                            <td class="p-2 sm:p-3">
-                                                <span class="px-2 py-1 rounded-full text-xs <?php echo getStatusClassChiTiet($chiTiet['TrangThai']); ?>">
-                                                    <?php echo getStatusTextChiTiet($chiTiet['TrangThai']); ?>
-                                                </span>
-                                            </td>
-                                            <td class="text-gray-600 p-2 sm:p-3">
-                                                <?php
-                                                    $ngayTao = safeHtml($chiTiet['NgayTao']);
-                                                    if ($ngayTao && strtotime($ngayTao)) {
-                                                        echo date('d/m/Y', strtotime($ngayTao));
-                                                    } else {
-                                                        echo $ngayTao;
-                                                    }
-                                                ?>
-                                            </td>
-                                            <td class="text-gray-600 p-2 sm:p-3"><?php echo safeHtml($chiTiet['MaKhuVuc']); ?></td>
-                                            <td class="text-gray-600 p-2 sm:p-3"><?php echo safeHtml($chiTiet['GhiChu']); ?></td>
-                                            <td class="p-2 sm:p-3">
-                                                <button onclick='generatePDF(<?php echo json_encode([$chiTiet]); ?>)' class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 text-sm">
-                                                    <i class="ri-printer-line"></i> In Tem
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php else: ?>
-                        <div class="text-center bg-red-50 rounded-lg p-6">
-                            <i class="ri-error-warning-line text-4xl text-red-500 mb-3"></i>
-                            <p class="text-red-600 text-base font-semibold">Không tìm thấy chi tiết nhập kho cho đơn này.</p>
-                        </div>
-                    <?php endif; ?>
+                    <div>
+                        <select id="filterChiTiet" onchange="filterChiTiet()" class="border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="all">Tất cả chi tiết</option>
+                            <option value="hasNote">Chi tiết có ghi chú</option>
+                        </select>
+                    </div>
                 </div>
+                <?php if ($chiTietList): ?>
+                    <div class="responsive-table custom-scrollbar">
+                        <table id="chiTietTable" class="w-full border-collapse">
+                            <thead class="bg-red-50 text-red-800 sticky top-0 z-10">
+                                <tr>
+                                    <th class="text-left sticky left-0 bg-red-50 z-20 p-2 sm:p-3 font-semibold">STT</th>
+                                    <th class="text-left p-2 sm:p-3 font-semibold">Số Lượng</th>
+                                    <?php if (!empty($don) && isset($don['MaDVT']) && $don['MaDVT'] != '1'): ?>
+                                        <th class="text-left p-2 sm:p-3 font-semibold">Số Kg Cân</th>
+                                    <?php endif; ?>
+                                    <th class="text-left p-2 sm:p-3 font-semibold">Số Lot</th>
+                                    <th class="text-left p-2 sm:p-3 font-semibold">Thành Phần</th>
+                                    <th class="text-left p-2 sm:p-3 font-semibold">Trạng Thái</th>
+                                    <th class="text-left p-2 sm:p-3 font-semibold">Ngày Tạo</th>
+                                    <th class="text-left p-2 sm:p-3 font-semibold">Khu Vực</th>
+                                    <th class="text-left p-2 sm:p-3 font-semibold">Ghi Chú</th>
+                                    <th class="text-left p-2 sm:p-3 font-semibold">In Tem</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($chiTietList as $index => $chiTiet): ?>
+                                    <tr class="border-b border-gray-200 hover:bg-red-100 transition-colors" data-note="<?php echo safeHtml($chiTiet['GhiChu']); ?>">
+                                        <td class="sticky left-0 bg-white p-2 sm:p-3"><?php echo $index + 1; ?></td>
+                                        <td class="font-bold p-2 sm:p-3 whitespace-normal <?php echo intval($chiTiet['SoLuong']) > 0 ? 'text-green-600' : 'text-red-600'; ?>">
+                                            <?php echo safeHtml($chiTiet['SoLuong']) . ' ' . safeHtml($chiTiet['TenDVT']); ?>
+                                        </td>
+                                        <?php if (!empty($don) && isset($don['MaDVT']) && $don['MaDVT'] != '1'): ?>
+                                            <td class="p-2 sm:p-3"><?php echo safeHtml($chiTiet['SoKgCan']); ?></td>
+                                        <?php endif; ?>
+                                        <td class="p-2 sm:p-3"><?php echo safeHtml($chiTiet['SoLot']); ?></td>
+                                        <td class="p-2 sm:p-3"><?php echo safeHtml($chiTiet['TenThanhPhan']); ?></td>
+                                        <td class="p-2 sm:p-3">
+                                            <span class="px-2 py-1 rounded-full text-xs <?php echo getStatusClassChiTiet($chiTiet['TrangThai']); ?>">
+                                                <?php echo getStatusTextChiTiet($chiTiet['TrangThai']); ?>
+                                            </span>
+                                        </td>
+                                        <td class="text-gray-600 p-2 sm:p-3">
+                                            <?php
+                                                $ngayTao = safeHtml($chiTiet['NgayTao']);
+                                                if ($ngayTao && strtotime($ngayTao)) {
+                                                    echo date('d/m/Y', strtotime($ngayTao));
+                                                } else {
+                                                    echo $ngayTao;
+                                                }
+                                            ?>
+                                        </td>
+                                        <td class="text-gray-600 p-2 sm:p-3"><?php echo safeHtml($chiTiet['MaKhuVuc']); ?></td>
+                                        <td class="text-gray-600 p-2 sm:p-3"><?php echo safeHtml($chiTiet['GhiChu']); ?></td>
+                                        <td class="p-2 sm:p-3">
+                                            <button onclick='generatePDF(<?php echo json_encode([$chiTiet]); ?>)' class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 text-sm">
+                                                <i class="ri-printer-line"></i> In Tem
+                                            </button>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php else: ?>
+                    <div class="text-center bg-red-50 rounded-lg p-6">
+                        <i class="ri-error-warning-line text-4xl text-red-500 mb-3"></i>
+                        <p class="text-red-600 text-base font-semibold">Không tìm thấy chi tiết nhập kho cho đơn này.</p>
+                    </div>
+                <?php endif; ?>
+            </div>
             <?php else: ?>
                 <div class="flex items-center justify-center h-[calc(100vh-64px)]">
                     <div class="text-center p-6 bg-white rounded-lg shadow-lg border-t-4 border-red-500">
@@ -817,6 +825,21 @@ $percentCompleted = $don && $don['SoLuongDatHang'] > 0 ? min(100, round(($don['D
     </div>
 
     <script>
+        // Hàm lọc chi tiết nhập kho
+        function filterChiTiet() {
+            const filterValue = document.getElementById('filterChiTiet').value;
+            const table = document.getElementById('chiTietTable');
+            const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+
+            for (let row of rows) {
+                const note = row.getAttribute('data-note');
+                if (filterValue === 'hasNote') {
+                    row.style.display = (note && note.trim() !== '') ? '' : 'none';
+                } else {
+                    row.style.display = '';
+                }
+            }
+        }
         // Hàm ghi log
         function logToScreen(message, type = 'info') {
             console[type === 'error' ? 'error' : 'log'](message);
