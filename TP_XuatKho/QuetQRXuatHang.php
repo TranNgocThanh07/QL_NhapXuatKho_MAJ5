@@ -981,7 +981,61 @@ $chiTietXuatWithQR = array_map(function ($ct) {
     </div> -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // --- CÁC BIẾN VÀ THAM CHIẾU DOM GIỮ NGUYÊN ---
+    // --- KHỞI TẠO ÂM THANH VỚI FILE .MP3 ---
+        const sounds = {
+        thanh_cong: new Audio('../TP_XuatKho/sounds/thanh_cong.mp3'),
+        hoan_tat_don_hang: new Audio('../TP_XuatKho/sounds/hoan_tat_don_hang.mp3'),
+        da_quet_roi: new Audio('../TP_XuatKho/sounds/da_quet_roi.mp3'),
+        ma_khong_dung: new Audio('../TP_XuatKho/sounds/ma_khong_dung.mp3'),
+        khong_thay_ma: new Audio('../TP_XuatKho/sounds/khong_thay_ma.mp3'),
+        thao_tac_loi: new Audio('../TP_XuatKho/sounds/thao_tac_loi.mp3'),
+        play: async function(soundKey) {
+            // Dừng tất cả âm thanh khác
+            Object.keys(this).forEach(key => {
+                if (key !== 'play' && this[key].pause) {
+                    this[key].pause();
+                    this[key].currentTime = 0;
+                }
+            });
+            const sound = this[soundKey];
+            if (!sound) {
+                console.error(`Âm thanh ${soundKey} không tồn tại`);
+                showNotification(`Âm thanh ${soundKey} không tồn tại`, 'error');
+                return false;
+            }
+            try {
+                sound.preload = 'auto';
+                if (sound.readyState < 2) { // Chưa tải xong
+                    await new Promise((resolve, reject) => {
+                        sound.oncanplaythrough = resolve;
+                        sound.onerror = () => reject(new Error(`Không thể tải âm thanh ${soundKey}`));
+                        sound.load();
+                    });
+                }
+                await sound.play();
+                console.log(`Phát âm thanh: ${soundKey}`);
+                return true;
+            } catch (err) {
+                console.error(`Lỗi phát âm thanh ${soundKey}:`, err);
+                showNotification(`Không thể phát âm thanh ${soundKey}: ${err.message}`, 'error');
+                return false;
+            }
+        }
+    };
+
+    // Tải trước tất cả âm thanh
+    Object.keys(sounds).forEach(key => {
+        if (key !== 'play' && sounds[key]) {
+            sounds[key].preload = 'auto';
+            sounds[key].load();
+            sounds[key].onerror = () => {
+                console.error(`Lỗi tải âm thanh ${key}`);
+                showNotification(`Không thể tải âm thanh ${key}`, 'error');
+            };
+        }
+    });
+
+    // --- CÁC BIẾN VÀ THAM CHIẾU DOM ---
     const successModal = document.getElementById('successModal');
     const successOkButton = document.getElementById('successOkButton');
     const closeSuccessModal = document.getElementById('closeSuccessModal');
@@ -998,12 +1052,11 @@ document.addEventListener('DOMContentLoaded', function() {
     let html5QrCode = null;
     let currentCameraId = null;
     let camerasAvailable = [];
-    let isScanningActive = false; // Cờ báo hiệu một yêu cầu quét đang được xử lý
+    let isScanningActive = false;
     let notificationTimeout = null;
     let isOrderComplete = <?php echo $phieuXuat['TrangThaiDon'] == 1 ? 'true' : 'false'; ?>;
     let isScannerInitialized = false;
 
-    // Biến này sẽ giữ hàm resolve của Promise, chờ kết quả quét
     let scanRequestHandler = null;
 
     const chiTietList = <?php echo json_encode(array_column($chiTietXuatWithQR, 'MaQR')); ?>;
@@ -1016,26 +1069,51 @@ document.addEventListener('DOMContentLoaded', function() {
     notificationContainer.style.transition = 'opacity 0.5s ease';
     document.body.appendChild(notificationContainer);
 
-    // --- CÁC HÀM LOGIC BACKEND (showNotification, updateStatus, ...) GIỮ NGUYÊN ---
-    function showNotification(message, type, isOrderCompleted = false) {
+    // --- HÀM HIỂN THỊ THÔNG BÁO VỚI ÂM THANH ---
+    async function showNotification(message, type, isOrderCompleted = false) {
+        console.log('Thông báo:', message, 'Loại:', type); // Debug thông báo
+        let soundKey;
+
+        // Xác định âm thanh dựa trên thông báo và loại
+        if (isOrderCompleted && successModal) {
+            soundKey = 'hoan_tat_don_hang';
+        } else if (type === 'success') {
+            soundKey = 'thanh_cong';
+        } else {
+            if (message.includes('đã được quét rồi') || message.includes('Chi tiết đã được quét')) {
+                soundKey = 'da_quet_roi';
+            } else if (message.includes('không khớp') || message.includes('Mã QR không khớp')) {
+                soundKey = 'ma_khong_dung';
+            } else if (message.includes('Không tìm thấy mã QR')) {
+                soundKey = 'khong_thay_ma';
+            } else {
+                soundKey = 'thao_tac_loi';
+            }
+        }
+
+        // Phát âm thanh và chờ hoàn thành
+        console.log('Chuẩn bị phát âm thanh:', soundKey);
+        const soundPlayed = await sounds.play(soundKey);
+
+        // Hiển thị thông báo
         if (isOrderCompleted && successModal) {
             successModal.classList.remove('hidden');
             requestAnimationFrame(() => successModal.classList.add('show'));
-            return;
+        } else {
+            if (notificationTimeout) clearTimeout(notificationTimeout);
+            notificationContainer.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-[1000] ${
+                type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+            }`;
+            notificationContainer.innerHTML = message || 'Không có thông báo';
+            notificationContainer.classList.remove('hidden');
+            requestAnimationFrame(() => {
+                notificationContainer.style.opacity = '1';
+                notificationTimeout = setTimeout(() => {
+                    notificationContainer.style.opacity = '0';
+                    setTimeout(() => notificationContainer.classList.add('hidden'), 200);
+                }, 2000);
+            });
         }
-        if (notificationTimeout) clearTimeout(notificationTimeout);
-        notificationContainer.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-[1000] ${
-            type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-        }`;
-        notificationContainer.innerHTML = message || 'Không có thông báo';
-        notificationContainer.classList.remove('hidden');
-        requestAnimationFrame(() => {
-            notificationContainer.style.opacity = '1';
-            notificationTimeout = setTimeout(() => {
-                notificationContainer.style.opacity = '0';
-                setTimeout(() => notificationContainer.classList.add('hidden'), 200);
-            }, 2000);
-        });
     }
 
     if (successOkButton) {
@@ -1060,8 +1138,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return conLaiElement ? parseInt(conLaiElement.textContent.replace(/\./g, ''), 10) === 0 : false;
     }
 
-    function updateStatus(maCTXHTP) {
-        // ... Logic fetch và cập nhật giữ nguyên như cũ
+    function updateStatus(maCTXHTP) {     
         fetch(window.location.href, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -1448,8 +1525,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(err => handleFetchError(err, 'Lỗi khi cập nhật trạng thái'));
     }
 
-    function updateOrderStatus() {
-        // ... Logic giữ nguyên
+    function updateOrderStatus() {     
         if (!maXuatHang) {
             showNotification('Không tìm thấy mã đơn hàng để cập nhật trạng thái!', 'error');
             return;
@@ -1469,7 +1545,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function handleFetchError(err, defaultMessage) {
-        // ... Logic giữ nguyên
         let message;
         if (err.message.includes('HTTP error')) {
             message = `${defaultMessage}: ${err.message}`;
@@ -1483,7 +1558,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showNotification(message, 'error');
     }
 
-    // --- CÁC HÀM ĐIỀU KHIỂN SCANNER ĐÃ ĐƯỢC CẬP NHẬT ---
+    // --- CÁC HÀM ĐIỀU KHIỂN SCANNER ---
 
     btnQuetMa.addEventListener('click', function() {
         if (isOrderCompleted() || isOrderComplete) {
@@ -1493,14 +1568,13 @@ document.addEventListener('DOMContentLoaded', function() {
         scannerModal.classList.remove('hidden');
         requestAnimationFrame(() => scannerModal.classList.add('show'));
         
-        // Chỉ khởi tạo và bắt đầu camera MỘT LẦN
         if (!isScannerInitialized) {
             initializeAndStartScanner();
         }
     });
 
     closeModalButton.addEventListener('click', function() {
-        stopScanner(); // Dừng camera khi đóng modal
+        stopScanner();
         scannerModal.classList.remove('show');
         setTimeout(() => scannerModal.classList.add('hidden'), 300);
     });
@@ -1508,15 +1582,22 @@ document.addEventListener('DOMContentLoaded', function() {
     scanButton.addEventListener('click', triggerScan);
     switchCameraButton.addEventListener('click', switchCamera);
 
-
     function initializeAndStartScanner() {
         if (typeof Html5Qrcode === 'undefined') {
             showNotification('Lỗi: Thư viện QR code chưa được tải!', 'error');
             return;
         }
-        html5QrCode = new Html5Qrcode("scanner-container", { verbose: false });
+        
+        const config = {
+            verbose: false,
+            experimentalFeatures: {
+                useBarCodeDetectorIfSupported: true
+            }
+        };
+        
+        html5QrCode = new Html5Qrcode("scanner-container", config);
         isScannerInitialized = true;
-
+        
         Html5Qrcode.getCameras()
             .then(devices => {
                 camerasAvailable = devices;
@@ -1525,39 +1606,56 @@ document.addEventListener('DOMContentLoaded', function() {
                     showNotification('Không tìm thấy camera trên thiết bị!', 'error');
                     return;
                 }
+                
                 if (!currentCameraId) {
-                    const rearCamera = devices.find(device => device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('rear'));
+                    const rearCamera = devices.find(device => 
+                        device.label.toLowerCase().includes('back') || 
+                        device.label.toLowerCase().includes('rear') ||
+                        device.label.toLowerCase().includes('environment')
+                    );
                     currentCameraId = rearCamera ? rearCamera.id : devices[0].id;
                 }
-                startContinuousScanner(); // Bắt đầu quét liên tục
+                
+                startContinuousScanner();
             })
             .catch(err => {
                 qrGuide.innerHTML = `<p>Lỗi lấy danh sách camera: ${err}</p>`;
                 showNotification('Không thể lấy danh sách camera: ' + err, 'error');
+                console.error('Camera initialization error:', err);
             });
     }
 
-    // Hàm này sẽ được gọi liên tục bởi thư viện khi nó thấy mã QR
     function onContinuousScan(decodedText, decodedResult) {
-        // Nếu có một yêu cầu đang chờ (scanRequestHandler không null),
-        // thì chúng ta sẽ xử lý mã này.
         if (scanRequestHandler) {
-            scanRequestHandler(decodedText); // Hoàn thành Promise với kết quả
-            scanRequestHandler = null; // Reset lại để không xử lý lại cho cùng 1 lần nhấn nút
+            scanRequestHandler(decodedText);
+            scanRequestHandler = null;
         }
     }
 
     function startContinuousScanner() {
         if (isOrderComplete || !html5QrCode) return;
-        
-        const config = { fps: 10, qrbox: { width: 300, height: 400 } };
+
+        const config = {
+            fps: 20,
+            qrbox: { width: 250, height: 500 },
+            videoConstraints: {
+                facingMode: "environment",
+                aspectRatio: 1.777,
+                width: { ideal: 1920 },
+                height: { ideal: 1080 },
+                focusMode: "continuous",
+                advanced: [
+                    { zoom: 1.5 },
+                    { torch: true }
+                ]
+            }
+        };
+
         html5QrCode.start(
             currentCameraId,
             config,
-            onContinuousScan, // Callback khi quét thành công
-            (errorMessage) => { 
-                // Có thể bỏ qua lỗi này vì nó sẽ báo liên tục khi không thấy QR
-            }
+            onContinuousScan,
+            (errorMessage) => {}
         ).then(() => {
             qrGuide.innerHTML = '<p>Camera đã sẵn sàng. Đặt mã QR vào khung và nhấn "Quét".</p>';
             scanButton.disabled = false;
@@ -1569,7 +1667,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function triggerScan() {
         if (isScanningActive || isOrderComplete) {
-             if (isOrderComplete) {
+            if (isOrderComplete) {
                 showNotification('Đơn đã hoàn thành!', 'success');
             }
             return;
@@ -1580,35 +1678,24 @@ document.addEventListener('DOMContentLoaded', function() {
         qrGuide.innerHTML = '<p>Đang tìm mã QR...</p>';
         scanButton.classList.add('bg-gray-500');
 
-        // Tạo một Promise sẽ được giải quyết bởi onContinuousScan
-        // hoặc bị hủy bởi timeout
         const scanPromise = new Promise((resolve, reject) => {
-            scanRequestHandler = resolve; // Lưu hàm resolve để onContinuousScan có thể gọi
-            
-            // Đặt thời gian chờ, nếu sau 2 giây không có mã nào được quét, báo lỗi
+            scanRequestHandler = resolve;
             setTimeout(() => {
                 reject(new Error("Timeout"));
             }, 500);
         });
 
         scanPromise.then(decodedText => {
-            // ĐÃ TÌM THẤY MÃ QR
             qrGuide.innerHTML = '<p>Đã tìm thấy mã! Đang xử lý...</p>';
-            onScanSuccess(decodedText); // Gọi hàm xử lý logic
-            
-            // Reset trạng thái để có thể quét lần nữa
+            onScanSuccess(decodedText);
             isScanningActive = false;
             scanButton.disabled = false;
             scanButton.classList.remove('bg-gray-500');
             qrGuide.innerHTML = '<p>Xử lý xong! Nhấn "Quét" để tiếp tục.</p>';
-
         }).catch(error => {
-            // KHÔNG TÌM THẤY MÃ QR SAU 2 GIÂY
             if (error.message === "Timeout") {
                 showNotification('Không tìm thấy mã QR. Vui lòng thử lại!', 'error');
-                qrGuide.innerHTML = '<p>Không tìm thấy mã QR. Hãy thử lại.</p>';
             }
-            // Reset trạng thái
             scanRequestHandler = null;
             isScanningActive = false;
             scanButton.disabled = false;
@@ -1616,7 +1703,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Hàm xử lý logic chính sau khi đã có mã QR
     function onScanSuccess(decodedText) {
         decodedText = decodedText.trim();
 
@@ -1640,7 +1726,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (row && row.querySelector('.text-chua-xuat')) {
                         updateStatus(maCTXHTP);
                         foundUnscanned = true;
-                        return; // Thoát vòng lặp khi đã tìm và xử lý một chi tiết chưa quét
+                        return;
                     }
                 } else {
                     showNotification('Vui lòng quét một mã QR hợp lệ!', 'error');
@@ -1659,11 +1745,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function stopScanner() {
         if (html5QrCode && html5QrCode.isScanning) {
-            html5QrCode.stop().catch(err => {
-                // Lỗi khi dừng không quá nghiêm trọng, có thể bỏ qua
-            });
+            html5QrCode.stop().catch(err => {});
         }
-        isScannerInitialized = false; // Đặt lại để lần mở sau sẽ khởi tạo lại
+        isScannerInitialized = false;
         scanRequestHandler = null;
         isScanningActive = false;
         scanButton.disabled = false;
@@ -1671,7 +1755,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function switchCamera() {
         if (camerasAvailable.length <= 1) {
-            showNotification('Thiết bị chỉ có 1 camera', 'error');
+            showNotification('Chỉ có một camera!', 'error');
             return;
         }
         if (html5QrCode && html5QrCode.isScanning) {
