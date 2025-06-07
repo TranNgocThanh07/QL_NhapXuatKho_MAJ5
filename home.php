@@ -215,19 +215,20 @@
                     </div>
                 </div>
 
-                <div class="bg-white rounded-lg shadow-lg p-6 border-l-4 border-blue-600">
+                <div class="bg-white rounded-lg shadow-lg p-6 border-l-4 border-red-600">
                     <div class="flex items-center">
-                        <div class="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
+                        <div class="p-3 rounded-full bg-red-100 text-red-600 mr-4">
                             <i class="fas fa-arrow-circle-down text-2xl"></i>
                         </div>
                         <div>
-                            <p class="text-gray-500 text-sm">Tổng Nhập kho </p>
-                            <h3 class="text-2xl font-bold text-gray-800"><?php echo number_format($totalNhapKho); ?></h3>
+                           <a href="/TP_NhapKho/XemTatCaChiTietNhap.php" class="inline-flex items-center px-4 py-2 sm:px-6 sm:py-3 border border-transparent text-xl sm:text-base font-medium rounded-md shadow-sm text-red-600 bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-150 ease-in-out">                           
+                           Tất Cả Chi Tiết Nhập
+                        </a>                 
                         </div>
                     </div>
                 </div>
 
-                <div class="bg-white rounded-lg shadow-lg p-6 border-l-4 border-green-600">
+                <!-- <div class="bg-white rounded-lg shadow-lg p-6 border-l-4 border-green-600">
                     <div class="flex items-center">
                         <div class="p-3 rounded-full bg-green-100 text-green-600 mr-4">
                             <i class="fas fa-arrow-circle-up text-2xl"></i>
@@ -237,7 +238,7 @@
                             <h3 class="text-2xl font-bold text-gray-800"><?php echo number_format($totalXuatKho); ?></h3>
                         </div>
                     </div>
-                </div>
+                </div> -->
             </div>
         </div>
     </section>
