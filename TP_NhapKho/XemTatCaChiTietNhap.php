@@ -32,9 +32,11 @@ $searchFieldsConfig = [
 function buildSearchConditions($searchFieldsConfig, $postData) {
     $conditions = [];
     $params = [];
+    
     foreach ($searchFieldsConfig as $field => $config) {
-        if (!empty($postData[$field])) {
+        if (isset($postData[$field]) && trim($postData[$field]) !== '') {
             $value = trim($postData[$field]);
+            
             if ($config['type'] === 'float') {
                 if (is_numeric($value) && $value >= 0) {
                     $conditions[] = "{$config['table']}.$field = ?";
@@ -47,6 +49,7 @@ function buildSearchConditions($searchFieldsConfig, $postData) {
             }
         }
     }
+    
     return [$conditions, $params];
 }
 
@@ -55,8 +58,17 @@ try {
         header('Content-Type: application/json');
 
         $page = isset($_POST['page']) ? max(1, (int)$_POST['page']) : 1;
-        $limit = 10;
+        $limit = 15;
         $offset = ($page - 1) * $limit;
+
+        // Bắt đầu xây dựng điều kiện và tham số
+        [$conditions, $params] = buildSearchConditions($searchFieldsConfig, $_POST);
+        
+        // *** SỬA LỖI: Xử lý bộ lọc đặc biệt cho Ghi Chú ***
+        if (isset($_POST['filterChiTiet']) && $_POST['filterChiTiet'] === 'hasNote') {
+            // Thêm điều kiện: Ghi Chú không được rỗng (NULL hoặc chuỗi trống)
+            $conditions[] = "(ct.GhiChu IS NOT NULL AND ct.GhiChu <> '')";
+        }
 
         // Truy vấn tổng số bản ghi
         $sqlCount = "SELECT COUNT(1) as total 
@@ -68,12 +80,12 @@ try {
                      LEFT JOIN TP_DonViTinh dvt ON ct.MaDVT = dvt.MaDVT
                      WHERE 1=1";
 
-        [$conditions, $params] = buildSearchConditions($searchFieldsConfig, $_POST);
         if (!empty($conditions)) {
             $sqlCount .= " AND " . implode(" AND ", $conditions);
         }
 
         $stmtCount = $pdo->prepare($sqlCount);
+        // Bind params cho câu lệnh count
         foreach ($params as $index => $param) {
             $stmtCount->bindValue($index + 1, $param, is_float($param) ? PDO::PARAM_STR : PDO::PARAM_STR);
         }
@@ -100,11 +112,15 @@ try {
         $sql .= " ORDER BY ct.NgayTao DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
 
         $stmt = $pdo->prepare($sql);
+        
+        // 1. Bind các tham số điều kiện (WHERE)
         foreach ($params as $index => $param) {
             $stmt->bindValue($index + 1, $param, is_float($param) ? PDO::PARAM_STR : PDO::PARAM_STR);
         }
+        // 2. Bind các tham số phân trang (OFFSET, FETCH) với kiểu INT
         $stmt->bindValue(count($params) + 1, (int)$offset, PDO::PARAM_INT);
         $stmt->bindValue(count($params) + 2, (int)$limit, PDO::PARAM_INT);
+        
         $stmt->execute();
         $chiTietList = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -113,7 +129,11 @@ try {
             'data' => $chiTietList,
             'totalPages' => $totalPages,
             'currentPage' => $page,
-            'offset' => $offset
+            'totalRecords' => $totalRecords,
+            'offset' => $offset,
+            'activeFilters' => array_filter($_POST, function($value, $key) {
+                return !in_array($key, ['action', 'page']) && !empty(trim($value));
+            }, ARRAY_FILTER_USE_BOTH)
         ]);
         exit;
     }
@@ -139,447 +159,394 @@ function safeHtml($value) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <style>
-        .loading {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 20px;
-            border-radius: 8px;
-            display: none;
-            z-index: 1000;
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { 50: '#fef2f2', 100: '#fee2e2', 500: '#ef4444', 600: '#dc2626', 700: '#b91c1c', 800: '#991b1b', 900: '#7f1d1d' }
+                    },
+                    animation: { 'fade-in': 'fadeIn 0.5s ease-in-out', 'slide-in': 'slideIn 0.3s ease-out' }
+                }
+            }
         }
-        .table-container {
-            max-height: 500px;
-            overflow-y: auto;
-            overflow-x: auto;
-            position: relative;
-            width: 100%;
-            display: block;
-        }
-        .table-container table {
-            width: 100%;
-            border-collapse: collapse;
-            min-width: 1200px;
-            table-layout: auto;
-        }
-        .table-container thead th {
-            position: sticky;
-            top: 0;
-            background: #fef2f2;
-            z-index: 5;
-            font-size: 0.75rem;
-            padding: 8px;
-            white-space: nowrap;
-            text-align: left;
-            vertical-align: middle;
-            min-width: 80px;
-        }
-        .table-container tbody td {
-            padding: 8px;
-            white-space: nowrap;
-            text-align: left;
-            vertical-align: middle;
-            font-size: 0.875rem;
-        }
-        .table-container tbody tr {
-            transition: background-color 0.2s;
-        }
-        .table-container tbody tr:hover {
-            background-color: #fef2f2;
-        }
-        .search-input {
-            transition: all 0.3s;
-        }
-        .search-input:focus {
-            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.3);
-        }
-    </style>
+    </script>
+   <style>
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes slideIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+    
+    .loading {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+    }
+    
+    .table-container {
+        max-height: 70vh;
+        overflow: auto;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    
+    table {
+        table-layout: auto;
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .table-header-cell, td {
+        white-space: nowrap;
+        padding: 12px 16px;
+        text-align: left;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .table-header-cell {
+        font-weight: 600;
+        color: #4b5563;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+    }
+    
+    td {
+        color: #374151;
+        font-size: 0.875rem;
+    }
+    
+    .table-container td, .table-header-cell {
+        max-width: 300px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .table-container::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    
+    .table-container::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 4px;
+    }
+    
+    .table-container::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    
+    .table-container::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+    
+    .search-input {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .search-input:focus {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px -5px rgba(239, 68, 68, 0.25);
+    }
+    
+    .filter-chip {
+        animation: slideIn 0.3s ease-out;
+    }
+</style>
 </head>
-<body class="bg-gray-50 font-sans antialiased">
-    <div class="relative min-h-screen">
-        <!-- Header -->
-        <header class="sticky top-0 z-20 bg-gradient-to-r from-blue-800 to-indigo-600 p-3 shadow-lg">
-            <div class="flex items-center justify-between max-w-7xl mx-auto">
-                <div class="flex items-center">
-                    <a href="../nhapkho.php" class="text-white text-xl hover:scale-110 transition-transform p-2" aria-label="Quay lại trang nhập kho">
-                        <i class="fas fa-arrow-left"></i>
+<body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
+    <!-- Header -->
+    <header class="sticky top-0 z-30 bg-gradient-to-r from-primary-800 via-primary-700 to-primary-600 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between py-4">
+                <div class="flex items-center space-x-4">
+                    <a href="../nhapkho.php" class="group flex items-center justify-center w-10 h-10 bg-white/10 hover:bg-white/20 rounded-lg transition-all duration-300 hover:scale-105">
+                        <i class="fas fa-arrow-left text-white group-hover:text-primary-100"></i>
                     </a>
-                    <h2 class="text-white font-bold text-lg sm:text-xl flex items-center ml-2 sm:ml-4">
-                        <i class="fas fa-list mr-2"></i> Tất Cả Chi Tiết Nhập Kho
-                    </h2>
+                    <div class="flex flex-col">
+                        <h1 class="text-xl sm:text-2xl font-bold text-white flex items-center">
+                            <i class="fas fa-warehouse mr-3 text-primary-200"></i>
+                            Chi Tiết Nhập Kho
+                        </h1>
+                        <p class="text-primary-100 text-sm hidden sm:block">Quản lý và tìm kiếm chi tiết nhập kho</p>
+                    </div>
+                </div>
+                <div class="hidden sm:flex items-center space-x-3">
+                    <div id="recordCount" class="bg-white/10 px-3 py-1 rounded-full text-primary-100 text-sm font-medium">
+                        <i class="fas fa-list-ol mr-1"></i>
+                        <span>0 bản ghi</span>
+                    </div>
                 </div>
             </div>
-        </header>
+        </div>
+    </header>
 
-        <main class="max-w-7xl mx-auto p-2 sm:p-4 space-y-5 pb-20">
-            <!-- Bộ lọc và tìm kiếm -->
-            <div class="bg-white shadow-xl border-l-4 border-red-600 p-3 sm:p-4">
-                <h3 class="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2 mb-4">
-                    <i class="fas fa-filter mr-3 text-red-600"></i> Bộ Lọc & Tìm Kiếm
-                </h3>
-                <div class="flex flex-col md:flex-row gap-4 mb-4">
-                    <div class="relative w-full md:w-1/3 group">
-                        <select id="filterChiTiet" class="p-2 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-300 shadow-sm" aria-label="Lọc chi tiết nhập kho">
+    <main class="max-w-7xl mx-auto sm:px-6 lg:px-8 py-6 space-y-6">
+        <!-- Search and Filter Section -->
+        <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-primary-50 to-primary-100 px-6 py-4 border-b border-primary-200">
+                <h2 class="text-lg font-bold text-primary-800 flex items-center"> <i class="fas fa-search mr-3 text-primary-600"></i> Bộ Lọc & Tìm Kiếm </h2>
+                <p class="text-sm text-primary-600 mt-1">Sử dụng các bộ lọc để tìm kiếm chi tiết nhập kho</p>
+            </div>
+            
+            <div class="p-6">
+                <div id="activeFilters" class="mb-6 hidden">
+                    <div class="flex flex-wrap items-center gap-2 mb-4">
+                        <span class="text-sm font-medium text-gray-700">Bộ lọc đang áp dụng:</span>
+                        <div id="filterChips" class="flex flex-wrap gap-2"></div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-4 mb-6">
+                    <div class="flex-1">
+                        <select id="filterChiTiet" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-300 bg-white shadow-sm">
                             <option value="all">Tất cả chi tiết</option>
                             <option value="hasNote">Chi tiết có ghi chú</option>
                         </select>
                     </div>
-                    <div class="relative w-full md:w-1/3">
-                        <button id="resetFilters" type="button" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-300" aria-label="Làm mới bộ lọc">
-                            <i class="fas fa-sync-alt mr-2"></i> Làm mới
+                    <div class="flex gap-2">
+                        <button id="resetFilters" class="px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white rounded-xl font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg flex items-center">
+                            <i class="fas fa-sync-alt mr-2"></i> <span class="hidden sm:inline">Làm mới</span>
+                        </button>
+                        <button id="clearAllFilters" class="px-6 py-3 bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white rounded-xl font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg flex items-center">
+                            <i class="fas fa-times mr-2"></i> <span class="hidden sm:inline">Xóa tất cả</span>
                         </button>
                     </div>
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     <?php foreach ($searchFieldsConfig as $field => $config): ?>
                         <div class="relative group">
-                            <input type="text" id="<?php echo safeHtml($field); ?>" 
-                                   placeholder="Tìm theo <?php echo safeHtml($config['label']); ?>" 
-                                   class="search-input p-2 border border-gray-300 rounded-lg w-full pl-12 focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-300 shadow-sm"
-                                   data-type="<?php echo $config['type']; ?>"
-                                   aria-label="Tìm kiếm theo <?php echo safeHtml($config['label']); ?>">
-                            <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-red-500 transition-colors duration-300"></i>
+                            <label class="block text-sm font-medium text-gray-700 mb-2"> <?php echo safeHtml($config['label']); ?> </label>
+                            <div class="relative">
+                                <input type="text" id="<?php echo safeHtml($field); ?>" placeholder="Tìm <?php echo safeHtml($config['label']); ?>..." class="search-input w-full px-4 py-3 pl-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-300 bg-white shadow-sm hover:shadow-md" data-label="<?php echo safeHtml($config['label']); ?>">
+                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"> <i class="fas fa-search text-gray-400 group-focus-within:text-primary-500 transition-colors duration-300"></i> </div>
+                                <button type="button" class="clear-input absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-primary-500 transition-colors duration-300 hidden" data-field="<?php echo safeHtml($field); ?>"> <i class="fas fa-times"></i> </button>
+                            </div>
                         </div>
                     <?php endforeach; ?>
                 </div>
             </div>
+        </div>
 
-            <!-- Danh sách chi tiết nhập kho -->
-            <div class="bg-white shadow-xl border-l-4 border-red-600 p-3 sm:p-4">
-                <h3 class="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2 mb-4">
-                    <i class="fas fa-list-ul mr-3 text-red-600"></i> Danh Sách Chi Tiết Nhập Kho
-                </h3>
-                <div class="table-container">
-                    <table class="min-w-full divide-y divide-gray-200 rounded-lg overflow-hidden">
-                        <thead class="bg-red-50">
-                            <tr>
-                                <th class="px-2 py-2 text-xs font-medium text-gray-600 uppercase tracking-wider">STT</th>
-                                <th class="px-2 py-2 text-xs font-medium text-gray-600 uppercase tracking-wider">Mã Số Mẻ</th>
-                                <th class="px-2 py-2 text-xs font-medium text-gray-600 uppercase tracking-wider">Đơn Hàng</th>
-                                <th class="px-2 py-2 text-xs font-medium text-gray-600 uppercase tracking-wider">Vật Tư</th>
-                                <th class="px-2 py-2 text-xs font-medium text-gray-600 uppercase tracking-wider">Tên Vải</th>
-                                <th class="px-2 py-2 text-xs font-medium text-gray-600 uppercase tracking-wider">Màu</th>
-                                <th class="px-2 py-2 text-xs font-medium text-gray-600 uppercase tracking-wider">ĐVT</th>
-                                <th class="px-2 py-2 text-xs font-medium text-gray-600 uppercase tracking-wider">Khổ</th>
-                                <th class="px-2 py-2 text-xs font-medium text-gray-600 uppercase tracking-wider">Số Lượng</th>
-                                <th class="px-2 py-2 text-xs font-medium text-gray-600 uppercase tracking-wider">Số Lot</th>
-                                <th class="px-2 py-2 text-xs font-medium text-gray-600 uppercase tracking-wider">Thành Phần</th>
-                                <th class="px-2 py-2 text-xs font-medium text-gray-600 uppercase tracking-wider">Số Kg Cân</th>
-                                <th class="px-2 py-2 text-xs font-medium text-gray-600 uppercase tracking-wider">Khách Hàng</th>
-                                <th class="px-2 py-2 text-xs font-medium text-gray-600 uppercase tracking-wider">Nhân Viên</th>
-                                <th class="px-2 py-2 text-xs font-medium text-gray-600 uppercase tracking-wider">Người Liên Hệ</th>
-                                <th class="px-2 py-2 text-xs font-medium text-gray-600 uppercase tracking-wider">Khu Vực</th>
-                                <th class="px-2 py-2 text-xs font-medium text-gray-600 uppercase tracking-wider">Trạng Thái</th>
-                                <th class="px-2 py-2 text-xs font-medium text-gray-600 uppercase tracking-wider">Ngày Tạo</th>
-                                <th class="px-2 py-2 text-xs font-medium text-gray-600 uppercase tracking-wider">Ghi Chú</th>
-                            </tr>
-                        </thead>
-                        <tbody id="chiTietTableBody" class="bg-white divide-y divide-gray-100"></tbody>
-                    </table>
+        <!-- Results Section -->
+        <div class="bg-white rounded-2xl shadow-xl border  overflow-hidden">
+            <div class="bg-gradient-to-r from-primary-50 to-primary-100 px-6 py-4 border-b border-primary-200">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-lg font-bold text-primary-800 flex items-center"> <i class="fas fa-table mr-3 text-primary-600"></i> Danh Sách Chi Tiết </h2>
+                    <div id="resultsInfo" class="text-sm text-primary-600"></div>
                 </div>
-                <div id="pagination" class="mt-6 flex justify-center items-center space-x-2"></div>
             </div>
-        </main>
+            
+            <div class="table-container">
+                <table class="w-full">
+                    <thead class="bg-gray-50 sticky top-0 z-10">
+                        <tr>
+                            <th class="table-header-cell px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">STT</th>
+                            <th class="table-header-cell px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Mã Số Mẻ</th>
+                            <th class="table-header-cell px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Đơn Hàng</th>
+                            <th class="table-header-cell px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Vật Tư</th>
+                            <th class="table-header-cell px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Tên Vải</th>
+                            <th class="table-header-cell px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Màu</th>
+                            <th class="table-header-cell px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">ĐVT</th>
+                            <th class="table-header-cell px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Khổ</th>
+                            <th class="table-header-cell px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Số Lượng</th>
+                            <th class="table-header-cell px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Số Lot</th>
+                            <th class="table-header-cell px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Thành Phần</th>
+                            <th class="table-header-cell px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Kg Cân</th>
+                            <th class="table-header-cell px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Khách Hàng</th>
+                            <th class="table-header-cell px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Nhân Viên</th>
+                            <th class="table-header-cell px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Người LH</th>
+                            <th class="table-header-cell px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Khu Vực</th>
+                            <th class="table-header-cell px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Trạng Thái</th>
+                            <th class="table-header-cell px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Ngày Tạo</th>
+                            <th class="table-header-cell px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200">Ghi Chú</th>
+                        </tr>
+                    </thead>
+                    <tbody id="chiTietTableBody" class="bg-white divide-y divide-gray-100"></tbody>
+                </table>
+            </div>
+            
+            <div class="bg-gray-50 px-6 py-4 border-t border-gray-200">
+                <div id="pagination" class="flex items-center justify-center space-x-2"></div>
+            </div>
+        </div>
+    </main>
 
-        <!-- Loading Indicator -->
-        <div id="loading" class="loading">
-            <i class="fas fa-spinner fa-spin"></i> Đang tải...
+    <div id="loading" class="loading">
+        <div class="bg-white rounded-2xl p-8 shadow-2xl text-center">
+            <div class="animate-spin w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full mx-auto mb-4"></div>
+            <p class="text-gray-700 font-medium">Đang tải dữ liệu...</p>
         </div>
     </div>
 
- <script>
-    let currentPage = 1;
-    let totalPages = 1;
-    const searchFields = <?php echo json_encode(array_keys($searchFieldsConfig)); ?>;
-    let lastChangedField = null; // Lưu trường cuối cùng được thay đổi
+    <script>
+        let currentPage = 1;
+        const searchFields = <?php echo json_encode(array_keys($searchFieldsConfig)); ?>;
+        const fieldLabels = <?php echo json_encode(array_column($searchFieldsConfig, 'label', null)); ?>;
+        let debounceTimers = new Map();
 
-    // Hàm debounce
-    function debounce(func, wait) {
-        let timeout;
-        return function (...args) {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => func.apply(this, args), wait);
-        };
-    }
-
-    // Hàm reset bộ lọc cụ thể
-    function resetSpecificFilter(fieldToReset) {
-        if (fieldToReset) {
-            $(`#${fieldToReset}`).val(''); // Xóa giá trị của trường cụ thể
-            lastChangedField = null; // Đặt lại để tránh lặp
+        function debounceSearch(field, func, delay = 800) {
+            if (debounceTimers.has(field)) clearTimeout(debounceTimers.get(field));
+            const timer = setTimeout(() => { func(); debounceTimers.delete(field); }, delay);
+            debounceTimers.set(field, timer);
         }
-        loadPage(1); // Tải lại trang với các giá trị input hiện tại
-    }
 
-    // Hàm reset toàn bộ bộ lọc
-    function resetAllFilters() {
-        searchFields.forEach(field => $(`#${field}`).val(''));
-        $('#filterChiTiet').val('all');
-        lastChangedField = null;
-        loadPage(1);
-    }
+        function updateActiveFilters() {
+            const activeFilters = new Map();
+            searchFields.forEach(field => {
+                const value = $(`#${field}`).val().trim();
+                if (value) activeFilters.set(field, { value: value, label: fieldLabels[field] || field });
+            });
+            displayFilterChips(activeFilters);
+        }
 
-    // Khởi tạo sự kiện
-    $(document).ready(function() {
-        searchFields.forEach(field => {
-            const $input = $(`#${field}`);
-            $input.on('input', debounce(() => {
-                if ($input.attr('data-type') === 'float' && $input.val() && (!/^\d*\.?\d*$/.test($input.val()) || $input.val() < 0)) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Dữ liệu không hợp lệ',
-                        text: `Vui lòng nhập số không âm hợp lệ cho ${$input.attr('placeholder')}`
-                    });
-                    $input.val('');
-                    return;
-                }
-                lastChangedField = field; // Lưu trường vừa thay đổi
-                console.log(`Field changed: ${field}, Value: ${$input.val()}`); // Debug
-                loadPage(1);
-            }, 500));
-        });
+        function displayFilterChips(activeFilters) {
+            const $activeFiltersContainer = $('#activeFilters');
+            const $filterChips = $('#filterChips');
+            $activeFiltersContainer.toggleClass('hidden', activeFilters.size === 0);
+            $filterChips.empty();
+            activeFilters.forEach((filter, field) => {
+                const chip = $(`<div class="filter-chip flex items-center bg-primary-100 text-primary-800 px-3 py-1 rounded-full text-sm font-medium"> <span class="mr-2">${filter.label}: ${filter.value}</span> <button type="button" class="remove-filter hover:text-primary-600 transition-colors" data-field="${field}"> <i class="fas fa-times"></i> </button> </div>`);
+                $filterChips.append(chip);
+            });
+        }
 
-        $('#filterChiTiet').on('change', () => {
-            lastChangedField = 'filterChiTiet'; // Lưu trường bộ lọc đặc biệt
-            console.log(`Filter changed: ${$('#filterChiTiet').val()}`); // Debug
+        function removeSpecificFilter(field) {
+            $(`#${field}`).val('').trigger('input');
+        }
+
+        function clearAllFilters() {
+            searchFields.forEach(field => $(`#${field}`).val(''));
+            $('#filterChiTiet').val('all');
+            $('.clear-input').addClass('hidden');
+            loadPage(1);
+        }
+
+        $(document).ready(function() {
+            searchFields.forEach(field => {
+                $(`#${field}`).on('input', function() {
+                    $(this).siblings('.clear-input').toggleClass('hidden', $(this).val().trim() === '');
+                    debounceSearch(field, () => loadPage(1));
+                });
+            });
+            $(document).on('click', '.clear-input, .remove-filter', function() { removeSpecificFilter($(this).data('field')); });
+            $('#resetFilters').on('click', () => loadPage(currentPage));
+            $('#clearAllFilters').on('click', clearAllFilters);
+            $('#filterChiTiet').on('change', () => loadPage(1));
+            $(document).on('click', '.page-link', function(e) {
+                e.preventDefault();
+                const page = $(this).data('page');
+                if (page && page != currentPage) loadPage(page);
+            });
             loadPage(1);
         });
 
-        $('#resetFilters').on('click', resetAllFilters);
-        loadPage(1);
-    });
+        function loadPage(page) {
+            $('#loading').css('display', 'flex');
+            updateActiveFilters();
+            const formData = { action: 'search', page: page };
 
-    // Gọi API để load dữ liệu
-    async function loadPage(page) {
-        if (page < 1 || page > totalPages) {
-            $('#loading').hide();
-            return;
-        }
-
-        const filterValue = $('#filterChiTiet').val();
-        const formData = new FormData();
-        formData.append('action', 'search');
-        formData.append('page', page);
-        searchFields.forEach(field => {
-            const value = $(`#${field}`).val();
-            if (value) formData.append(field, value);
-        });
-
-        // Debug: Log các giá trị FormData
-        const formDataDebug = {};
-        for (let [key, value] of formData.entries()) {
-            formDataDebug[key] = value;
-        }
-        console.log('FormData sent:', formDataDebug);
-
-        $('#loading').show();
-
-        try {
-            const response = await $.ajax({
-                url: window.location.href,
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                timeout: 10000
+            // Lấy dữ liệu từ các ô input tìm kiếm
+            searchFields.forEach(field => {
+                const value = $(`#${field}`).val().trim();
+                if (value) formData[field] = value;
             });
-
-            if (response.success) {
-                updateTable(response.data, response.offset, filterValue);
-                totalPages = response.totalPages;
-                currentPage = response.currentPage;
-                updatePagination(response.totalPages, response.currentPage);
-            } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Lỗi!',
-                    text: response.error || 'Không thể tải dữ liệu.'
-                });
-                updateTable([], response.offset, filterValue); // Hiển thị bảng rỗng nếu có lỗi
+            
+            // *** SỬA LỖI: Gửi giá trị của bộ lọc Ghi Chú ***
+            const filterChiTietValue = $('#filterChiTiet').val();
+            if (filterChiTietValue !== 'all') {
+                formData.filterChiTiet = filterChiTietValue;
             }
-        } catch (error) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Lỗi kết nối!',
-                text: 'Không thể kết nối đến server: ' + error.message
+
+            $.ajax({
+                url: '', type: 'POST', data: formData, dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        currentPage = response.currentPage;
+                        renderTable(response.data, response.offset);
+                        renderPagination(response.totalPages, response.currentPage);
+                        $('#recordCount span').text(`${response.totalRecords} bản ghi`);
+                        $('#resultsInfo').text(` Tổng số ${response.totalRecords}`);
+                    } else {
+                        Swal.fire('Lỗi!', response.error || 'Có lỗi xảy ra khi tải dữ liệu.', 'error');
+                    }
+                },
+                error: (jqXHR, textStatus) => Swal.fire('Lỗi!', 'Không thể kết nối đến máy chủ: ' + textStatus, 'error'),
+                complete: () => $('#loading').css('display', 'none')
             });
-            updateTable([], 0, filterValue); // Hiển thị bảng rỗng nếu lỗi kết nối
-        } finally {
-            $('#loading').hide();
         }
-    }
-
-    // Cập nhật bảng
-    function updateTable(data, offset, filterValue) {
-        const tbody = $('#chiTietTableBody');
-        tbody.empty();
-        if (!data || data.length === 0) {
-            tbody.append(`
-                <tr>
-                    <td colspan="19" class="text-center p-6 bg-red-50 rounded-lg">
-                        <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-3"></i>
-                        <p class="text-red-600 text-base font-semibold">Không tìm thấy chi tiết nhập kho.</p>
-                    </td>
-                </tr>
-            `);
-
-            if (lastChangedField) {
-                const fieldLabel = lastChangedField === 'filterChiTiet' 
-                    ? 'Bộ lọc chi tiết' 
-                    : <?php echo json_encode(array_column($searchFieldsConfig, 'label', null)); ?>[lastChangedField] || lastChangedField;
-                Swal.fire({
-                    icon: 'info',
-                    title: 'Không tìm thấy',
-                    text: `Không có chi tiết nhập kho phù hợp với bộ lọc "${fieldLabel}".`,
-                    showCancelButton: true,
-                    confirmButtonText: `Xóa bộ lọc "${fieldLabel}"`,
-                    cancelButtonText: 'Đóng',
-                    confirmButtonColor: '#ef4444',
-                    cancelButtonColor: '#6b7280'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        resetSpecificFilter(lastChangedField); // Xóa bộ lọc gần nhất
-                    }
-                });
-            } else {
-                Swal.fire({
-                    icon: 'info',
-                    title: 'Không tìm thấy',
-                    text: 'Không có chi tiết nhập kho phù hợp với các bộ lọc. Vui lòng kiểm tra lại.',
-                    showCancelButton: true,
-                    confirmButtonText: 'Xóa tất cả bộ lọc',
-                    cancelButtonText: 'Đóng',
-                    confirmButtonColor: '#ef4444',
-                    cancelButtonColor: '#6b7280'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        resetAllFilters(); // Xóa tất cả bộ lọc
-                    }
-                });
+        
+        function renderTable(data, offset) {
+            const $tbody = $('#chiTietTableBody');
+            $tbody.empty();
+            if (data.length === 0) {
+                $tbody.html('<tr><td colspan="19" class="text-center text-gray-500 py-10">Không tìm thấy dữ liệu phù hợp.</td></tr>');
+                return;
             }
-            return;
+            const renderCell = (value) => value !== null && value !== '' ? $('<div>').text(value).html() : '';
+            const rows = data.map((item, index) => {
+                const rowNum = offset + index + 1;
+                const formattedDate = item.NgayTao ? new Date(item.NgayTao.replace(' ', 'T')).toLocaleDateString('vi-VN') : null;
+                return `
+                    <tr class="hover:bg-primary-50 transition-colors duration-200 animate-fade-in" style="animation-delay: ${index * 0.02}s">
+                        <td class="px-4 py-3 text-sm text-gray-700 border-b border-gray-200">${rowNum}</td>
+                        <td class="px-4 py-3 text-sm font-medium text-primary-700 border-b border-gray-200">${renderCell(item.MaSoMe)}</td>
+                        <td class="px-4 py-3 text-sm text-gray-700 border-b border-gray-200">${renderCell(item.MaDonHang)}</td>
+                        <td class="px-4 py-3 text-sm text-gray-700 border-b border-gray-200">${renderCell(item.MaVatTu)}</td>
+                        <td class="px-4 py-3 text-sm text-gray-700 border-b border-gray-200">${renderCell(item.TenVai)}</td>
+                        <td class="px-4 py-3 text-sm text-gray-700 border-b border-gray-200">${renderCell(item.TenMau)}</td>
+                        <td class="px-4 py-3 text-sm text-gray-700 border-b border-gray-200">${renderCell(item.TenDVT)}</td>
+                        <td class="px-4 py-3 text-sm text-gray-700 border-b border-gray-200">${renderCell(item.Kho)}</td>
+                        <td class="px-4 py-3 text-sm text-gray-700 border-b border-gray-200">${renderCell(item.SoLuong)}</td>
+                        <td class="px-4 py-3 text-sm text-gray-700 border-b border-gray-200">${renderCell(item.SoLot)}</td>
+                        <td class="px-4 py-3 text-sm text-gray-700 border-b border-gray-200">${renderCell(item.TenThanhPhan)}</td>
+                        <td class="px-4 py-3 text-sm text-gray-700 border-b border-gray-200">${renderCell(item.SoKgCan)}</td>
+                        <td class="px-4 py-3 text-sm text-gray-700 border-b border-gray-200">${renderCell(item.TenKhachHang)}</td>
+                        <td class="px-4 py-3 text-sm text-gray-700 border-b border-gray-200">${renderCell(item.TenNhanVien)}</td>
+                        <td class="px-4 py-3 text-sm text-gray-700 border-b border-gray-200">${renderCell(item.TenNguoiLienHe)}</td>
+                        <td class="px-4 py-3 text-sm text-gray-700 border-b border-gray-200">${renderCell(item.MaKhuVuc)}</td>
+                        <td class="px-4 py-3 text-sm text-gray-700 border-b border-gray-200">${renderCell(item.TrangThai)}</td>
+                        <td class="px-4 py-3 text-sm text-gray-700 border-b border-gray-200">${renderCell(formattedDate)}</td>
+                        <td class="px-4 py-3 text-sm text-gray-700 border-b border-gray-200"><div class="max-w-xs truncate" title="${renderCell(item.GhiChu)}">${renderCell(item.GhiChu)}</div></td>
+                    </tr>
+                `;
+            });
+            $tbody.append(rows.join(''));
         }
 
-        let stt = offset + 1;
-        data.forEach(item => {
-            if (filterValue === 'hasNote' && (!item.GhiChu || item.GhiChu.trim() === '')) return;
-            const row = `
-                <tr class="hover:bg-red-50 transition-colors duration-200" data-note="${item.GhiChu || ''}">
-                    <td class="px-4 py-2 text-sm text-gray-700">${stt++}</td>
-                    <td class="px-4 py-2 text-sm text-gray-700">${item.MaSoMe || ''}</td>
-                    <td class="px-4 py-2 text-sm text-gray-700">${item.MaDonHang || ''}</td>
-                    <td class="px-4 py-2 text-sm text-gray-700">${item.MaVatTu || ''}</td>
-                    <td class="px-4 py-2 text-sm text-gray-700">${item.TenVai || ''}</td>
-                    <td class="px-4 py-2 text-sm text-gray-700">${item.TenMau || ''}</td>
-                    <td class="px-4 py-2 text-sm text-gray-700">${item.TenDVT || ''}</td>
-                    <td class="px-4 py-2 text-sm text-gray-700">${item.Kho || ''}</td>
-                    <td class="px-4 py-2 text-sm font-bold ${parseFloat(item.SoLuong) > 0 ? 'text-green-700' : 'text-red-700'}">
-                        ${item.SoLuong || '0'} ${item.TenDVT || ''}
-                    </td>
-                    <td class="px-4 py-2 text-sm text-gray-700">${item.SoLot || ''}</td>
-                    <td class="px-4 py-2 text-sm text-gray-700">${item.TenThanhPhan || ''}</td>
-                    <td class="px-4 py-2 text-sm text-gray-700">${item.SoKgCan || ''}</td>
-                    <td class="px-4 py-2 text-sm text-gray-700">${item.TenKhachHang || ''}</td>
-                    <td class="px-4 py-2 text-sm text-gray-700">${item.TenNhanVien || ''}</td>
-                    <td class="px-4 py-2 text-sm text-gray-700">${item.TenNguoiLienHe || ''}</td>
-                    <td class="px-4 py-2 text-sm text-gray-700">${item.MaKhuVuc || ''}</td>
-                    <td class="px-4 py-2 text-sm text-gray-700">
-                        <span class="px-2 py-1 rounded-full text-xs ${getStatusClass(item.TrangThai)}">
-                            ${getStatusText(item.TrangThai)}
-                        </span>
-                    </td>
-                    <td class="px-4 py-2 text-sm text-gray-700">
-                        ${item.NgayTao && new Date(item.NgayTao).toLocaleDateString('vi-VN') || ''}
-                    </td>
-                    <td class="px-4 py-2 text-sm text-gray-700">${item.GhiChu || ''}</td>
-                </tr>
-            `;
-            tbody.append(row);
-        });
-    }
-
-    // Cập nhật phân trang
-    function updatePagination(totalPages, currentPage) {
-        const pagination = $('#pagination');
-        pagination.empty();
-
-        const maxPagesToShow = 5;
-        let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
-        let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
-
-        if (endPage - startPage + 1 < maxPagesToShow) {
-            startPage = Math.max(1, endPage - maxPagesToShow + 1);
-        }
-
-        if (currentPage > 1) {
-            pagination.append(`
-                <button onclick="loadPage(${currentPage - 1})" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-full hover:bg-gray-300 transition-all duration-300" aria-label="Trang trước">
-                    <i class="fas fa-chevron-left"></i>
-                </button>
-            `);
-        }
-
-        if (startPage > 1) {
-            pagination.append(`
-                <button onclick="loadPage(1)" class="px-4 py-2 ${1 === currentPage ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700'} rounded-full hover:bg-red-500 hover:text-white transition-all duration-300" aria-label="Trang 1">
-                    1
-                </button>
-            `);
-            if (startPage > 2) {
-                pagination.append('<span class="px-4 py-2">...</span>');
+        function renderPagination(totalPages, currentPage) {
+            const $pagination = $('#pagination');
+            $pagination.empty();
+            if (totalPages <= 1) return;
+            const createLink = (page, text, isActive = false, isDisabled = false) => {
+                const activeClass = isActive ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-gray-600 hover:bg-gray-100';
+                const disabledClass = isDisabled ? 'opacity-50 cursor-not-allowed' : '';
+                return `<a href="#" class="page-link px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium transition-colors ${activeClass} ${disabledClass}" data-page="${page}">${text}</a>`;
+            };
+            let html = createLink(currentPage - 1, '<i class="fas fa-chevron-left"></i>', false, currentPage === 1);
+            const pageWindow = 2;
+            let startPage = Math.max(1, currentPage - pageWindow);
+            let endPage = Math.min(totalPages, currentPage + pageWindow);
+            if (startPage > 1) {
+                html += createLink(1, '1');
+                if (startPage > 2) html += `<span class="px-4 py-2 text-gray-500">...</span>`;
             }
-        }
-
-        for (let i = startPage; i <= endPage; i++) {
-            pagination.append(`
-                <button onclick="loadPage(${i})" class="px-4 py-2 ${i === currentPage ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700'} rounded-full hover:bg-red-500 hover:text-white transition-all duration-300" aria-label="Trang ${i}">
-                    ${i}
-                </button>
-            `);
-        }
-
-        if (endPage < totalPages) {
-            if (endPage < totalPages - 1) {
-                pagination.append('<span class="px-4 py-2">...</span>');
+            for (let i = startPage; i <= endPage; i++) {
+                html += createLink(i, i, i === currentPage);
             }
-            pagination.append(`
-                <button onclick="loadPage(${totalPages})" class="px-4 py-2 ${totalPages === currentPage ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700'} rounded-full hover:bg-red-500 hover:text-white transition-all duration-300" aria-label="Trang ${totalPages}">
-                    ${totalPages}
-                </button>
-            `);
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) html += `<span class="px-4 py-2 text-gray-500">...</span>`;
+                html += createLink(totalPages, totalPages);
+            }
+            html += createLink(currentPage + 1, '<i class="fas fa-chevron-right"></i>', false, currentPage === totalPages);
+            $pagination.html(html);
         }
-
-        if (currentPage < totalPages) {
-            pagination.append(`
-                <button onclick="loadPage(${currentPage + 1})" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-full hover:bg-gray-300 transition-all duration-300" aria-label="Trang sau">
-                    <i class="fas fa-chevron-right"></i>
-                </button>
-            `);
-        }
-    }
-
-    // Hàm lấy class và text trạng thái
-    function getStatusClass(status) {
-        switch (status) {
-            case '0': return 'bg-blue-100 text-blue-800';
-            case '1': return 'bg-yellow-100 text-yellow-800';
-            case '2': return 'bg-green-100 text-green-800';
-            default: return 'bg-gray-100 text-gray-800';
-        }
-    }
-
-    function getStatusText(status) {
-        switch (status) {
-            case '0': return 'Hàng Mới';
-            case '1': return 'Hàng Xuất';
-            case '2': return 'Hàng Tồn';
-            default: return 'N/A';
-        }
-    }
-</script>
+    </script>
 </body>
 </html>

@@ -1217,7 +1217,7 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
     }
 
     const formData = new FormData(this);
-    const maQRBase = `${formData.get('MaKhachHang')}_${formData.get('MaVai')}_${formData.get('MaMau')}_${formData.get('MaDVT')}_${formData.get('Kho')}_${soLuong}_${soLot}_${tenThanhPhan}`;
+    const maQRBase = `${formData.get('MaKhachHang')}_${formData.get('MaVai')}_${formData.get('MaMau')}_${formData.get('MaDVT')}_${formData.get('Kho')}_${soLuong}_${soLot}`;
 
     for (let i = 1; i <= soCay; i++) {
         tempSTT++;
