@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once 'init.php';
 require_once 'db_config.php';
 
 // Kiểm tra nếu người dùng chưa đăng nhập, chuyển hướng về login.php

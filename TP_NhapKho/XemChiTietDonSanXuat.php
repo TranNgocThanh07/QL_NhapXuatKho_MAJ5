@@ -9,6 +9,36 @@ use Endroid\QrCode\Writer\PngWriter;
 require_once __DIR__ . '/TemPDF.php';
 include '../db_config.php';
 
+// Xử lý yêu cầu AJAX
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    header('Content-Type: application/json');
+
+    if ($_POST['action'] === 'deleteChiTiet') {
+        try {
+            $maCTNHTP = $_POST['maChiTiet'] ?? ''; // Lưu ý: JavaScript gửi 'maChiTiet'
+            if (empty($maCTNHTP)) {
+                echo json_encode(['success' => false, 'message' => 'Thiếu MaCTNHTP']);
+                exit;
+            }
+
+            // Xóa bản ghi từ TP_ChiTietDonSanXuat
+            $sqlDelete = "DELETE FROM TP_ChiTietDonSanXuat WHERE MaCTNHTP = ?";
+            $stmtDelete = $pdo->prepare($sqlDelete);
+            $stmtDelete->execute([$maCTNHTP]);
+
+            // Kiểm tra xem có bản ghi nào bị ảnh hưởng không
+            if ($stmtDelete->rowCount() > 0) {
+                echo json_encode(['success' => true, 'message' => 'Xóa chi tiết thành công']);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Không tìm thấy chi tiết để xóa']);
+            }
+        } catch (Exception $e) {
+            error_log("[" . date('Y-m-d H:i:s') . "] Lỗi xóa chi tiết: " . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Lỗi server: ' . $e->getMessage()]);
+        }
+        exit;
+    }
+}
 // Truy vấn thông tin đơn sản xuất
 $maSoMe = $_GET['maSoMe'] ?? '';
 $sql = "SELECT 
@@ -727,86 +757,94 @@ $percentCompleted = $don && $don['SoLuongDatHang'] > 0 ? min(100, round(($don['D
                 </div>
 
                <!-- Chi tiết nhập kho -->
-            <div class="bg-white rounded-xl shadow-sm p-3 sm:p-4 card-hover border border-gray-100">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="section-header text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2">
-                        <div class="icon-circle bg-indigo-100 text-indigo-600">
-                            <i class="fas fa-list"></i>
+                <div class="bg-white rounded-xl shadow-sm p-3 sm:p-4 card-hover border border-gray-100">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="section-header text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2">
+                            <div class="icon-circle bg-indigo-100 text-indigo-600">
+                                <i class="fas fa-list"></i>
+                            </div>
+                            <span>Chi Tiết Nhập Kho</span>
+                        </h3>
+                        <div>
+                            <select id="filterChiTiet" onchange="filterChiTiet()" class="border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="all">Tất cả chi tiết</option>
+                                <option value="hasNote">Chi tiết có ghi chú</option>
+                            </select>
                         </div>
-                        <span>Chi Tiết Nhập Kho</span>
-                    </h3>
-                    <div>
-                        <select id="filterChiTiet" onchange="filterChiTiet()" class="border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="all">Tất cả chi tiết</option>
-                            <option value="hasNote">Chi tiết có ghi chú</option>
-                        </select>
                     </div>
-                </div>
-                <?php if ($chiTietList): ?>
-                    <div class="responsive-table custom-scrollbar">
-                        <table id="chiTietTable" class="w-full border-collapse">
-                            <thead class="bg-red-50 text-red-800 sticky top-0 z-10">
-                                <tr>
-                                    <th class="text-left sticky left-0 bg-red-50 z-20 p-2 sm:p-3 font-semibold">STT</th>
-                                    <th class="text-left p-2 sm:p-3 font-semibold">Số Lượng</th>
-                                    <?php if (!empty($don) && isset($don['MaDVT']) && $don['MaDVT'] != '1'): ?>
-                                        <th class="text-left p-2 sm:p-3 font-semibold">Số Kg Cân</th>
-                                    <?php endif; ?>
-                                    <th class="text-left p-2 sm:p-3 font-semibold">Số Lot</th>
-                                    <th class="text-left p-2 sm:p-3 font-semibold">Thành Phần</th>
-                                    <th class="text-left p-2 sm:p-3 font-semibold">Trạng Thái</th>
-                                    <th class="text-left p-2 sm:p-3 font-semibold">Ngày Tạo</th>
-                                    <th class="text-left p-2 sm:p-3 font-semibold">Khu Vực</th>
-                                    <th class="text-left p-2 sm:p-3 font-semibold">Ghi Chú</th>
-                                    <th class="text-left p-2 sm:p-3 font-semibold">In Tem</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($chiTietList as $index => $chiTiet): ?>
-                                    <tr class="border-b border-gray-200 hover:bg-red-100 transition-colors" data-note="<?php echo safeHtml($chiTiet['GhiChu']); ?>">
-                                        <td class="sticky left-0 bg-white p-2 sm:p-3"><?php echo $index + 1; ?></td>
-                                        <td class="font-bold p-2 sm:p-3 whitespace-normal <?php echo intval($chiTiet['SoLuong']) > 0 ? 'text-green-600' : 'text-red-600'; ?>">
-                                            <?php echo safeHtml($chiTiet['SoLuong']) . ' ' . safeHtml($chiTiet['TenDVT']); ?>
-                                        </td>
+                    <?php if ($chiTietList): ?>
+                        <div class="responsive-table custom-scrollbar">
+                            <table id="chiTietTable" class="w-full border-collapse">
+                                <thead class="bg-red-50 text-red-800 sticky top-0 z-10">
+                                    <tr>
+                                        <th class="text-left sticky left-0 bg-red-50 z-20 p-2 sm:p-3 font-semibold">STT</th>
+                                        <th class="text-left p-2 sm:p-3 font-semibold">Số Lượng</th>
                                         <?php if (!empty($don) && isset($don['MaDVT']) && $don['MaDVT'] != '1'): ?>
-                                            <td class="p-2 sm:p-3"><?php echo safeHtml($chiTiet['SoKgCan']); ?></td>
+                                            <th class="text-left p-2 sm:p-3 font-semibold">Số Kg Cân</th>
                                         <?php endif; ?>
-                                        <td class="p-2 sm:p-3"><?php echo safeHtml($chiTiet['SoLot']); ?></td>
-                                        <td class="p-2 sm:p-3"><?php echo safeHtml($chiTiet['TenThanhPhan']); ?></td>
-                                        <td class="p-2 sm:p-3">
-                                            <span class="px-2 py-1 rounded-full text-xs <?php echo getStatusClassChiTiet($chiTiet['TrangThai']); ?>">
-                                                <?php echo getStatusTextChiTiet($chiTiet['TrangThai']); ?>
-                                            </span>
-                                        </td>
-                                        <td class="text-gray-600 p-2 sm:p-3">
-                                            <?php
-                                                $ngayTao = safeHtml($chiTiet['NgayTao']);
-                                                if ($ngayTao && strtotime($ngayTao)) {
-                                                    echo date('d/m/Y', strtotime($ngayTao));
-                                                } else {
-                                                    echo $ngayTao;
-                                                }
-                                            ?>
-                                        </td>
-                                        <td class="text-gray-600 p-2 sm:p-3"><?php echo safeHtml($chiTiet['MaKhuVuc']); ?></td>
-                                        <td class="text-gray-600 p-2 sm:p-3"><?php echo safeHtml($chiTiet['GhiChu']); ?></td>
-                                        <td class="p-2 sm:p-3">
-                                            <button onclick='generatePDF(<?php echo json_encode([$chiTiet]); ?>)' class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 text-sm">
-                                                <i class="ri-printer-line"></i> In Tem
-                                            </button>
-                                        </td>
+                                        <th class="text-left p-2 sm:p-3 font-semibold">Số Lot</th>
+                                        <th class="text-left p-2 sm:p-3 font-semibold">Thành Phần</th>
+                                        <th class="text-left p-2 sm:p-3 font-semibold">Trạng Thái</th>
+                                        <th class="text-left p-2 sm:p-3 font-semibold">Ngày Tạo</th>
+                                        <th class="text-left p-2 sm:p-3 font-semibold">Khu Vực</th>
+                                        <th class="text-left p-2 sm:p-3 font-semibold">Ghi Chú</th>
+                                        <th class="text-left p-2 sm:p-3 font-semibold">In Tem</th>
+                                        <th class="text-left p-2 sm:p-3 font-semibold">Xóa</th>
                                     </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                <?php else: ?>
-                    <div class="text-center bg-red-50 rounded-lg p-6">
-                        <i class="ri-error-warning-line text-4xl text-red-500 mb-3"></i>
-                        <p class="text-red-600 text-base font-semibold">Không tìm thấy chi tiết nhập kho cho đơn này.</p>
-                    </div>
-                <?php endif; ?>
-            </div>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($chiTietList as $index => $chiTiet): ?>
+                                        <tr class="border-b border-gray-200 hover:bg-red-100 transition-colors" data-note="<?php echo safeHtml($chiTiet['GhiChu']); ?>">
+                                            <td class="sticky left-0 bg-white p-2 sm:p-3"><?php echo $index + 1; ?></td>
+                                            <td class="font-bold p-2 sm:p-3 whitespace-normal <?php echo intval($chiTiet['SoLuong']) > 0 ? 'text-green-600' : 'text-red-600'; ?>">
+                                                <?php echo safeHtml($chiTiet['SoLuong']) . ' ' . safeHtml($chiTiet['TenDVT']); ?>
+                                            </td>
+                                            <?php if (!empty($don) && isset($don['MaDVT']) && $don['MaDVT'] != '1'): ?>
+                                                <td class="p-2 sm:p-3"><?php echo safeHtml($chiTiet['SoKgCan']); ?></td>
+                                            <?php endif; ?>
+                                            <td class="p-2 sm:p-3"><?php echo safeHtml($chiTiet['SoLot']); ?></td>
+                                            <td class="p-2 sm:p-3"><?php echo safeHtml($chiTiet['TenThanhPhan']); ?></td>
+                                            <td class="p-2 sm:p-3">
+                                                <span class="px-2 py-1 rounded-full text-xs <?php echo getStatusClassChiTiet($chiTiet['TrangThai']); ?>">
+                                                    <?php echo getStatusTextChiTiet($chiTiet['TrangThai']); ?>
+                                                </span>
+                                            </td>
+                                            <td class="text-gray-600 p-2 sm:p-3">
+                                                <?php
+                                                    $ngayTao = safeHtml($chiTiet['NgayTao']);
+                                                    if ($ngayTao && strtotime($ngayTao)) {
+                                                        echo date('d/m/Y', strtotime($ngayTao));
+                                                    } else {
+                                                        echo $ngayTao;
+                                                    }
+                                                ?>
+                                            </td>
+                                            <td class="text-gray-600 p-2 sm:p-3"><?php echo safeHtml($chiTiet['MaKhuVuc']); ?></td>
+                                            <td class="text-gray-600 p-2 sm:p-3"><?php echo safeHtml($chiTiet['GhiChu']); ?></td>
+                                            <td class="p-2 sm:p-3">
+                                                <button onclick='generatePDF(<?php echo json_encode([$chiTiet], JSON_HEX_QUOT | JSON_HEX_APOS); ?>)' class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 text-sm">
+                                                    <i class="ri-printer-line"></i> In Tem
+                                                </button>
+                                            </td>
+                                            <td class="p-2 sm:p-3">
+                                                <?php if ( $chiTiet['TrangThai'] != '1'): ?>
+                                                    <button onclick="deleteChiTiet('<?php echo safeHtml($chiTiet['MaCTNHTP'] ?: ''); ?>')" class="bg-gray-600 text-white px-3 py-1 rounded hover:bg-gray-700 text-sm">
+                                                        <i class="fas fa-trash-alt"></i> Xóa
+                                                    </button>
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php else: ?>
+                        <div class="text-center bg-red-50 rounded-lg p-6">
+                            <i class="ri-error-warning-line text-4xl text-red-500 mb-3"></i>
+                            <p class="text-red-600 text-base font-semibold">Không tìm thấy chi tiết nhập kho cho đơn này.</p>
+                        </div>
+                    <?php endif; ?>
+                </div>
             <?php else: ?>
                 <div class="flex items-center justify-center h-[calc(100vh-64px)]">
                     <div class="text-center p-6 bg-white rounded-lg shadow-lg border-t-4 border-red-500">
@@ -865,7 +903,81 @@ $percentCompleted = $don && $don['SoLuongDatHang'] > 0 ? min(100, round(($don['D
                 checkCordovaEnvironment();
             }
         });
+        // Hàm xóa chi tiết nhập kho
+        async function deleteChiTiet(maChiTiet) {
+        logToScreen(`[deleteChiTiet] Bắt đầu xóa chi tiết: maChiTiet=${maChiTiet}`);
 
+        // Hiển thị xác nhận xóa
+        const { isConfirmed } = await Swal.fire({
+            title: 'Xác nhận xóa',
+            text: 'Bạn có chắc chắn muốn xóa chi tiết nhập kho này? Hành động này không thể hoàn tác.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Xóa',
+            cancelButtonText: 'Hủy'
+        });
+
+        if (!isConfirmed) {
+            logToScreen('[deleteChiTiet] Người dùng hủy xóa.');
+            return;
+        }
+
+        // Hiển thị loading
+        Swal.fire({
+            title: 'Đang xóa...',
+            text: 'Vui lòng chờ trong giây lát.',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        try {
+            // Gửi yêu cầu AJAX
+            const formData = new FormData();
+            formData.append('action', 'deleteChiTiet');
+            formData.append('maChiTiet', maChiTiet);
+
+            logToScreen(`[deleteChiTiet] Gửi yêu cầu POST với maChiTiet=${maChiTiet}`);
+            const response = await fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            });
+
+            // Kiểm tra phản hồi
+            if (!response.ok) {
+                const errorText = await response.text();
+                logToScreen(`[deleteChiTiet] Lỗi server: ${response.status} - ${errorText}`, 'error');
+                throw new Error(`Phản hồi server không thành công: ${response.status}`);
+            }
+
+            const result = await response.json();
+            logToScreen(`[deleteChiTiet] Phản hồi JSON: ${JSON.stringify(result).substring(0, 100)}...`);
+
+            if (result.success) {
+                // Làm mới bảng
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Xóa thành công',
+                    text: result.message || 'Chi tiết nhập kho đã bị xóa.',
+                    timer: 2000,
+                    showConfirmButton: false
+                }).then(() => {
+                    logToScreen('[deleteChiTiet] Làm mới trang.');
+                    window.location.reload(true);
+                });
+            } else {
+                throw new Error(result.message || 'Xóa không thành công');
+            }
+        } catch (error) {
+            logToScreen(`[deleteChiTiet] Lỗi: ${error.message}`, 'error');
+            console.error('Chi tiết lỗi:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Lỗi xóa',
+                text: `Không thể xóa chi tiết: ${error.message}`,
+                footer: 'Vui lòng kiểm tra console để biết chi tiết.'
+            });
+        }
+    }
         // Hàm generatePDF
         window.generatePDF = async function(data) {
         const startTime = performance.now();

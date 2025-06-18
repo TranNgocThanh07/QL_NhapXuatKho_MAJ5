@@ -58,7 +58,7 @@ try {
         header('Content-Type: application/json');
 
         $page = isset($_POST['page']) ? max(1, (int)$_POST['page']) : 1;
-        $limit = 15;
+        $limit = 10;
         $offset = ($page - 1) * $limit;
 
         // Bắt đầu xây dựng điều kiện và tham số
