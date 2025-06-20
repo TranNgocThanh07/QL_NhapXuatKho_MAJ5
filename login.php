@@ -26,6 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['tenNhanVien'] = $user['TenNhanVien'];
                 $_SESSION['maNhanVien'] = $user['MaNhanVien'];
                 $_SESSION['maPhanQuyen'] = $user['MaPhanQuyen'];
+                $_SESSION['taiKhoan'] = $user['TaiKhoan'];
 
                 if ($remember) {
                     // Lưu cả tài khoản và mật khẩu (đã mã hóa base64 để bảo mật cơ bản)

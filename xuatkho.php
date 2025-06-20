@@ -1,16 +1,16 @@
 <?php
 // xuatkho.php
 include 'db_config.php'; // File cấu hình kết nối database
-
-
+require_once 'init.php';
+$maPhanQuyen = $_SESSION['maPhanQuyen'] ?? '';
 // Xử lý yêu cầu AJAX
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'getData') {
     try {
-        $recordsPerPage = 10;
+       $recordsPerPage = 10;
         $page = isset($_POST['page']) && is_numeric($_POST['page']) ? (int)$_POST['page'] : 1;
         $offset = ($page - 1) * $recordsPerPage;
 
-        $tenNhanVien = isset($_POST['tenNhanVien']) ? "%" . $_POST['tenNhanVien'] . "%" : "%";
+        $maXuatHang = isset($_POST['maXuatHang']) ? "%" . $_POST['maXuatHang'] . "%" : "%";
         $tenKhachHang = isset($_POST['tenKhachHang']) ? "%" . $_POST['tenKhachHang'] . "%" : "%";
         $trangThaiFilter = isset($_POST['trangThai']) && in_array($_POST['trangThai'], ['chua_xuat', 'dang_xuat', 'hoan_tat']) ? $_POST['trangThai'] : 'chua_xuat';
 
@@ -18,9 +18,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $sqlCount = "SELECT COUNT(DISTINCT xh.MaXuatHang) as total 
                     FROM TP_XuatHang xh
                     LEFT JOIN TP_ChiTietXuatHang ct ON xh.MaXuatHang = ct.MaXuatHang
-                    LEFT JOIN NhanVien nv ON xh.MaNhanVien = nv.MaNhanVien
                     LEFT JOIN TP_KhachHang kh ON xh.MaKhachHang = kh.MaKhachHang
-                    WHERE nv.TenNhanVien LIKE :tenNhanVien
+                    WHERE xh.MaXuatHang LIKE :maXuatHang
                     AND kh.TenKhachHang LIKE :tenKhachHang";
         if ($trangThaiFilter === 'chua_xuat') {
             $sqlCount .= " AND xh.TrangThai = 0 AND NOT EXISTS (
@@ -46,13 +45,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $sqlCount .= " AND xh.TrangThai = 1";
         }
         $stmtCount = $pdo->prepare($sqlCount);
-        $stmtCount->bindValue(':tenNhanVien', $tenNhanVien, PDO::PARAM_STR);
+        $stmtCount->bindValue(':maXuatHang', $maXuatHang, PDO::PARAM_STR);
         $stmtCount->bindValue(':tenKhachHang', $tenKhachHang, PDO::PARAM_STR);
         $stmtCount->execute();
         $totalRecords = $stmtCount->fetch(PDO::FETCH_ASSOC)['total'];
         $totalPages = ceil($totalRecords / $recordsPerPage);
 
-        // Lấy dữ liệu phiếu xuất
+       // Lấy dữ liệu phiếu xuất
         $sql = "SELECT xh.MaXuatHang, nv.TenNhanVien, kh.TenKhachHang, xh.NgayXuat, xh.TrangThai, xh.GhiChu,
                SUM(ct.SoLuong) as TongSoLuongXuat,
                dvt.TenDVT,
@@ -63,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 LEFT JOIN NhanVien nv ON xh.MaNhanVien = nv.MaNhanVien
                 LEFT JOIN TP_KhachHang kh ON xh.MaKhachHang = kh.MaKhachHang
                 LEFT JOIN TP_DonViTinh dvt ON ct.MaDVT = dvt.MaDVT
-                WHERE nv.TenNhanVien LIKE :tenNhanVien
+                WHERE xh.MaXuatHang LIKE :maXuatHang
                 AND kh.TenKhachHang LIKE :tenKhachHang";
         if ($trangThaiFilter === 'chua_xuat') {
             $sql .= " AND xh.TrangThai = 0 AND NOT EXISTS (
@@ -93,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 OFFSET :offset ROWS 
                 FETCH NEXT :limit ROWS ONLY";
         $stmt = $pdo->prepare($sql);
-        $stmt->bindValue(':tenNhanVien', $tenNhanVien, PDO::PARAM_STR);
+        $stmt->bindValue(':maXuatHang', $maXuatHang, PDO::PARAM_STR);
         $stmt->bindValue(':tenKhachHang', $tenKhachHang, PDO::PARAM_STR);
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
         $stmt->bindValue(':limit', $recordsPerPage, PDO::PARAM_INT);
@@ -122,14 +121,14 @@ $page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] :
 $offset = ($page - 1) * $recordsPerPage;
 $trangThaiFilter = isset($_GET['trangThai']) && in_array($_GET['trangThai'], ['chua_xuat', 'dang_xuat', 'hoan_tat']) ? $_GET['trangThai'] : 'chua_xuat';
 $tenKhachHang = isset($_GET['tenKhachHang']) ? "%" . $_GET['tenKhachHang'] . "%" : "%";
-
+$maXuatHang = isset($_GET['maXuatHang']) ? "%" . $_GET['maXuatHang'] . "%" : "%";
 // Lấy dữ liệu ban đầu
+// Đếm tổng số bản ghi
 $sqlCount = "SELECT COUNT(DISTINCT xh.MaXuatHang) as total 
              FROM TP_XuatHang xh
              LEFT JOIN TP_ChiTietXuatHang ct ON xh.MaXuatHang = ct.MaXuatHang
-             LEFT JOIN NhanVien nv ON xh.MaNhanVien = nv.MaNhanVien
              LEFT JOIN TP_KhachHang kh ON xh.MaKhachHang = kh.MaKhachHang
-             WHERE nv.TenNhanVien LIKE :tenNhanVien
+             WHERE xh.MaXuatHang LIKE :maXuatHang
              AND kh.TenKhachHang LIKE :tenKhachHang";
 if ($trangThaiFilter === 'chua_xuat') {
     $sqlCount .= " AND xh.TrangThai = 0 AND NOT EXISTS (
@@ -155,7 +154,7 @@ if ($trangThaiFilter === 'chua_xuat') {
     $sqlCount .= " AND xh.TrangThai = 1";
 }
 $stmtCount = $pdo->prepare($sqlCount);
-$stmtCount->bindValue(':tenNhanVien', '%', PDO::PARAM_STR); // Mặc định tìm tất cả nhân viên
+$stmtCount->bindValue(':maXuatHang', $maXuatHang, PDO::PARAM_STR);
 $stmtCount->bindValue(':tenKhachHang', $tenKhachHang, PDO::PARAM_STR);
 $stmtCount->execute();
 $totalRecords = $stmtCount->fetch(PDO::FETCH_ASSOC)['total'];
@@ -171,7 +170,7 @@ $sql = "SELECT xh.MaXuatHang, nv.TenNhanVien, kh.TenKhachHang, xh.NgayXuat, xh.T
         LEFT JOIN NhanVien nv ON xh.MaNhanVien = nv.MaNhanVien
         LEFT JOIN TP_KhachHang kh ON xh.MaKhachHang = kh.MaKhachHang
         LEFT JOIN TP_DonViTinh dvt ON ct.MaDVT = dvt.MaDVT
-        WHERE nv.TenNhanVien LIKE :tenNhanVien
+        WHERE xh.MaXuatHang LIKE :maXuatHang
         AND kh.TenKhachHang LIKE :tenKhachHang";
 if ($trangThaiFilter === 'chua_xuat') {
     $sql .= " AND xh.TrangThai = 0 AND NOT EXISTS (
@@ -201,7 +200,7 @@ $sql .= " GROUP BY xh.MaXuatHang, nv.TenNhanVien, kh.TenKhachHang, xh.NgayXuat, 
           OFFSET :offset ROWS 
           FETCH NEXT :limit ROWS ONLY";
 $stmt = $pdo->prepare($sql);
-$stmt->bindValue(':tenNhanVien', '%', PDO::PARAM_STR); // Mặc định tìm tất cả nhân viên
+$stmt->bindValue(':maXuatHang', $maXuatHang, PDO::PARAM_STR);
 $stmt->bindValue(':tenKhachHang', $tenKhachHang, PDO::PARAM_STR);
 $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
 $stmt->bindValue(':limit', $recordsPerPage, PDO::PARAM_INT);
@@ -264,7 +263,7 @@ $xuatHang = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <!-- Thanh tìm kiếm và bộ lọc trạng thái -->
                 <div class="flex text-sm flex-col md:flex-row gap-4 mb-4">
                     <div class="relative w-full md:w-1/3 group">
-                        <input type="text" id="searchTenNhanVien" placeholder="Tìm theo Tên Nhân Viên" class="p-1 border border-gray-300 rounded-lg w-full pl-12 focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-300 shadow-sm">
+                        <input type="text" id="searchMaXuatHang" placeholder="Tìm theo Mã Phiếu Xuất" class="p-1 border border-gray-300 rounded-lg w-full pl-12 focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-300 shadow-sm">
                         <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-red-500 transition-colors duration-300"></i>
                     </div>
                     <div class="relative w-full md:w-1/3 group">
@@ -375,17 +374,23 @@ function debounce(func, wait) {
     };
 }
 
-// Ẩn/hiện nút Xuất Hàng dựa trên bộ lọc trạng thái
+
+// Ẩn/hiện nút Xuất Hàng dựa trên bộ lọc trạng thái và mã phân quyền
 function toggleButtonsBasedOnFilter() {
     const trangThai = document.getElementById('filterTrangThai').value;
     const btnXuatHang = document.getElementById('btnXuatHang');
-    if (trangThai === 'hoan_tat') {
-        btnXuatHang.style.display = 'none';
+    const maPhanQuyen = <?php echo json_encode($maPhanQuyen); ?>;
+    
+    if (maPhanQuyen == 4 || trangThai === 'hoan_tat') {
+        if (btnXuatHang) {
+            btnXuatHang.style.display = 'none';
+        }
     } else {
-        btnXuatHang.style.display = 'inline-flex';
+        if (btnXuatHang) {
+            btnXuatHang.style.display = 'inline-flex';
+        }
     }
 }
-
 // Hàm để bỏ chọn tất cả checkbox
 function uncheckAllCheckboxes() {
     const checkboxes = document.querySelectorAll('.row-checkbox');
@@ -404,7 +409,7 @@ window.addEventListener('pageshow', function(event) {
 
 // Gọi API để tải dữ liệu
 function loadPage(page) {
-    const tenNhanVien = document.getElementById('searchTenNhanVien').value;
+   const maXuatHang = document.getElementById('searchMaXuatHang').value;
     const tenKhachHang = document.getElementById('searchTenKhachHang').value;
     const trangThai = document.getElementById('filterTrangThai').value;
     const loading = document.getElementById('loading');
@@ -414,7 +419,7 @@ function loadPage(page) {
     fetch(window.location.href, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `action=getData&page=${page}&tenNhanVien=${encodeURIComponent(tenNhanVien)}&tenKhachHang=${encodeURIComponent(tenKhachHang)}&trangThai=${trangThai}`
+        body: `action=getData&page=${page}&maXuatHang=${encodeURIComponent(maXuatHang)}&tenKhachHang=${encodeURIComponent(tenKhachHang)}&trangThai=${trangThai}`
     })
     .then(response => {
         if (!response.ok) throw new Error('Network response was not ok');
@@ -570,7 +575,7 @@ document.getElementById('btnXuatHang').addEventListener('click', function(e) {
 });
 
 // Gắn sự kiện tìm kiếm và lọc trạng thái
-document.getElementById('searchTenNhanVien').addEventListener('input', debounce(() => loadPage(1), 300));
+document.getElementById('searchMaXuatHang').addEventListener('input', debounce(() => loadPage(1), 300));
 document.getElementById('searchTenKhachHang').addEventListener('input', debounce(() => loadPage(1), 300));
 document.getElementById('filterTrangThai').addEventListener('change', () => {
     loadPage(1);

@@ -45,14 +45,15 @@ try {
     }
 
     // Lấy chi tiết phiếu xuất
-    $sqlChiTiet = "SELECT ct.MaCTXHTP, ct.SoLuong, ct.TrangThai, dvt.TenDVT,
-                          v.MaVai, v.TenVai, m.TenMau,
-                          ct.SoLot, ct.TenThanhPhan, ct.MaDonHang, ct.MaVatTu, ct.Kho
-                   FROM TP_ChiTietXuatHang ct
-                   LEFT JOIN TP_DonViTinh dvt ON ct.MaDVT = dvt.MaDVT
-                   LEFT JOIN Vai v ON ct.MaVai = v.MaVai
-                   LEFT JOIN TP_Mau m ON ct.MaMau = m.MaMau
-                   WHERE ct.MaXuatHang = :maXuatHang";
+   $sqlChiTiet = "SELECT ct.MaCTXHTP, ct.SoLuong, ct.SoKgCan, ct.TrangThai, dvt.TenDVT,
+                      v.MaVai, v.TenVai, m.TenMau,
+                      ct.SoLot, ct.TenThanhPhan, ct.MaDonHang, ct.MaVatTu, ct.Kho
+               FROM TP_ChiTietXuatHang ct
+               LEFT JOIN TP_DonViTinh dvt ON ct.MaDVT = dvt.MaDVT
+               LEFT JOIN Vai v ON ct.MaVai = v.MaVai
+               LEFT JOIN TP_Mau m ON ct.MaMau = m.MaMau
+               WHERE ct.MaXuatHang = :maXuatHang
+               ORDER BY ct.SoLot ASC, ct.SoKgCan ASC";
     $stmtChiTiet = $pdo->prepare($sqlChiTiet);
     $stmtChiTiet->bindValue(':maXuatHang', $maXuatHang, PDO::PARAM_STR);
     $stmtChiTiet->execute();
@@ -65,6 +66,55 @@ try {
 
 // Xử lý định dạng ngày
 $ngayXuat = date('d/m/Y', strtotime($phieuXuat['NgayXuat']));
+
+// Tính tổng xuất, đã xuất, còn lại
+$tongXuat = $phieuXuat['TongSoLuongXuat']; // Tổng số lượng xuất từ truy vấn SQL
+$daXuat = 0; // Khởi tạo tổng số lượng đã xuất
+
+// Tính tổng số lượng đã xuất từ chi tiết
+foreach ($chiTietXuat as $ct) {
+    if ($ct['TrangThai'] == 1) {
+        $daXuat += $ct['SoLuong'];
+    }
+}
+
+// Tính số lượng còn lại
+$conLai = $tongXuat - $daXuat;
+
+// Tính phần trăm hoàn thành
+$percentCompleted = ($tongXuat > 0) ? ($daXuat / $tongXuat * 100) : 0;
+
+// Hàm hỗ trợ hiển thị HTML an toàn
+function safeHtml($value) {
+    return $value !== null && $value !== '' ? htmlspecialchars($value) : 'N/A';
+}
+
+// Nhóm chi tiết theo Lot và tính tổng số kg thực tế
+$lotGroups = [];
+foreach ($chiTietXuat as $chiTiet) {
+    $lot = $chiTiet['SoLot'];
+    if (!isset($lotGroups[$lot])) {
+        $lotGroups[$lot] = [
+            'items' => [],
+            'totalQuantity' => 0,
+            'totalKg' => 0,
+            'totalCay' => 0
+        ];
+    }
+    $lotGroups[$lot]['items'][] = $chiTiet;
+    $lotGroups[$lot]['totalQuantity'] += (float)$chiTiet['SoLuong'];
+    $lotGroups[$lot]['totalKg'] += (float)$chiTiet['SoKgCan'];
+    $lotGroups[$lot]['totalCay'] += 1;
+}
+
+// Tính tổng số kg thực tế chỉ cho các cây có trạng thái = 1
+$sqlSoKgThucTe = "SELECT SUM(SoKgCan) as SoKgThucTe 
+                  FROM TP_ChiTietXuatHang 
+                  WHERE MaXuatHang = :maXuatHang AND TrangThai = 1";
+$stmtSoKgThucTe = $pdo->prepare($sqlSoKgThucTe);
+$stmtSoKgThucTe->bindValue(':maXuatHang', $maXuatHang, PDO::PARAM_STR);
+$stmtSoKgThucTe->execute();
+$soKgThucTe = $stmtSoKgThucTe->fetch(PDO::FETCH_ASSOC)['SoKgThucTe'] ?? 0;
 ?>
 
 <!DOCTYPE html>
@@ -127,6 +177,163 @@ $ngayXuat = date('d/m/Y', strtotime($phieuXuat['NgayXuat']));
             word-wrap: break-word;
             max-width: 180px;
         }
+
+        .progress-bar {
+            height: 12px;
+            background: #E5E7EB;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .progress-value {
+            height: 100%;
+            background: linear-gradient(90deg, var(--secondary-color), #818CF8);
+            border-radius: 12px;
+            transition: width 0.5s ease;
+        }
+         .pulse {
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(88, 80, 236, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 12px rgba(88, 80, 236, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(88, 80, 236, 0);
+            }
+        }
+         .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid #E5E7EB;
+        }
+
+        .stat-card i {
+            position: absolute;
+            right: -10px;
+            bottom: -10px;
+            font-size: 2.5rem;
+            opacity: 0.1;
+        }
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: #f0f4f8;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-weight: 600;
+    font-size: 0.75rem;
+}
+
+.card-hover {
+    transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.icon-circle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.progress-animate {
+    animation: fillBar 1.5s ease-out;
+}
+
+@keyframes fillBar {
+    from { width: 0%; }
+    to { width: attr(data-percentage); }
+}
+
+.section-header {
+    position: relative;
+    overflow: hidden;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 0.5rem;
+}
+
+.section-header::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -1px;
+    height: 3px;
+    width: 60px;
+    background: linear-gradient(90deg, #b91c1c, #dc2626);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #b91c1c;
+    border-radius: 10px;
+}
+
+.responsive-table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.responsive-table table {
+    width: 100%;
+    min-width: 1000px;
+}
+
+th, td {
+    white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+    th, td {
+        white-space: normal;
+        word-break: break-word;
+        font-size: 0.75rem;
+        padding: 0.5rem;
+    }
+
+    .icon-circle {
+        width: 28px;
+        height: 28px;
+    }
+
+    .status-badge {
+        font-size: 0.65rem;
+        padding: 0.2rem 0.5rem;
+    }
+}
     </style>
 </head>
 <body class="bg-gray-100 font-sans antialiased"> 
@@ -258,6 +465,72 @@ $ngayXuat = date('d/m/Y', strtotime($phieuXuat['NgayXuat']));
                 </div>
                 <?php endif; ?>
 
+                <!-- Hiển thị tiến độ xuất kho -->
+                <div class="px-6 pb-4">
+                    <h3 class="section-header text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2 mb-4">
+                        <div class="icon-circle bg-indigo-100 text-indigo-600">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <span>Tiến Độ Xuất Kho</span>
+                    </h3>
+                    <div class="bg-white rounded-xl text-xs border p-5 card-hover shadow-sm">
+                        <div class="flex justify-between mb-3">
+                            <span class="font-semibold text-gray-700 flex items-center">
+                                <span class="bg-indigo-100 p-1 rounded-md text-indigo-500 mr-2"><i class="fas fa-chart-line"></i></span>
+                                Tiến độ:
+                                <span id="progressPercent" class="ml-2 bg-indigo-100 text-indigo-700 px-2 py-1 rounded-lg font-bold"><?php echo round($percentCompleted, 2); ?>%</span>
+                            </span>
+                            <span id="progressText" class="font-semibold text-gray-700 flex items-center">
+                                <i class="fas fa-box-open text-indigo-400 mr-2"></i>
+                                <?php echo number_format($daXuat, 2, '.', ''); ?> / <?php echo number_format($tongXuat, 2, '.', ''); ?> <?php echo safeHtml($phieuXuat['TenDVT']); ?>
+                            </span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-4 mb-4 overflow-hidden">
+                            <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 h-4 rounded-full progress-animate relative" style="width: <?php echo $percentCompleted; ?>%">
+                                <?php if ($percentCompleted > 25): ?>
+                                    <span class="absolute inset-0 flex items-center justify-center text-xs font-bold text-white"><?php echo $percentCompleted; ?>%</span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-<?php echo ($phieuXuat['TenDVT'] != 'KG') ? 4 : 3; ?> gap-3">
+                            <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-3 rounded-lg shadow-sm border border-blue-200 text-center transform transition-all hover:scale-105">
+                                <div class="icon-circle bg-blue-500 text-white mx-auto mb-2">
+                                    <i class="fas fa-box-open"></i>
+                                </div>
+                                <p class="text-xs text-blue-700 font-medium mb-1">Tổng Xuất</p>
+                                <p class="font-bold text-blue-800 text-lg"><?php echo number_format($tongXuat, 2, '.', ''); ?></p>
+                                <p class="text-xs text-blue-500"><?php echo safeHtml($phieuXuat['TenDVT']); ?></p>
+                            </div>
+                            <div class="bg-gradient-to-br from-green-50 to-green-100 p-3 rounded-lg shadow-sm border border-green-200 text-center transform transition-all hover:scale-105">
+                                <div class="icon-circle bg-green-500 text-white mx-auto mb-2">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                                <p class="text-xs text-green-700 font-medium mb-1">Đã Xuất</p>
+                                <p class="font-bold text-green-800 text-lg"><?php echo number_format($daXuat, 2, '.', ''); ?></p>
+                                <p class="text-xs text-green-500"><?php echo safeHtml($phieuXuat['TenDVT']); ?></p>
+                            </div>
+                             <?php if ($phieuXuat['TenDVT'] != 'KG'): ?>
+                                <div class="bg-gradient-to-br from-red-50 to-red-100 p-3 rounded-lg shadow-sm border border-red-200 text-center transform transition-all hover:scale-105">
+                                    <div class="icon-circle bg-red-500 text-white mx-auto mb-2">
+                                        <i class="fas fa-weight-hanging"></i>
+                                    </div>
+                                    <p class="text-xs text-red-700 font-medium mb-1">Số Kg Cân Thực Đã Xuất</p>
+                                    <p class="font-bold text-red-800 text-lg"><?php echo number_format($soKgThucTe, 2, '.', ''); ?></p>
+                                     <p class="text-xs text-red-500">KG</p>
+                                </div>
+                            <?php endif; ?>
+                            <div class="bg-gradient-to-br from-amber-50 to-amber-100 p-3 rounded-lg shadow-sm border border-amber-200 text-center transform transition-all hover:scale-105">
+                                <div class="icon-circle bg-amber-500 text-white mx-auto mb-2">
+                                    <i class="fas fa-hourglass-half"></i>
+                                </div>
+                                <p class="text-xs text-amber-700 font-medium mb-1">Còn Lại</p>
+                                <p class="font-bold text-amber-800 text-lg"><?php echo number_format($conLai, 2, '.', ''); ?></p>
+                                <p class="text-xs text-amber-500"><?php echo safeHtml($phieuXuat['TenDVT']); ?></p>
+                            </div>                         
+                        </div>
+                    </div>
+                </div>
+
                  <!-- Summary Footer -->
                     <div class="mt-1 flex flex-col text-xs md:flex-row justify-between gap-4 p-4 pt-2">
                         <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm md:w-1/3">
@@ -279,67 +552,72 @@ $ngayXuat = date('d/m/Y', strtotime($phieuXuat['NgayXuat']));
                         </div>
                     </div>
                 <!-- Danh sách chi tiết -->
-                <div class="p-4 pt-2 mt-1">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                        <i class="fas fa-list-ul icon-red"></i> Chi Tiết Xuất Hàng
+               <div class="p-4 pt-2 mt-1">
+                    <h3 class="section-header text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2 mb-4">
+                        <div class="icon-circle bg-indigo-100 text-indigo-600">
+                            <i class="fas fa-list"></i>
+                        </div>
+                        <span>Chi Tiết Xuất Hàng</span>
                         <span class="text-sm bg-red-100 text-red-700 px-2 py-1 rounded-full">
                             <?php echo count($chiTietXuat); ?> mục
                         </span>
                     </h3>
-          
-                    <div class="overflow-x-auto rounded-xl border border-gray-200 shadow-sm">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gradient-to-r from-red-50 to-red-100">
+                    <div class="responsive-table custom-scrollbar">
+                        <table class="w-full border-collapse">
+                            <thead class="bg-red-50 text-red-800 sticky top-0 z-10">
                                 <tr>
-                                    <th class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                                        <div class="flex items-center gap-1">
-                                            <i class="fas fa-hashtag icon-red"></i> STT
-                                        </div>
-                                    </th>                                                                     
-                                    <th class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                                        <div class="flex items-center gap-1">
-                                            <i class="fas fa-boxes icon-red"></i> Số Lượng Xuất
-                                        </div>
-                                    </th>
-                                    <th class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                                        <div class="flex items-center gap-1">
-                                            <i class="fas fa-barcode icon-red"></i> Số Lot
-                                        </div>
-                                    </th>
-                                    <th class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                                        <div class="flex items-center gap-1">
-                                            <i class="fas fa-layer-group icon-red"></i> Thành Phần
-                                        </div>
-                                    </th>                              
-                                    <th class="px-4 py-4 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                                        <div class="flex items-center gap-1">
-                                            <i class="fas fa-check-circle icon-red"></i> Trạng Thái
-                                        </div>
-                                    </th>
+                                    <th class="text-left sticky left-0 bg-red-50 z-20 p-2 sm:p-3 font-semibold">STT</th>
+                                    <th class="text-left p-2 sm:p-3 font-semibold">Số Lượng Xuất</th>
+                                    <?php if ($phieuXuat['TenDVT'] != 'KG'): ?>
+                                        <th class="text-left p-2 sm:p-3 font-semibold">Số Kg Cân</th>
+                                    <?php endif; ?>
+                                    <th class="text-left p-2 sm:p-3 font-semibold">Số Lot</th>
+                                    <th class="text-left p-2 sm:p-3 font-semibold">Thành Phần</th>
+                                    <th class="text-left p-2 sm:p-3 font-semibold">Trạng Thái</th>
                                 </tr>
                             </thead>
-                            <tbody class="bg-white divide-y divide-gray-100">
+                            <tbody>
                                 <?php 
                                 $stt = 1;
-                                foreach ($chiTietXuat as $ct): 
-                                    $trangThaiHienThi = ($ct['TrangThai'] == 1) ? 'Đã xuất' : 'Chưa xuất';
-                                    $trangThaiClass = ($ct['TrangThai'] == 1) ? 'text-green-600' : 'text-red-500';
-                                    $trangThaiIcon = ($ct['TrangThai'] == 1) ? 'fa-check-circle' : 'fa-times-circle';
+                                foreach ($lotGroups as $lot => $group): 
                                 ?>
-                                    <tr class="hover:bg-red-50 transition-colors duration-200">
-                                        <td class="px-4 py-4 text-xs text-gray-700"><?php echo $stt++; ?></td>                                                                                                  
-                                        <td class="px-4 py-4 text-xs text-gray-700 font-medium"><?php echo number_format($ct['SoLuong'], 0, ',', '.') . ' ' . htmlspecialchars($ct['TenDVT']); ?></td>
-                                        <td class="px-4 py-4 text-xs text-gray-700"><?php echo htmlspecialchars($ct['SoLot']); ?></td>
-                                        <td class="px-4 py-4 text-xs text-gray-700"><?php echo htmlspecialchars($ct['TenThanhPhan']); ?></td>                                     
-                                        <td class="px-4 py-4 text-xs <?php echo $trangThaiClass; ?> font-medium flex items-center gap-2">
-                                            <i class="fas <?php echo $trangThaiIcon; ?> <?php echo $trangThaiClass; ?>"></i>
-                                            <?php echo htmlspecialchars($trangThaiHienThi); ?>
+                                    <tr class="bg-indigo-100 text-indigo-800 font-bold border-b border-gray-200">
+                                        <td colspan="<?php echo ($phieuXuat['TenDVT'] != 'KG') ? 5 : 4; ?>" class="p-2 sm:p-3">
+                                            <div class="flex items-center gap-2">
+                                                <i class="fas fa-folder-open"></i>
+                                                <span>Số Lot: <?php echo safeHtml($lot); ?> (Tổng xuất: <?php echo number_format($group['totalQuantity'], 2, '.', '') . ' ' . safeHtml($phieuXuat['TenDVT']); ?>
+                                                <?php if ($phieuXuat['TenDVT'] != 'KG'): ?>
+                                                    , Tổng kg thực tế: <?php echo number_format($group['totalKg'], 2, '.', '') . ' KG'; ?>
+                                                <?php endif; ?>
+                                                , Tổng cây: <?php echo $group['totalCay'] . ' Cây'; ?>)</span>
+                                            </div>
                                         </td>
                                     </tr>
+                                    <?php foreach ($group['items'] as $chiTiet): 
+                                        $trangThaiHienThi = ($chiTiet['TrangThai'] == 1) ? 'Đã xuất' : 'Chưa xuất';
+                                        $trangThaiClass = ($chiTiet['TrangThai'] == 1) ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+                                    ?>
+                                        <tr class="border-b border-gray-200 hover:bg-red-100 transition-colors">
+                                            <td class="sticky left-0 bg-white p-2 sm:p-3"><?php echo $stt++; ?></td>
+                                            <td class="font-bold p-2 sm:p-3 <?php echo intval($chiTiet['SoLuong']) > 0 ? 'text-green-600' : 'text-red-600'; ?>">
+                                                <?php echo number_format($chiTiet['SoLuong'], 2, '.', '') . ' ' . safeHtml($chiTiet['TenDVT']); ?>
+                                            </td>
+                                            <?php if ($phieuXuat['TenDVT'] != 'KG'): ?>
+                                                <td class="p-2 sm:p-3"><?php echo number_format($chiTiet['SoKgCan'], 2, '.', ''); ?></td>
+                                            <?php endif; ?>
+                                            <td class="p-2 sm:p-3"><?php echo safeHtml($chiTiet['SoLot']); ?></td>
+                                            <td class="p-2 sm:p-3"><?php echo safeHtml($chiTiet['TenThanhPhan']); ?></td>
+                                            <td class="p-2 sm:p-3">
+                                                <span class="px-2 py-1 rounded-full text-xs <?php echo $trangThaiClass; ?>">
+                                                    <?php echo $trangThaiHienThi; ?>
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
                                 <?php endforeach; ?>
                             </tbody>
                         </table>
-                    </div>                  
+                    </div>
                 </div>
             </div>
         </div>

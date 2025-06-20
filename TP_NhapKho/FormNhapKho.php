@@ -706,10 +706,11 @@ $stmtKhuVuc->execute();
 $MaKhuVucList = $stmtKhuVuc->fetchAll(PDO::FETCH_ASSOC);
 
 
-// Xử lý cập nhật trạng thái đơn hàng khi nhập đủ số lượng
+// Xử lý cập nhật trạng thái đơn hàng khi nhập đủ số lượng và cập nhật trạng thái đơn hàng
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'updateDonStatus') {
     header('Content-Type: application/json');
     $maSoMeToUpdate = $_POST['maSoMe'] ?? '';
+    $forceComplete = isset($_POST['forceComplete']) && $_POST['forceComplete'] === 'true';
 
     if (empty($maSoMeToUpdate)) {
         echo json_encode(['success' => false, 'message' => 'Mã số mẻ không được cung cấp.']);
@@ -725,23 +726,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         if ($resultRemaining) {
             $tongSoLuongGiao = floatval($resultRemaining['TongSoLuongGiao']);
             $tongDaNhap = floatval($resultRemaining['TongDaNhap'] ?? 0);
-            if ($tongDaNhap >= $tongSoLuongGiao) {
-                $sqlUpdateStatus = "UPDATE TP_DonSanXuat SET TrangThai = 3 WHERE MaSoMe = ?";
-                $stmtUpdateStatus = $pdo->prepare($sqlUpdateStatus);
-                $stmtUpdateStatus->execute([$maSoMeToUpdate]);
 
-                if ($stmtUpdateStatus->rowCount() > 0) {
-                    echo json_encode(['success' => true, 'message' => 'Trạng thái đơn hàng đã được cập nhật thành "Đã nhập đủ".']);
-                } else {
-                    echo json_encode(['success' => false, 'message' => 'Không thể cập nhật trạng thái đơn hàng hoặc trạng thái đã được cập nhật trước đó.']);
-                }
+            // Kiểm tra nhập đủ số lượng nếu không phải trường hợp đặc biệt
+            if (!$forceComplete && $tongDaNhap < $tongSoLuongGiao) {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Chưa nhập đủ số lượng, không thể cập nhật trạng thái. Đã nhập: ' . 
+                                 number_format($tongDaNhap, 2) . ' / ' . 
+                                 number_format($tongSoLuongGiao, 2)
+                ]);
+                exit;
+            }
+
+            // Cập nhật trạng thái đơn hàng
+            $sqlUpdateStatus = "UPDATE TP_DonSanXuat SET TrangThai = 3 WHERE MaSoMe = ?";
+            $stmtUpdateStatus = $pdo->prepare($sqlUpdateStatus);
+            $stmtUpdateStatus->execute([$maSoMeToUpdate]);
+
+            if ($stmtUpdateStatus->rowCount() > 0) {
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Trạng thái đơn hàng đã được cập nhật thành "Đã nhập đủ".'
+                ]);
             } else {
-                echo json_encode(['success' => false, 'message' => 'Chưa nhập đủ số lượng, không cập nhật trạng thái.']);
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Không thể cập nhật trạng thái đơn hàng hoặc trạng thái đã được cập nhật trước đó.'
+                ]);
             }
         } else {
-            echo json_encode(['success' => false, 'message' => 'Không tìm thấy đơn hàng với mã số mẻ: ' . htmlspecialchars($maSoMeToUpdate)]);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Không tìm thấy đơn hàng với mã số mẻ: ' . htmlspecialchars($maSoMeToUpdate)
+            ]);
         }
-
     } catch (PDOException $e) {
         http_response_code(500);
         echo json_encode(['success' => false, 'message' => 'Lỗi cơ sở dữ liệu: ' . $e->getMessage()]);
@@ -1012,9 +1030,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                    
                     <!-- Khuvuc Và Ghi Chú -->
                      <div class="grid grid-cols-2 gap-4">
-                        <div>
+                       <div>
                             <label class="block text-xs font-bold text-gray-700 mb-1">Số Lot</label>
-                            <input type="text" name="SoLot" id="soLot" class="input-field w-full p-2 text-xs rounded-lg" oninput="this.value = this.value.toUpperCase();">
+                            <input type="text" id="soLot" name="SoLot" value=""
+                                oninput="restrictLotNumber(this)"
+                                class="input-field w-full p-2 rounded-lg text-xs border-gray-300 focus:border-blue-500"
+                                placeholder="Nhập số lot (tối đa 8 số)">
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-gray-700 mb-1">Khu Vực</label>
@@ -1056,6 +1077,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     </a>
                 </div>
             </form>
+             
 
             <!-- Table giữ nguyên -->
             <div class="mt-6 mx-auto mb-20">
@@ -1078,18 +1100,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     <tbody id="dataTableBody"></tbody>
                 </table>
                 <div class="flex items-center gap-3 mt-4">
-                    <select id="labelType" class="input-field p-1 text-xs rounded-lg">
-                        <option value="system">Tem Hệ Thống</option>
-                        <option value="khachle">Tem Khách Lẻ</option>
-                    </select>
+                   
                     <button id="saveToDB" 
                         class="btn px-4 py-2 text-xs bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700">
                         <i class="fas fa-save mr-2"></i>Nhập
                     </button>
-                    <button id="XemChiTietNhap" 
-                        class="btn px-4 py-2 text-xs bg-green-600 text-white rounded-lg shadow-md hover:bg-green-700 flex items-center">
+                   <button id="XemChiTietNhap" 
+                        class="btn px-4 py-2 text-xs bg-orange-600 text-white rounded-lg shadow-md hover:bg-orange-700 flex items-center">
                         <i class="fas fa-eye mr-2"></i>Xem
                     </button>
+                    <button id="XacNhanHoanThanh" 
+                        class="btn px-4 py-2 text-xs bg-green-600 text-white rounded-lg shadow-md hover:bg-green-700 flex items-center">
+                        <i class="fas fa-eye mr-2"></i>Xác Nhận Đơn
+                    </button>
+                </div>
+                <div class="flex items-center space-x-2 mt-4">
+                    <label for="labelType" class="text-sm font-medium text-gray-700 whitespace-nowrap">Chọn Tem để in:</label>
+                    <select id="labelType" class="border border-gray-300 rounded-lg px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="system">Tem Hệ Thống</option>
+                        <option value="khachle">Tem Khách Lẻ</option>
+                    </select>
                 </div>
             </div>
         </div>
@@ -1108,6 +1138,41 @@ function generateMaCTNHTP(index) {
     return prefix + date + random + '_' + String(index).padStart(3, '0');
 }
 
+//sử lý thông báo xác nhận đơn 
+async function updateXacNhanHoanThanhButton() {
+    const maSoMe = '<?php echo htmlspecialchars($maSoMe); ?>';
+    const soLuongGiao = <?php echo $soLuongGiao; ?>;
+    const xacNhanButton = document.getElementById('XacNhanHoanThanh');
+
+    if (!maSoMe || !xacNhanButton) return;
+
+    try {
+        const tongSoLuongDaNhapDB = await getTongSoLuongNhap(maSoMe);
+        const tongSoLuongNhapTam = tempData.reduce((sum, item) => sum + item.SoLuong, 0);
+        const tongSoLuongDaNhap = tongSoLuongDaNhapDB + tongSoLuongNhapTam;
+        const tyLeNhap = (tongSoLuongDaNhap / soLuongGiao) * 100;
+
+        // Luôn cho phép nhấn nút bằng cách không đặt disabled
+        xacNhanButton.disabled = false;
+
+        // Cập nhật giao diện nút dựa trên tỷ lệ
+        if (tyLeNhap >= 70) {
+            xacNhanButton.classList.remove('opacity-50', 'cursor-not-allowed');
+            xacNhanButton.classList.add('hover:bg-green-700');
+        } else {
+            xacNhanButton.classList.add('opacity-50', 'cursor-not-allowed');
+            xacNhanButton.classList.remove('hover:bg-green-700');
+        }
+    } catch (error) {
+        console.error('Lỗi khi kiểm tra tỷ lệ nhập kho:', error);
+        xacNhanButton.classList.add('opacity-50', 'cursor-not-allowed');
+        xacNhanButton.classList.remove('hover:bg-green-700');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await updateXacNhanHoanThanhButton();
+});
 // Lấy tổng số lượng đã nhập từ cơ sở dữ liệu qua AJAX
 async function getTongSoLuongNhap(maSoMe) {
     const formData = new FormData();
@@ -1128,6 +1193,29 @@ async function getTongSoLuongNhap(maSoMe) {
         }
     } catch (error) {
         throw new Error('Lỗi kết nối hoặc server: ' + error.message);
+    }
+}
+
+function restrictLotNumber(input) {
+    // Loại bỏ mọi ký tự không phải số
+    input.value = input.value.replace(/[^0-9]/g, '');
+
+    // Giới hạn tối đa 8 chữ số
+    if (input.value.length > 8) {
+        input.value = input.value.slice(0, 8);
+        Swal.fire({
+            icon: 'warning',
+            title: 'Cảnh báo!',
+            text: 'Số Lot chỉ được phép nhập tối đa 8 chữ số.',
+            confirmButtonText: 'OK',
+            customClass: {
+                popup: 'rounded-xl',
+                title: 'text-lg font-semibold',
+                confirmButton: 'bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg'
+            },
+            buttonsStyling: false,
+            width: '320px',
+        });
     }
 }
 
@@ -1182,6 +1270,9 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
     if (soLuong <= 0) errorMessages.push("Số lượng phải lớn hơn 0.");
     if (soKGCan !== null && soKGCan < 0) errorMessages.push("Số KG Cân không được âm.");
     if (!soLot) errorMessages.push("Số Lot không được để trống.");
+    else if (!/^\d{8}$/.test(soLot)) {
+        errorMessages.push(`Số Lot phải đúng 8 chữ số, hiện tại bạn nhập ${soLot.length} chữ số.`);
+    }
     if (!tenThanhPhan) errorMessages.push("Thành phần không được để trống.");
     if (!maKhuVuc) errorMessages.push("Mã khu vực không được để trống.");
 
@@ -1959,6 +2050,7 @@ document.getElementById('saveToDB').addEventListener('click', async function() {
                 tempData = [];
                 tempSTT = 0;
                 updateTable();
+                await updateXacNhanHoanThanhButton();
             });
         } else {
             Swal.fire({
@@ -1989,6 +2081,166 @@ document.getElementById('saveToDB').addEventListener('click', async function() {
         });
     }
 });
+
+//xử lý sự kiện nhấn xác nhận đơn 
+document.getElementById('XacNhanHoanThanh').addEventListener('click', async function() {
+    const maSoMe = '<?php echo htmlspecialchars($maSoMe); ?>';
+    const soLuongGiao = <?php echo $soLuongGiao; ?>;
+    const tenDVT = '<?php echo $tenDVT; ?>';
+
+    try {
+        const tongSoLuongDaNhapDB = await getTongSoLuongNhap(maSoMe);
+        const tongSoLuongNhapTam = tempData.reduce((sum, item) => sum + item.SoLuong, 0);
+        const tongSoLuongDaNhap = tongSoLuongDaNhapDB + tongSoLuongNhapTam;
+        const tyLeNhap = (tongSoLuongDaNhap / soLuongGiao) * 100;
+
+        // Kiểm tra tỷ lệ nhập kho
+        if (tyLeNhap < 70) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Chưa đủ điều kiện!',
+                html: `
+                    <div class="text-left space-y-3 text-sm">
+                        <div class="flex items-center">
+                            <i class="fas fa-exclamation-triangle mr-2 text-yellow-500"></i>
+                            <span><strong>Số lượng nhập hàng trên 70% tổng số lượng nhập mới được xác nhận đơn!!!</strong></span>
+                        </div>
+                        <div class="flex items-center">
+                            <i class="fas fa-box-open mr-2 text-blue-500"></i>
+                            <span>Tổng số lượng: <span class="font-semibold">${soLuongGiao.toLocaleString(undefined, { minimumFractionDigits: 2 })} ${tenDVT}</span></span>
+                        </div>
+                        <div class="flex items-center">
+                            <i class="fas fa-arrow-down mr-2 text-green-500"></i>
+                            <span>Đã nhập: <span class="font-semibold">${tongSoLuongDaNhap.toLocaleString(undefined, { minimumFractionDigits: 2 })} ${tenDVT} (${tyLeNhap.toFixed(2)}%)</span></span>
+                        </div>
+                        <div class="flex items-center">
+                            <i class="fas fa-exclamation-circle mr-2 text-red-500"></i>
+                            <span>Vui lòng nhập thêm ít nhất: <span class="font-semibold">${((soLuongGiao * 0.7) - tongSoLuongDaNhap).toLocaleString(undefined, { minimumFractionDigits: 2 })} ${tenDVT}</span></span>
+                        </div>
+                    </div>
+                `,
+                confirmButtonText: 'OK',
+                customClass: {
+                    popup: 'rounded-xl',
+                    title: 'text-lg font-semibold',
+                    confirmButton: 'bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg'
+                },
+                buttonsStyling: false,
+                width: '90%'
+            });
+            return;
+        }
+
+        // Nếu tỷ lệ >= 70%, hiển thị thông báo xác nhận
+        Swal.fire({
+            icon: 'question',
+            title: 'Xác nhận hoàn thành đơn hàng?',
+            html: `
+                <div class="text-left space-y-3 text-sm">
+                    <div class="flex items-center">
+                        <i class="fas fa-exclamation-circle mr-2 text-red-500"></i>
+                        <span><strong>Cảnh báo:</strong> Hành động này sẽ đánh dấu đơn hàng <strong>${maSoMe}</strong> là hoàn thành và <strong>không thể hoàn tác</strong>.</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-box-open mr-2 text-blue-500"></i>
+                        <span>Tổng số lượng yêu cầu: <span class="font-semibold">${soLuongGiao.toLocaleString(undefined, { minimumFractionDigits: 2 })} ${tenDVT}</span></span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-arrow-down mr-2 text-green-500"></i>
+                        <span>Đã nhập: <span class="font-semibold">${tongSoLuongDaNhap.toLocaleString(undefined, { minimumFractionDigits: 2 })} ${tenDVT}</span></span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-question-circle mr-2 text-yellow-500"></i>
+                        <span>Bạn có chắc chắn muốn xác nhận hoàn thành đơn hàng này không?</span>
+                    </div>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Xác nhận',
+            cancelButtonText: 'Hủy',
+            customClass: {
+                popup: 'rounded-xl',
+                title: 'text-lg font-semibold',
+                confirmButton: 'bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg mr-2',
+                cancelButton: 'bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg'
+            },
+            buttonsStyling: false,
+            width: '90%'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    const formData = new FormData();
+                    formData.append('action', 'updateDonStatus');
+                    formData.append('maSoMe', maSoMe);
+                    formData.append('forceComplete', 'true');
+
+                    const response = await fetch(window.location.href, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await response.json();
+
+                    if (data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Thành công!',
+                            text: 'Đơn hàng đã được xác nhận hoàn thành.',
+                            confirmButtonText: 'OK',
+                            customClass: {
+                                popup: 'rounded-xl',
+                                title: 'text-lg font-semibold',
+                                confirmButton: 'bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg'
+                            },
+                            buttonsStyling: false
+                        }).then(() => {
+                            window.location.href = '../nhapkho.php';
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Lỗi!',
+                            text: data.message,
+                            confirmButtonText: 'OK',
+                            customClass: {
+                                popup: 'rounded-xl',
+                                title: 'text-lg font-semibold',
+                                confirmButton: 'bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg'
+                            },
+                            buttonsStyling: false
+                        });
+                    }
+                } catch (error) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Lỗi!',
+                        text: 'Lỗi khi xác nhận đơn hàng: ' + error.message,
+                        confirmButtonText: 'OK',
+                        customClass: {
+                            popup: 'rounded-xl',
+                            title: 'text-lg font-semibold',
+                            confirmButton: 'bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg'
+                        },
+                        buttonsStyling: false
+                    });
+                }
+            }
+        });
+    } catch (error) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Lỗi!',
+            text: 'Không thể kiểm tra số lượng đã nhập: ' + error.message,
+            confirmButtonText: 'OK',
+            customClass: {
+                popup: 'rounded-xl',
+                title: 'text-lg font-semibold',
+                confirmButton: 'bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg'
+            },
+            buttonsStyling: false
+        });
+    }
+});
+
 // Kiểm tra trạng thái "đã nhập đủ" khi trang tải
 document.addEventListener('DOMContentLoaded', async function() {
     const showCompletedMessage = sessionStorage.getItem('showCompletedMessage');

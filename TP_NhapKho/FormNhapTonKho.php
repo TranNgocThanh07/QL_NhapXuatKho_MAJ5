@@ -1039,8 +1039,11 @@ $MaKhuVucList = $stmtKhuVuc->fetchAll(PDO::FETCH_ASSOC);
                      <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-bold text-gray-700 mb-1">Số Lot</label>
-                            <input type="text" name="SoLot" id="soLot" class="input-field w-full p-2 text-xs rounded-lg" oninput="this.value = this.value.toUpperCase();">
-                        </div>     
+                            <input type="text" id="soLot" name="SoLot" value=""
+                                oninput="restrictLotNumber(this)"
+                                class="input-field w-full p-2 rounded-lg text-xs border-gray-300 focus:border-blue-500"
+                                placeholder="Nhập số lot (tối đa 8 số)">
+                        </div>  
                         <div>
                             <label class="block text-xs font-bold text-gray-700 mb-1">Khu Vực</label>
                             <select name="MaKhuVuc" id="MaKhuVuc" class="input-field w-full p-2 text-xs rounded-lg" list="MaKhuVucList">
@@ -1152,6 +1155,29 @@ async function getTongSoLuongNhap(maSoMe) {
     }
 }
 
+function restrictLotNumber(input) {
+    // Loại bỏ mọi ký tự không phải số
+    input.value = input.value.replace(/[^0-9]/g, '');
+
+    // Giới hạn tối đa 8 chữ số
+    if (input.value.length > 8) {
+        input.value = input.value.slice(0, 8);
+        Swal.fire({
+            icon: 'warning',
+            title: 'Cảnh báo!',
+            text: 'Số Lot chỉ được phép nhập tối đa 8 chữ số.',
+            confirmButtonText: 'OK',
+            customClass: {
+                popup: 'rounded-xl',
+                title: 'text-lg font-semibold',
+                confirmButton: 'bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg'
+            },
+            buttonsStyling: false,
+            width: '320px',
+        });
+    }
+}
+
 // Xử lý sự kiện submit form nhập kho, kiểm tra và thêm dữ liệu vào tempData
 document.getElementById('nhapHangForm').addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -1169,6 +1195,9 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
     if (soCay <= 0) errorMessages.push("Số cây phải lớn hơn 0.");
     if (soKGCan !== null && soKGCan < 0) errorMessages.push("Số KG Cân không được âm.");
     if (!soLot) errorMessages.push("Số Lot không được để trống.");
+    else if (!/^\d{8}$/.test(soLot)) {
+        errorMessages.push(`Số Lot phải đúng 8 chữ số, hiện tại bạn nhập ${soLot.length} chữ số.`);
+    }
     if (!tenThanhPhan) errorMessages.push("Thành phần không được để trống.");
     if (!maKhuVuc) errorMessages.push("Mã khu vực không được để trống.");
 

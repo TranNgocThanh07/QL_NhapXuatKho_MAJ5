@@ -100,6 +100,21 @@
     <?php
     include 'header.php';
     include 'db_config.php';
+    require_once 'init.php';
+
+    // Gán giá trị từ session
+    $tenNhanVien = $_SESSION['tenNhanVien'] ?? '';
+    $maPhanQuyen = $_SESSION['maPhanQuyen'] ?? '';
+
+    // Xác định vai trò dựa trên MaPhanQuyen
+    $vaiTro = '';
+    if ($maPhanQuyen == 4) {
+        $vaiTro = 'Nhân viên nhập kho';
+    } elseif ($maPhanQuyen == 5) {
+        $vaiTro = 'Nhân viên xuất kho';
+    } elseif ($maPhanQuyen == 6) {
+        $vaiTro = 'Nhân viên kho';
+    }
 
     // Lấy giá trị từ form, mặc định là ngày hiện tại
     $selectedDay = isset($_GET['day']) ? $_GET['day'] : date('d');
@@ -185,14 +200,18 @@
                     <h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-4">Hệ thống quản lý kho</h1>
                     <p class="text-base sm:text-lg opacity-90 mb-6">Quản lý hàng hóa hiệu quả, tối ưu vận hành doanh nghiệp</p>
                     <div class="flex flex-col sm:flex-row gap-4">
+                         <?php if ($maPhanQuyen == 4 || $maPhanQuyen == 6): ?>
                         <a href="nhapkho.php" class="inline-flex items-center px-4 py-2 sm:px-6 sm:py-3 border border-transparent text-sm sm:text-base font-medium rounded-md shadow-sm text-red-600 bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-150 ease-in-out">
                             <i class="fas fa-arrow-circle-down mr-2"></i>
                             Nhập kho ngay
                         </a>
+                          <?php endif; ?>
+                      
                         <a href="xuatkho.php" class="inline-flex items-center px-4 py-2 sm:px-6 sm:py-3 border border-transparent text-sm sm:text-base font-medium rounded-md shadow-sm text-red-600 bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-150 ease-in-out">
                             <i class="fas fa-arrow-circle-up mr-2"></i>
                             Xuất kho ngay
                         </a>
+
                     </div>
                 </div>
             </div>
@@ -220,10 +239,12 @@
                         <div class="p-3 rounded-full bg-red-100 text-red-600 mr-4">
                             <i class="fas fa-arrow-circle-down text-2xl"></i>
                         </div>
-                        <div>
-                           <a href="/TP_NhapKho/XemTatCaChiTietNhap.php" class="inline-flex items-center px-4 py-2 sm:px-6 sm:py-3 border border-transparent text-xl sm:text-base font-medium rounded-md shadow-sm text-red-600 bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-150 ease-in-out">                           
-                           Tất Cả Chi Tiết Nhập
-                        </a>                 
+                        <div class="">
+                            <a href="/TP_NhapKho/XemTatCaChiTietNhap.php"
+                            class="inline-flex items-center gap-2 px-5 py-2.5 border border-red-500 text-sm font-semibold text-red-600 bg-white rounded-lg shadow hover:bg-red-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 transition duration-200">
+                                <i class="fas fa-list-alt"></i>
+                                Tất Cả Chi Tiết Nhập
+                            </a>
                         </div>
                     </div>
                 </div>

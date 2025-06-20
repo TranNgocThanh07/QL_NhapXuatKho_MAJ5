@@ -84,12 +84,13 @@ try {
             }
 
             // Cập nhật trạng thái chi tiết và lấy tiến độ
-            $stmtUpdate = $pdo->prepare("
+           $stmtUpdate = $pdo->prepare("
                 UPDATE TP_ChiTietXuatHang SET TrangThai = 1 WHERE MaCTXHTP = ?;
                 SELECT 
                     COALESCE(SUM(SoLuong), 0) AS TongSoLuongXuat, 
                     COALESCE(SUM(CASE WHEN TrangThai = 1 THEN SoLuong ELSE 0 END), 0) AS SoLuongDaXuat,
                     COALESCE(SUM(CASE WHEN TrangThai = 0 THEN SoLuong ELSE 0 END), 0) AS SoLuongConLai,
+                    COALESCE(SUM(CASE WHEN TrangThai = 1 THEN COALESCE(SoKgCan, 0) ELSE 0 END), 0) AS SoKgThucTe,
                     COUNT(CASE WHEN TrangThai = 0 THEN 1 END) AS remaining 
                 FROM TP_ChiTietXuatHang 
                 WHERE MaXuatHang = ?
@@ -166,6 +167,7 @@ try {
             COALESCE(SUM(ct.SoLuong), 0) AS TongSoLuongXuat, 
             COALESCE(SUM(CASE WHEN ct.TrangThai = 1 THEN ct.SoLuong ELSE 0 END), 0) AS SoLuongDaXuat,
             COALESCE(SUM(CASE WHEN ct.TrangThai = 0 THEN ct.SoLuong ELSE 0 END), 0) AS SoLuongConLai,
+            COALESCE(SUM(CASE WHEN ct.TrangThai = 1 THEN COALESCE(ct.SoKgCan, 0) ELSE 0 END), 0) AS SoKgThucTe,
             MIN(dvt.TenDVT) AS TenDVT, MIN(v.MaVai) AS MaVai, MIN(v.TenVai) AS TenVai, 
             MIN(m.TenMau) AS TenMau, MIN(ct.SoLot) AS SoLot, MIN(ct.TenThanhPhan) AS TenThanhPhan, 
             MIN(ct.MaDonHang) AS MaDonHang, MIN(ct.MaVatTu) AS MaVatTu, MIN(ct.Kho) AS Kho,
@@ -176,7 +178,8 @@ try {
                     ISNULL(CAST(ct2.TrangThai AS NVARCHAR), '') + ':' + ISNULL(dvt2.TenDVT, '') + ':' + 
                     ISNULL(v2.MaVai, '') + ':' + ISNULL(v2.TenVai, '') + ':' + ISNULL(m2.TenMau, '') + ':' + 
                     ISNULL(ct2.SoLot, '') + ':' + ISNULL(ct2.TenThanhPhan, '') + ':' + ISNULL(ct2.MaDonHang, '') + ':' + 
-                    ISNULL(ct2.MaVatTu, '') + ':' + ISNULL(ct2.Kho, '') + ':' + ISNULL(ct2.MaQR, '')
+                    ISNULL(ct2.MaVatTu, '') + ':' + ISNULL(ct2.Kho, '') + ':' + ISNULL(ct2.MaQR, '') + ':' + 
+                    ISNULL(CAST(COALESCE(ct2.SoKgCan, 0) AS NVARCHAR), '0')
                 FROM TP_ChiTietXuatHang ct2
                 LEFT JOIN TP_DonViTinh dvt2 ON ct2.MaDVT = dvt2.MaDVT
                 LEFT JOIN Vai v2 ON ct2.MaVai = v2.MaVai
@@ -225,6 +228,7 @@ try {
                 'MaVatTu' => $fields[10],
                 'Kho' => $fields[11],
                 'MaQR' => $fields[12],
+                'SoKgCan' => $fields[13],
             ];
         }
     }
@@ -262,6 +266,30 @@ $chiTietXuatWithQR = array_map(function ($ct) {
     $ct['qrCode'] = generateQRCodeBase64($ct['MaCTXHTP']);
     return $ct;
 }, $chiTietXuat);
+
+// Hàm hỗ trợ hiển thị HTML an toàn
+function safeHtml($value) {
+    return $value !== null && $value !== '' ? htmlspecialchars($value) : 'N/A';
+}
+
+// Nhóm chi tiết theo Lot và tính tổng số kg thực tế
+$groupedChiTiet = [];
+foreach ($chiTietXuat as $ct) {
+    $lot = $ct['SoLot'];
+    if (!isset($groupedChiTiet[$lot])) {
+        $groupedChiTiet[$lot] = [
+            'totalQuantity' => 0,
+            'totalKg' => 0,
+            'totalCay' => 0,
+            'items' => []
+        ];
+    }
+    $groupedChiTiet[$lot]['totalQuantity'] += (float)$ct['SoLuong'];
+        $groupedChiTiet[$lot]['totalKg'] += (float)$ct['SoKgCan'];
+    $groupedChiTiet[$lot]['totalCay'] += 1; // Mỗi bản ghi là một cây
+    $groupedChiTiet[$lot]['items'][] = $ct;
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -360,8 +388,7 @@ $chiTietXuatWithQR = array_map(function ($ct) {
                 box-shadow: 0 0 0 0 rgba(88, 80, 236, 0);
             }
         }
-
-        .stat-card {
+ .stat-card {
             background: white;
             border-radius: 12px;
             padding: 1rem;
@@ -378,6 +405,7 @@ $chiTietXuatWithQR = array_map(function ($ct) {
             font-size: 2.5rem;
             opacity: 0.1;
         }
+       
 
         .data-table-container {
             max-height: 1000px;
@@ -645,6 +673,15 @@ $chiTietXuatWithQR = array_map(function ($ct) {
                 color: white;
             }
         }
+        .icon-circle1 {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
     </style>
 </head>
 
@@ -674,31 +711,31 @@ $chiTietXuatWithQR = array_map(function ($ct) {
 
             <div class="card">
                 <!-- Info Section -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 p-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 ">
                     <div class="info-card bg-gray-50 p-2 rounded-lg border border-gray-200 shadow-sm flex flex-col">
-                        <h3 class="text-sm font-semibold text-gray-500 mb-4 flex items-center gap-2">
+                        <h3 style="font-size: 16px;" class="font-semibold text-gray-500 mb-4 flex items-center gap-2">
                             <i class="fas fa-file-invoice font-bold text-red-500"></i> Thông tin phiếu
                         </h3>
-                        <p class="flex justify-between text-xs mb-3">
+                        <p style="font-size: 14px;" class="flex justify-between text-xs mb-3">
                             <span class="text-gray-600"><i class="fas fa-hashtag text-red-400 mr-2"></i>Mã phiếu:</span>
                             <span class="font-bold badge bg-red-100 text-red-700"><?php echo htmlspecialchars($phieuXuat['MaXuatHang']); ?></span>
                         </p>
-                        <p class="flex text-xs justify-between mb-3">
+                        <p style="font-size: 14px;" class="flex text-xs justify-between mb-3">
                             <span class="text-gray-600 "><i class="fas fa-shopping-cart text-orange-400 mr-2"></i>Mã đơn
                                 hàng:</span>
                             <span class="font-bold"><?php echo htmlspecialchars($phieuXuat['MaDonHang']); ?></span>
                         </p>
-                        <p class="flex text-xs justify-between">
+                        <p style="font-size: 14px;" class="flex text-xs justify-between">
                             <span class="text-gray-600 "><i class="fas fa-boxes text-purple-400 mr-2"></i>Mã vật
                                 tư:</span>
                             <span class="font-bold"><?php echo htmlspecialchars($phieuXuat['MaVatTu']); ?></span>
                         </p>
                     </div>
                     <div class="info-card bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm flex flex-col">
-                        <h3 class="text-sm font-semibold text-gray-500 mb-4 flex items-center gap-2">
+                        <h3 style="font-size: 16px;" class="text-sm font-semibold text-gray-500 mb-4 flex items-center gap-2">
                             <i class="fas fa-tshirt text-blue-500"></i> Thông tin sản phẩm
                         </h3>
-                        <p class="flex text-xs justify-between mb-3">
+                        <p style="font-size: 14px;" class="flex text-xs justify-between mb-3">
                             <span class="text-gray-600"><i class="fas fa-layer-group text-blue-400 mr-2"></i>Vải:</span>
                             <span class="font-bold">
                                 <?php
@@ -706,32 +743,32 @@ $chiTietXuatWithQR = array_map(function ($ct) {
                                 ?>
                             </span>
                         </p>
-                        <p class="flex text-xs justify-between mb-3">
+                        <p style="font-size: 14px;" class="flex text-xs justify-between mb-3">
                             <span class="text-gray-600"><i class="fas fa-palette text-pink-400 mr-2"></i>Màu:</span>
                             <span class="font-bold"><?php $fabricName = explode('-', $phieuXuat['TenMau'])[0]; // Take part before '-'
                             echo $fabricName; ?></span>
                         </p>
-                        <p class="flex text-xs justify-between">
+                        <p style="font-size: 14px;" class="flex text-xs justify-between">
                             <span class="text-gray-600"><i
                                     class="fas fa-ruler-combined text-yellow-500 mr-2"></i>Khổ:</span>
                             <span class="font-bold"><?php echo htmlspecialchars($phieuXuat['Kho']); ?></span>
                         </p>
                     </div>
                     <div class="info-card bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm flex flex-col">
-                        <h3 class="text-sm font-semibold text-gray-500 mb-4 flex items-center gap-2">
+                        <h3 style="font-size: 16px;" class="text-sm font-semibold text-gray-500 mb-4 flex items-center gap-2">
                             <i class="fas fa-truck-loading text-green-500"></i> Thông tin xuất kho
                         </h3>
-                        <p class="flex text-xs justify-between mb-3">
+                        <p style="font-size: 14px;" class="flex text-xs justify-between mb-3">
                             <span class="text-gray-600"><i class="fas fa-user-tie text-indigo-400 mr-2"></i>Nhân
                                 viên:</span>
                             <span class="font-bold"><?php echo htmlspecialchars($phieuXuat['TenNhanVien']); ?></span>
                         </p>
-                        <p class="flex text-xs justify-between mb-3">
+                        <p style="font-size: 14px;" class="flex text-xs justify-between mb-3">
                             <span class="text-gray-600"><i class="fas fa-box-open text-green-500 mr-2"></i>Tổng SL
                                 xuất:</span>
                             <span class="font-bold"><?php echo number_format($phieuXuat['TongSoLuongXuat'], 0, ',', '.') . ' ' . htmlspecialchars($phieuXuat['TenDVT']); ?></span>
                         </p>
-                        <p class="flex text-xs justify-between">
+                        <p style="font-size: 14px;" style="font-size: 14px;" class="flex text-xs justify-between">
                             <span class="text-gray-600"><i class="fas fa-calendar-check text-blue-400 mr-2"></i>Ngày
                                 xuất:</span>
                             <span class="font-bold"><?php echo $ngayXuat; ?></span>
@@ -739,30 +776,30 @@ $chiTietXuatWithQR = array_map(function ($ct) {
                     </div>
 
                     <div class="info-card bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm flex flex-col">
-                        <h3 class="text-sm font-semibold text-gray-500 mb-4 flex items-center gap-2">
+                        <h3 style="font-size: 16px;" class="text-sm font-semibold text-gray-500 mb-4 flex items-center gap-2">
                             <i class="fas fa-user-friends text-yellow-500"></i> Thông tin khách hàng
                         </h3>
-                        <p class="flex text-xs justify-between mb-3">
+                        <p style="font-size: 14px;" class="flex text-xs justify-between mb-3">
                             <span class="text-gray-600"><i class="fas fa-building text-red-400 mr-2"></i>Tên khách
                                 hàng:</span>
                             <span class="font-bold"><?php echo htmlspecialchars($phieuXuat['TenKhachHang'] ?? 'Không xác định'); ?></span>
                         </p>
-                        <p class="flex text-xs justify-between mb-3">
+                        <p style="font-size: 14px;" class="flex text-xs justify-between mb-3">
                             <span class="text-gray-600"><i class="fas fa-briefcase text-blue-400 mr-2"></i>Tên hoạt
                                 động:</span>
                             <span class="font-bold text-right wrap-text"><?php echo htmlspecialchars($phieuXuat['TenHoatDong'] ?? 'Không xác định'); ?></span>
                         </p>
-                        <p class="flex text-xs justify-between mb-3">
+                        <p style="font-size: 14px;" class="flex text-xs justify-between mb-3">
                             <span class="text-gray-600"><i class="fas fa-map-marker-alt text-red-400 mr-2"></i>Địa
                                 chỉ:</span>
                             <span class="font-bold text-right wrap-text"><?php echo htmlspecialchars($phieuXuat['DiaChi'] ?? 'Không xác định'); ?></span>
                         </p>
-                        <p class="flex text-xs justify-between mb-3">
+                        <p style="font-size: 14px;" class="flex text-xs justify-between mb-3">
                             <span class="text-gray-600"><i class="fas fa-user text-green-400 mr-2"></i>Người liên
                                 hệ:</span>
                             <span class="font-bold"><?php echo htmlspecialchars($phieuXuat['TenNguoiLienHe'] ?? 'Không xác định'); ?></span>
                         </p>
-                        <p class="flex text-xs justify-between">
+                        <p style="font-size: 14px;" class="flex text-xs justify-between">
                             <span class="text-gray-600"><i class="fas fa-phone text-yellow-400 mr-2"></i>Số điện
                                 thoại:</span>
                             <span class="font-bold"><?php echo htmlspecialchars($phieuXuat['SoDienThoai'] ?? 'Không xác định'); ?></span>
@@ -770,124 +807,164 @@ $chiTietXuatWithQR = array_map(function ($ct) {
                     </div>
                 </div>
 
-                <!-- Progress Section -->
-                <div class="">
-                    <h3 class="section-title text-sm font-bold text-gray-800 flex items-center ml-5 mb-5">
-                        <i class="fas fa-chart-line text-indigo-500 mr-2"></i> Tiến Độ Xuất Kho
+                <!-- Hiển thị tiến độ xuất kho -->
+                <div class="px-6 pb-4">
+                    <h3 class="section-header text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2 mb-4">
+                        <div class="icon-circle1 bg-indigo-100 text-indigo-600">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <span>Tiến Độ Xuất Kho</span>
                     </h3>
-                    <div class="bg-white rounded-xl text-xs border p-5 card-shadow">
+                    <div class="bg-white rounded-xl text-xs border p-5 card-hover shadow-sm">
                         <div class="flex justify-between mb-3">
                             <span class="font-semibold text-gray-700 flex items-center">
-                                <span class="bg-indigo-100 p-1 rounded-md text-indigo-500 mr-2"><i
-                                        class="fas fa-chart-line"></i></span>
-                                Tiến độ :
-                                <span id="progressPercent"
-                                    class="ml-2 bg-indigo-100 text-indigo-700 px-2 py-1 rounded-lg font-bold"><?php echo $percentCompleted; ?>%</span>
+                                <span class="bg-indigo-100 p-1 rounded-md text-indigo-500 mr-2"><i class="fas fa-chart-line"></i></span>
+                                Tiến độ:
+                                <span id="progressPercent" class="ml-2 bg-indigo-100 text-indigo-700 px-2 py-1 rounded-lg font-bold"><?php echo round($percentCompleted, 2); ?>%</span>
                             </span>
                             <span id="progressText" class="font-semibold text-gray-700 flex items-center">
                                 <i class="fas fa-box-open text-indigo-400 mr-2"></i>
-                                <?php echo number_format($daXuat, 0, ',', '.'); ?> / <?php echo number_format($tongXuat, 0, ',', '.'); ?> <?php echo htmlspecialchars($phieuXuat['TenDVT']); ?>
+                                <?php echo number_format($daXuat, 2, '.', ''); ?> / <?php echo number_format($tongXuat, 2, '.', ''); ?> <?php echo safeHtml($phieuXuat['TenDVT']); ?>
                             </span>
                         </div>
-                        <div class="progress-bar mb-6">
-                            <div class="progress-value <?php echo $percentCompleted < 100 ? 'pulse' : ''; ?>" style="width: <?php echo $percentCompleted; ?>%">
+                        <div class="w-full bg-gray-200 rounded-full h-4 mb-4 overflow-hidden">
+                            <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 h-4 rounded-full progress-animate relative" style="width: <?php echo $percentCompleted; ?>%">
+                                <?php if ($percentCompleted > 25): ?>
+                                    <span class="absolute inset-0 flex items-center justify-center text-xs font-bold text-white"><?php echo $percentCompleted; ?>%</span>
+                                <?php endif; ?>
                             </div>
                         </div>
-                        <div class="grid grid-cols-3 gap-4">
-                            <div class="stat-card">
-                                <i class="fas fa-boxes text-blue-300"></i>
-                                <p class="text-xs font-medium text-blue-600">Tổng</p>
-                                <p class="font-bold text-lg text-blue-800"><?php echo number_format($tongXuat, 0, ',', '.'); ?></p>
-                                <p class="text-xs text-blue-500"><?php echo htmlspecialchars($phieuXuat['TenDVT']); ?></p>
+                        <div class="grid grid-cols-1 sm:grid-cols-<?php echo ($phieuXuat['TenDVT'] != 'KG') ? 4 : 3; ?> gap-3">
+                            <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-3 rounded-lg shadow-sm border border-blue-200 text-center transform transition-all hover:scale-105">
+                                <div class="icon-circle1 bg-blue-500 text-white mx-auto mb-2">
+                                    <i class="fas fa-box-open"></i>
+                                </div>
+                                <p class="text-xs text-blue-700 font-medium mb-1">Tổng Xuất</p>
+                                <p class="font-bold text-blue-800 text-lg"><?php echo number_format($tongXuat, 2, '.', ''); ?></p>
+                                <p class="text-xs text-blue-500"><?php echo safeHtml($phieuXuat['TenDVT']); ?></p>
                             </div>
-                            <div class="stat-card">
-                                <i class="fas fa-check-circle text-green-300"></i>
-                                <p class="text-xs font-medium text-green-600">Đã Xuất</p>
-                                <p class="font-bold text-lg text-green-800"><?php echo number_format($daXuat, 0, ',', '.'); ?></p>
-                                <p class="text-xs text-green-500"><?php echo htmlspecialchars($phieuXuat['TenDVT']); ?></p>
+                            <div class="bg-gradient-to-br from-green-50 to-green-100 p-3 rounded-lg shadow-sm border border-green-200 text-center transform transition-all hover:scale-105">
+                                <div class="icon-circle1 bg-green-500 text-white mx-auto mb-2">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                                <p class="text-xs text-green-700 font-medium mb-1">Đã Xuất</p>
+                                <p class="font-bold text-green-800 text-lg"><?php echo number_format($daXuat, 2, '.', ''); ?></p>
+                                <p class="text-xs text-green-500"><?php echo safeHtml($phieuXuat['TenDVT']); ?></p>
                             </div>
-                            <div class="stat-card">
-                                <i class="fas fa-hourglass-half text-red-300"></i>
-                                <p class="text-xs font-medium text-red-600">Còn Lại</p>
-                                <p class="font-bold text-lg text-red-800"><?php echo number_format($conLai, 0, ',', '.'); ?></p>
-                                <p class="text-xs text-red-500"><?php echo htmlspecialchars($phieuXuat['TenDVT']); ?></p>
-                            </div>
+                             <?php if ($phieuXuat['TenDVT'] != 'KG'): ?>
+                                <div class="bg-gradient-to-br from-red-50 to-red-100 p-3 rounded-lg shadow-sm border border-red-200 text-center transform transition-all hover:scale-105">
+                                    <div class="icon-circle1 bg-red-500 text-white mx-auto mb-2">
+                                        <i class="fas fa-weight-hanging"></i>
+                                    </div>
+                                    <p class="text-xs text-red-700 font-medium mb-1">Số Kg Cân Thực Đã Xuất</p>
+                                     <p class="font-bold text-lg text-red-800"><?php echo number_format($phieuXuat['SoKgThucTe'], 2, ',', '.'); ?></p>
+                                     <p class="text-xs text-red-500">KG</p>
+                                </div>
+                            <?php endif; ?>
+                            <div class="bg-gradient-to-br from-amber-50 to-amber-100 p-3 rounded-lg shadow-sm border border-amber-200 text-center transform transition-all hover:scale-105">
+                                <div class="icon-circle1 bg-amber-500 text-white mx-auto mb-2">
+                                    <i class="fas fa-hourglass-half"></i>
+                                </div>
+                                <p class="text-xs text-amber-700 font-medium mb-1">Còn Lại</p>
+                                <p class="font-bold text-amber-800 text-lg"><?php echo number_format($conLai, 2, '.', ''); ?></p>
+                                <p class="text-xs text-amber-500"><?php echo safeHtml($phieuXuat['TenDVT']); ?></p>
+                            </div>                         
                         </div>
                     </div>
                 </div>
 
+
                 <!-- Details Table -->
                 <div class="bg-white rounded-xl shadow-sm p-3 sm:p-4 card-hover border border-gray-100">
-                    <h3
-                        class="section-header text-base sm:text-lg font-bold text-gray-800 flex items-center justify-between gap-2 mb-4">
+                    <h3 class="section-header text-base sm:text-lg font-bold text-gray-800 flex items-center justify-between gap-2 mb-4">
                         <div class="flex items-center gap-2">
                             <div class="icon-circle bg-indigo-100 text-indigo-600">
                                 <i class="fas fa-list"></i>
                             </div>
                             <span>Chi Tiết Xuất Kho</span>
-                            <span class="text-sm bg-red-100 text-red-700 px-2 py-1 rounded-full"><?php echo count($chiTietXuat); ?>
-                                mục</span>
+                            <span class="text-sm bg-red-100 text-red-700 px-2 py-1 rounded-full"><?php echo count($chiTietXuat); ?> mục</span>
                         </div>
-                        <button id="btnQuetMa"
-                            class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm flex items-center gap-2">
+                        <button id="btnQuetMa" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm flex items-center gap-2">
                             <i class="fas fa-qrcode"></i> Quét Mã QR
                         </button>
                     </h3>
-                    <?php if ($chiTietXuatWithQR): ?>
-                    <div class="responsive-table custom-scrollbar" style="overflow-x: auto;">
-                        <table class="w-full border-collapse" id="chiTietTable" style="min-width: 700px;">
-                            <thead class="bg-red-50 text-red-800 sticky top-0 z-10">
-                                <tr>
-                                    <th class="text-left sticky left-0 bg-red-50 z-20 p-2 sm:p-3 font-semibold">
-                                        <i class="fas fa-list-ol mr-2 text-blue-600"></i>STT
-                                    </th>
-                                    <th class="text-left p-2 sm:p-3 font-semibold">
-                                        <i class="fas fa-boxes mr-2 text-green-600"></i>Số Lượng
-                                    </th>
-                                    <th class="text-left p-2 sm:p-3 font-semibold">
-                                        <i class="fas fa-tag mr-2 text-yellow-600"></i>Số Lot
-                                    </th>
-                                    <th class="text-left p-2 sm:p-3 font-semibold">
-                                        <i class="fas fa-cubes mr-2 text-purple-600"></i>Thành Phần
-                                    </th>
-                                    <th class="text-left p-2 sm:p-3 font-semibold">
-                                        <i class="fas fa-check-circle mr-2 text-green-500"></i>Trạng Thái
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php 
+                    <?php if ($groupedChiTiet): ?>
+                        <div class="responsive-table custom-scrollbar" style="overflow-x: auto;">
+                            <table class="w-full border-collapse" id="chiTietTable" style="min-width: 700px;">
+                                <thead class="bg-red-50 text-red-800 sticky top-0 z-10">
+                                    <tr>
+                                        <th class="text-left sticky left-0 bg-red-50 z-20 p-2 sm:p-3 font-semibold text-sm">
+                                            <i class="fas fa-list-ol mr-2 text-blue-600"></i>STT
+                                        </th>
+                                        <th class="text-left p-2 sm:p-3 font-semibold text-sm">
+                                            <i class="fas fa-boxes mr-2 text-green-600"></i>Số Lượng
+                                        </th>
+                                        <th class="text-left p-2 sm:p-3 font-semibold ttext-sm">
+                                            <i class="fas fa-tag mr-2 text-yellow-600"></i>Số Lot
+                                        </th>
+                                        <?php if ($phieuXuat['TenDVT'] != 'KG'): ?>
+                                            <th class="text-left p-2 sm:p-3 font-semibold text-sm">
+                                                <i class="fas fa-weight-hanging mr-2 text-purple-600"></i>Số Kg Cân
+                                            </th>
+                                        <?php endif; ?>
+                                        <th class="text-left p-2 sm:p-3 font-semibold text-sm">
+                                            <i class="fas fa-cubes mr-2 text-purple-600"></i>Thành Phần
+                                        </th>
+                                        <th class="text-left p-2 sm:p-3 font-semibold text-sm">
+                                            <i class="fas fa-check-circle mr-2 text-green-500"></i>Trạng Thái
+                                        </th>
+                                    </tr>
+                                </thead>
+
+                               <tbody class="text-sm">
+                                    <?php 
                                     $stt = 1;
-                                    foreach ($chiTietXuatWithQR as $ct): 
-                                        $trangThaiHienThi = ($ct['TrangThai'] == 1) ? 'Đã xuất' : 'Chưa xuất';
-                                        $trangThaiClass = ($ct['TrangThai'] == 1) ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600';
-                                        $soLuongClass = ($ct['SoLuong'] > 0) ? 'text-green-600' : 'text-red-600';
+                                    foreach ($groupedChiTiet as $lot => $group):
                                     ?>
-                                <tr class="border-b border-gray-200 hover:bg-red-100 transition-colors"
-                                    data-ma-ctxhtp="<?php echo htmlspecialchars($ct['MaCTXHTP']); ?>">
-                                    <td class="sticky left-0 bg-white p-2 sm:p-3"><?php echo $stt++; ?></td>
-                                    <td class="font-bold p-2 sm:p-3 whitespace-normal <?php echo $soLuongClass; ?>">
-                                        <?php echo number_format($ct['SoLuong'], 0, ',', '.') . ' ' . htmlspecialchars($ct['TenDVT']); ?>
-                                    </td>
-                                    <td class="p-2 sm:p-3"><?php echo htmlspecialchars($ct['SoLot']); ?></td>
-                                    <td class="p-2 sm:p-3"><?php echo htmlspecialchars($ct['TenThanhPhan']); ?></td>
-                                    <td class="p-2 sm:p-3">
-                                        <span
-                                            class="px-2 py-1 rounded-full text-xs <?php echo $trangThaiClass; ?> <?php echo $ct['TrangThai'] == 1 ? 'text-da-xuat' : 'text-chua-xuat'; ?>">
-                                            <?php echo htmlspecialchars($trangThaiHienThi); ?>
-                                        </span>
-                                    </td>
-                                </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
+                                        <tr class="bg-indigo-100 text-indigo-800 font-bold border-b border-gray-200">
+                                            <td colspan="<?php echo ($phieuXuat['TenDVT'] != 'KG') ? 6 : 5; ?>" class="p-2 sm:p-3">
+                                                <div class="flex items-center gap-2 text-sm">
+                                                    <i class="fas fa-folder-open"></i>
+                                                    <span>Số Lot: <?php echo safeHtml($lot); ?> (Tổng xuất: <?php echo number_format($group['totalQuantity'], 2, '.', '') . ' ' . safeHtml($phieuXuat['TenDVT']); ?>
+                                                    <?php if ($phieuXuat['TenDVT'] != 'KG'): ?>
+                                                        , Tổng kg thực tế: <?php echo number_format($group['totalKg'], 2, '.', '') . ' KG'; ?>
+                                                    <?php endif; ?>
+                                                    , Tổng cây: <?php echo $group['totalCay'] . ' Cây'; ?>)</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <?php foreach ($group['items'] as $ct): 
+                                            $trangThaiHienThi = ($ct['TrangThai'] == 1) ? 'Đã xuất' : 'Chưa xuất';
+                                            $trangThaiClass = ($ct['TrangThai'] == 1) ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600';
+                                            $soLuongClass = ($ct['SoLuong'] > 0) ? 'text-green-600' : 'text-red-600';
+                                        ?>
+                                            <tr class="border-b border-gray-200 hover:bg-red-100 transition-colors" data-ma-ctxhtp="<?php echo safeHtml($ct['MaCTXHTP']); ?>">
+                                                <td class="sticky left-0 bg-white p-2 sm:p-3 text-sm"><?php echo $stt++; ?></td>
+                                                <td class="font-bold p-2 sm:p-3 whitespace-normal <?php echo $soLuongClass; ?> text-sm">
+                                                    <?php echo number_format($ct['SoLuong'], 2, '.', '') . ' ' . safeHtml($ct['TenDVT']); ?>
+                                                </td>
+                                                <td class="p-2 sm:p-3 text-sm"><?php echo safeHtml($ct['SoLot']); ?></td>
+                                                <?php if ($phieuXuat['TenDVT'] != 'KG'): ?>
+                                                    <td class="p-2 sm:p-3 text-sm"><?php echo number_format($ct['SoKgCan'], 2, '.', '') . ' KG'; ?></td>
+                                                <?php endif; ?>
+                                                <td class="p-2 sm:p-3 text-sm"><?php echo safeHtml($ct['TenThanhPhan']); ?></td>
+                                                <td class="p-2 sm:p-3 text-sm">
+                                                    <span class="px-2 py-1 rounded-full text-xs <?php echo $trangThaiClass; ?> <?php echo $ct['TrangThai'] == 1 ? 'text-da-xuat' : 'text-chua-xuat'; ?>">
+                                                        <?php echo safeHtml($trangThaiHienThi); ?>
+                                                    </span>
+                                                </td>
+                                            </tr>
+
+                                        <?php endforeach; ?>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
                     <?php else: ?>
-                    <div class="text-center bg-red-50 rounded-lg p-6">
-                        <i class="ri-error-warning-line text-4xl text-red-500 mb-3"></i>
-                        <p class="text-red-600 text-base font-semibold">Không tìm thấy chi tiết xuất kho cho đơn này.
-                        </p>
-                    </div>
+                        <div class="text-center bg-red-50 rounded-lg p-6">
+                            <i class="ri-error-warning-line text-4xl text-red-500 mb-3"></i>
+                            <p class="text-red-600 text-base font-semibold">Không tìm thấy chi tiết xuất kho cho đơn này.</p>
+                        </div>
                     <?php endif; ?>
                 </div>
             </div>
@@ -1271,100 +1348,98 @@ $chiTietXuatWithQR = array_map(function ($ct) {
                 return conLaiElement ? parseInt(conLaiElement.textContent.replace(/\./g, ''), 10) === 0 : false;
             }
 
-            function updateStatus(maCTXHTP) {
-                fetch(window.location.href, {
+           function updateStatus(maCTXHTP) {
+            fetch(window.location.href, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `action=updateStatus&maCTXHTP=${encodeURIComponent(maCTXHTP)}`
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        throw new Error(`HTTP error! Status: ${response.status}, Message: ${text}`);
+                    });
+                }
+                return response.json().catch(err => {
+                    throw new Error(`Lỗi parse JSON: ${err.message}`);
+                });
+            })
+            .then(data => {
+                if (data.success) {
+                    const row = document.querySelector(`tr[data-ma-ctxhtp="${maCTXHTP}"] td:nth-child(${tenDVT !== 'KG' ? 6 : 5}) span`);
+                    if (row) {
+                        row.className = 'text-da-xuat font-medium flex items-center gap-1 px-3 py-1 rounded-full border bg-green-50 border-green-200';
+                        row.innerHTML = '<i class="fas fa-check-circle"></i> Đã xuất';
+                    }
+
+                    const newDaXuat = parseFloat(data.soLuongDaXuat || 0);
+                    const newTongXuat = parseFloat(data.tongSoLuongXuat || 0);
+                    const newConLai = parseFloat(data.soLuongConLai || 0);
+                    const newSoKgThucTe = parseFloat(data.soKgThucTe || 0);
+
+                    const tongXuatElement = document.querySelector('.stat-card:nth-child(1) .text-lg');
+                    const daXuatElement = document.querySelector('.stat-card:nth-child(2) .text-lg');
+                    const conLaiElement = document.querySelector('.stat-card:nth-child(3) .text-lg');
+                    const soKgThucTeElement = document.querySelector('.stat-card:nth-child(4) .text-lg');
+
+                    if (!tongXuatElement || !daXuatElement || !conLaiElement || !progressPercent || !progressText || !progressValue) {
+                        showNotification('Lỗi: Không tìm thấy phần tử để cập nhật tiến độ', 'error');
+                        return;
+                    }
+
+                    requestAnimationFrame(() => {
+                        tongXuatElement.textContent = newTongXuat.toLocaleString('vi-VN');
+                        daXuatElement.textContent = newDaXuat.toLocaleString('vi-VN');
+                        conLaiElement.textContent = newConLai.toLocaleString('vi-VN');
+                        if (soKgThucTeElement) {
+                            soKgThucTeElement.textContent = newSoKgThucTe.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        }
+
+                        const newPercent = newTongXuat > 0 ? (newDaXuat / newTongXuat * 100).toFixed(1) : 0;
+                        progressPercent.textContent = `${newPercent}%`;
+                        progressText.innerHTML = `
+                            <i class="fas fa-box-open text-indigo-400 mr-2"></i>
+                            ${newDaXuat.toLocaleString('vi-VN')} / ${newTongXuat.toLocaleString('vi-VN')} ${tenDVT}
+                        `;
+                        progressValue.style.width = `${newPercent}%`;
+                        progressValue.classList.toggle('pulse', newPercent < 100);
+                    });
+
+                    fetch(window.location.href, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded'
                         },
-                        body: `action=updateStatus&maCTXHTP=${encodeURIComponent(maCTXHTP)}`
+                        body: `action=updateDonSanXuat&maCTXHTP=${encodeURIComponent(maCTXHTP)}`
                     })
-                    .then(response => {
-                        if (!response.ok) {
-                            return response.text().then(text => {
-                                throw new Error(
-                                    `HTTP error! Status: ${response.status}, Message: ${text}`);
-                            });
-                        }
-                        return response.json().catch(err => {
-                            throw new Error(`Lỗi parse JSON: ${err.message}`);
-                        });
-                    })
-                    .then(data => {
-                        if (data.success) {
-                            const row = document.querySelector(
-                                `tr[data-ma-ctxhtp="${maCTXHTP}"] td:nth-child(5) span`);
-                            if (row) {
-                                row.className =
-                                    'text-da-xuat font-medium flex items-center gap-1 px-3 py-1 rounded-full border bg-green-50 border-green-200';
-                                row.innerHTML = '<i class="fas fa-check-circle"></i> Đã xuất';
+                    .then(response => response.json())
+                    .then(dataDonSanXuat => {
+                        if (dataDonSanXuat.success) {
+                            showNotification(
+                                `Quét chi tiết thành công! Tổng: ${newTongXuat.toLocaleString('vi-VN')} ${tenDVT}, Đã xuất: ${newDaXuat.toLocaleString('vi-VN')} ${tenDVT}, Còn lại: ${newConLai.toLocaleString('vi-VN')} ${tenDVT}${tenDVT !== 'KG' ? `, Số kg thực tế: ${newSoKgThucTe.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} KG` : ''}`,
+                                'success'
+                            );
+                            if (data.remaining === 0 || isOrderCompleted()) {
+                                isOrderComplete = true;
+                                stopScanner();
+                                scannerModal.classList.remove('show');
+                                setTimeout(() => scannerModal.classList.add('hidden'), 300);
+                                showNotification('', 'success', true);
+                                updateOrderStatus();
                             }
-
-                            const newDaXuat = parseInt(data.soLuongDaXuat || 0, 10);
-                            const newTongXuat = parseInt(data.tongSoLuongXuat || 0, 10);
-                            const newConLai = parseInt(data.soLuongConLai || 0, 10);
-
-                            const tongXuatElement = document.querySelector('.stat-card:nth-child(1) .text-lg');
-                            const daXuatElement = document.querySelector('.stat-card:nth-child(2) .text-lg');
-                            const conLaiElement = document.querySelector('.stat-card:nth-child(3) .text-lg');
-
-                            if (!tongXuatElement || !daXuatElement || !conLaiElement || !progressPercent || !
-                                progressText || !progressValue) {
-                                showNotification('Lỗi: Không tìm thấy phần tử để cập nhật tiến độ', 'error');
-                                return;
-                            }
-
-                            requestAnimationFrame(() => {
-                                tongXuatElement.textContent = newTongXuat.toLocaleString('vi-VN');
-                                daXuatElement.textContent = newDaXuat.toLocaleString('vi-VN');
-                                conLaiElement.textContent = newConLai.toLocaleString('vi-VN');
-
-                                const newPercent = newTongXuat > 0 ? (newDaXuat / newTongXuat * 100)
-                                    .toFixed(1) : 0;
-                                progressPercent.textContent = `${newPercent}%`;
-                                progressText.innerHTML = `
-                        <i class="fas fa-box-open text-indigo-400 mr-2"></i>
-                        ${newDaXuat.toLocaleString('vi-VN')} / ${newTongXuat.toLocaleString('vi-VN')} ${tenDVT}
-                    `;
-                                progressValue.style.width = `${newPercent}%`;
-                                progressValue.classList.toggle('pulse', newPercent < 100);
-                            });
-
-                            fetch(window.location.href, {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/x-www-form-urlencoded'
-                                    },
-                                    body: `action=updateDonSanXuat&maCTXHTP=${encodeURIComponent(maCTXHTP)}`
-                                })
-                                .then(response => response.json())
-                                .then(dataDonSanXuat => {
-                                    if (dataDonSanXuat.success) {
-                                        showNotification(
-                                            `Quét chi tiết thành công! Tổng: ${newTongXuat.toLocaleString('vi-VN')} ${tenDVT}, Đã xuất: ${newDaXuat.toLocaleString('vi-VN')} ${tenDVT}, Còn lại: ${newConLai.toLocaleString('vi-VN')} ${tenDVT}`,
-                                            'success'
-                                        );
-                                        if (data.remaining === 0 || isOrderCompleted()) {
-                                            isOrderComplete = true;
-                                            stopScanner();
-                                            scannerModal.classList.remove('show');
-                                            setTimeout(() => scannerModal.classList.add('hidden'), 300);
-                                            showNotification('', 'success', true);
-                                            updateOrderStatus();
-                                        }
-                                    } else {
-                                        showNotification(dataDonSanXuat.message ||
-                                            'Lỗi khi cập nhật đơn sản xuất', 'error');
-                                    }
-                                })
-                                .catch(err => handleFetchError(err, 'Lỗi khi cập nhật đơn sản xuất'));
                         } else {
-                            showNotification(data.message || 'Lỗi khi cập nhật trạng thái', 'error');
+                            showNotification(dataDonSanXuat.message || 'Lỗi khi cập nhật đơn sản xuất', 'error');
                         }
                     })
-                    .catch(err => handleFetchError(err, 'Lỗi khi cập nhật trạng thái'));
-            }
-
+                    .catch(err => handleFetchError(err, 'Lỗi khi cập nhật đơn sản xuất'));
+                } else {
+                    showNotification(data.message || 'Lỗi khi cập nhật trạng thái', 'error');
+                }
+            })
+            .catch(err => handleFetchError(err, 'Lỗi khi cập nhật trạng thái'));
+        }
             function updateOrderStatus() {
                 if (!maXuatHang) {
                     showNotification('Không tìm thấy mã đơn hàng để cập nhật trạng thái!', 'error');

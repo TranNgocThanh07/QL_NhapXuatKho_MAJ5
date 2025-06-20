@@ -11,6 +11,7 @@ if (!isset($_SESSION['tenNhanVien'])) {
 // Gán giá trị từ session
 $tenNhanVien = $_SESSION['tenNhanVien'] ?? '';
 $maPhanQuyen = $_SESSION['maPhanQuyen'] ?? '';
+$taiKhoan = $_SESSION['taiKhoan'] ?? ''; // Lưu tài khoản từ session
 
 // Xác định vai trò dựa trên MaPhanQuyen
 $vaiTro = '';
@@ -43,6 +44,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
             ?> - Minh Anh</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
     tailwind.config = {
         theme: {
@@ -114,10 +116,41 @@ $current_page = basename($_SERVER['PHP_SELF']);
         }
     }
 
+    /* Dropdown styles */
+    .dropdown-menu {
+        display: none;
+        position: absolute;
+        right: 0;
+        top: 100%;
+        background-color: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        z-index: 50;
+        min-width: 10rem;
+    }
+
+    .dropdown-menu.show {
+        display: block;
+    }
+
+    .dropdown-item {
+        display: flex;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        color: #1e293b;
+        font-size: 0.875rem;
+        transition: background-color 0.2s ease;
+    }
+
+    .dropdown-item:hover {
+        background-color: #f3f4f6;
+    }
+
     /* Responsive styles */
     @media (max-width: 768px) {
         .nav-link {
-            font-size: 0.75rem; /* Giảm kích thước chữ trên mobile */
+            font-size: 0.75rem;
         }
 
         .container {
@@ -137,11 +170,11 @@ $current_page = basename($_SERVER['PHP_SELF']);
         }
 
         .mobile-menu i {
-            font-size: 1.25rem; /* Giảm kích thước biểu tượng */
+            font-size: 1.25rem;
         }
 
         .mobile-menu span {
-            font-size: 0.65rem; /* Giảm kích thước chữ */
+            font-size: 0.65rem;
         }
 
         .user-info-mobile {
@@ -149,20 +182,24 @@ $current_page = basename($_SERVER['PHP_SELF']);
             align-items: center;
             text-align: center;
         }
+
+        .dropdown-menu {
+            right: 1rem;
+        }
     }
 
     @media (max-width: 640px) {
         .logo-container img {
-            height: 2rem; /* Giảm kích thước logo trên mobile */
+            height: 2rem;
             width: auto;
         }
 
         .logo-container span {
-            font-size: 1rem; /* Giảm kích thước chữ logo */
+            font-size: 1rem;
         }
 
         .user-info-mobile span {
-            font-size: 0.7rem; /* Giảm kích thước chữ thông tin người dùng */
+            font-size: 0.7rem;
         }
     }
     </style>
@@ -205,17 +242,17 @@ $current_page = basename($_SERVER['PHP_SELF']);
                         </a>
                         <?php endif; ?>
 
-                        <?php if ($maPhanQuyen == 5 || $maPhanQuyen == 6): ?>
+                    
                         <a href="xuatkho.php"
                             class="nav-link px-3 py-2 text-sm font-medium rounded-md transition duration-300 ease-in-out flex items-center space-x-1.5 <?php echo ($current_page == 'xuatkho.php') ? 'active text-red-600' : 'text-gray-700 hover:text-red-600'; ?>">
                             <i class="fas fa-arrow-circle-up"></i>
                             <span>Xuất kho</span>
                         </a>
-                        <?php endif; ?>
+
                     </div>
                 </div>
 
-                <!-- Right side - User info & Logout -->
+                <!-- Right side - User info & Settings -->
                 <div class="flex items-center space-x-4">
                     <div class="hidden md:flex items-center bg-gray-100 pl-3 pr-1 py-1.5 rounded-full">
                         <div class="text-right mr-2">
@@ -225,11 +262,20 @@ $current_page = basename($_SERVER['PHP_SELF']);
                         </div>
                     </div>
 
-                    <a href="logout.php"
-                        class="inline-flex items-center px-2 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-300 ease-in-out transform hover:-translate-y-0.5">
-                        <i class="fas fa-sign-out-alt "></i>
-                        
-                    </a>
+                    <div class="relative">
+                        <button id="settings-button"
+                            class="inline-flex items-center px-2 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-300 ease-in-out transform hover:-translate-y-0.5">
+                            <i class="fas fa-cog"></i>
+                        </button>
+                        <div id="settings-menu" class="dropdown-menu">
+                          <a href="#" onclick="showChangePasswordPopup('<?php echo htmlspecialchars($taiKhoan); ?>')" class="dropdown-item">
+                            <i class="fas fa-lock mr-2 text-red-500"></i> Đổi mật khẩu
+                        </a>
+                        <a href="logout.php" class="dropdown-item">
+                            <i class="fas fa-sign-out-alt mr-2 text-red-500"></i> Đăng xuất
+                        </a>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -300,7 +346,53 @@ $current_page = basename($_SERVER['PHP_SELF']);
     </div>
     <?php endif; ?>
 
-    <!-- Script để cập nhật thời gian theo thời gian thực -->
+    <!-- Change Password Popup -->
+    <div id="change-password-popup" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg w-full max-w-md overflow-hidden shadow-xl">
+            <div class="bg-red-600 p-4">
+                <div class="flex items-center">
+                    <i class="fas fa-lock text-white mr-2 text-xl"></i>
+                    <h3 class="text-lg font-medium text-white">Đổi mật khẩu</h3>
+                </div>
+            </div>
+            <div class="p-6">
+                <form id="change-password-form" method="POST" action="change_password.php">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Tài khoản</label>
+                        <input type="text" name="taiKhoan" value="<?php echo htmlspecialchars($taiKhoan); ?>" readonly
+                            class="w-full bg-gray-100 border border-gray-300 rounded-md p-2 text-gray-700">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Mật khẩu cũ</label>
+                        <input type="password" name="matKhauCu" id="matKhauCu"
+                            class="w-full border border-gray-300 rounded-md p-2 focus:ring-red-500 focus:border-red-500">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Mật khẩu mới</label>
+                        <input type="password" name="matKhauMoi" id="matKhauMoi"
+                            class="w-full border border-gray-300 rounded-md p-2 focus:ring-red-500 focus:border-red-500">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Xác nhận mật khẩu mới</label>
+                        <input type="password" name="xacNhanMatKhau" id="xacNhanMatKhau"
+                            class="w-full border border-gray-300 rounded-md p-2 focus:ring-red-500 focus:border-red-500">
+                    </div>
+                    <div class="flex justify-end space-x-2">
+                        <button type="button" onclick="hideChangePasswordPopup()"
+                            class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-all duration-200">
+                            Hủy
+                        </button>
+                        <button type="submit"
+                            class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-all duration-200">
+                            Đổi mật khẩu
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script để cập nhật thời gian và xử lý dropdown -->
     <script>
     function updateClock() {
         const now = new Date();
@@ -319,6 +411,103 @@ $current_page = basename($_SERVER['PHP_SELF']);
         }
         setTimeout(updateClock, 1000);
     }
+
+    // Toggle dropdown menu
+    document.getElementById('settings-button').addEventListener('click', function() {
+        const menu = document.getElementById('settings-menu');
+        menu.classList.toggle('show');
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(event) {
+        const menu = document.getElementById('settings-menu');
+        const button = document.getElementById('settings-button');
+        if (!menu.contains(event.target) && !button.contains(event.target)) {
+            menu.classList.remove('show');
+        }
+    });
+
+    // Show change password popup
+    function showChangePasswordPopup(taiKhoan) {
+        document.getElementById('change-password-popup').classList.remove('hidden');
+        document.getElementById('settings-menu').classList.remove('show');
+    }
+
+    // Hide change password popup
+    function hideChangePasswordPopup() {
+        document.getElementById('change-password-popup').classList.add('hidden');
+        document.getElementById('change-password-form').reset();
+    }
+
+    // Validate change password form
+    document.getElementById('change-password-form').addEventListener('submit', function(event) {
+        event.preventDefault();
+        const matKhauCu = document.getElementById('matKhauCu').value;
+        const matKhauMoi = document.getElementById('matKhauMoi').value;
+        const xacNhanMatKhau = document.getElementById('xacNhanMatKhau').value;
+
+        if (!matKhauCu || !matKhauMoi || !xacNhanMatKhau) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Thiếu thông tin',
+                text: 'Vui lòng nhập đầy đủ mật khẩu cũ, mật khẩu mới và xác nhận mật khẩu.',
+            });
+            return;
+        }
+
+        if (matKhauMoi !== xacNhanMatKhau) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Lỗi xác nhận',
+                text: 'Mật khẩu mới và xác nhận mật khẩu không khớp.',
+            });
+            return;
+        }
+
+        if (matKhauMoi.length < 6) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Mật khẩu yếu',
+                text: 'Mật khẩu mới phải có ít nhất 6 ký tự.',
+            });
+            return;
+        }
+
+        // Submit form via AJAX
+        const formData = new FormData(this);
+        fetch('change_password.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Thành công',
+                    text: 'Đổi mật khẩu thành công. Vui lòng đăng nhập lại.',
+                    timer: 2000,
+                    showConfirmButton: false
+                }).then(() => {
+                    window.location.href = 'logout.php';
+                });
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Lỗi',
+                    text: result.message || 'Không thể đổi mật khẩu. Vui lòng thử lại.',
+                });
+            }
+        })
+        .catch(error => {
+            Swal.fire({
+                icon: 'error',
+                title: 'Lỗi server',
+                text: 'Đã xảy ra lỗi khi xử lý yêu cầu. Vui lòng thử lại.',
+            });
+            console.error('Error:', error);
+        });
+    });
 
     document.addEventListener('DOMContentLoaded', updateClock);
     </script>

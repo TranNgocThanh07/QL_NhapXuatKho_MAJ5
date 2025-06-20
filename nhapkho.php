@@ -1,95 +1,75 @@
 <?php
 // Nhập Kho
-require_once 'init.php';
-include 'db_config.php'; // Kết nối DB
+include 'db_config.php'; // Chỉ chứa kết nối DB, không echo gì
 
-// Lấy MaNhanVien từ session
-$maNhanVien = isset($_SESSION['maNhanVien']) ? $_SESSION['maNhanVien'] : null;
-
-if (!$maNhanVien) {
-    header('Location: login.php'); // Chuyển hướng nếu chưa đăng nhập
-    exit;
-}
 // Xử lý yêu cầu AJAX trước mọi thứ
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     try {
         if ($_POST['action'] === 'getData') {
-            try {
-                $recordsPerPage = 10;
-                $page = isset($_POST['page']) && is_numeric($_POST['page']) ? (int)$_POST['page'] : 1;
-                $offset = ($page - 1) * $recordsPerPage;
+            $recordsPerPage = 10;
+            $page = isset($_POST['page']) && is_numeric($_POST['page']) ? (int)$_POST['page'] : 1;
+            $offset = ($page - 1) * $recordsPerPage;
 
-                $maSoMe = isset($_POST['maSoMe']) ? "%" . $_POST['maSoMe'] . "%" : "%";
-                $tenKhachHang = isset($_POST['tenKhachHang']) ? "%" . $_POST['tenKhachHang'] . "%" : "%";
-                $trangThai = isset($_POST['trangThai']) && in_array($_POST['trangThai'], ['0', '3']) ? (int)$_POST['trangThai'] : 0;
+            $maSoMe = isset($_POST['maSoMe']) ? "%" . $_POST['maSoMe'] . "%" : "%";
+            $tenKhachHang = isset($_POST['tenKhachHang']) ? "%" . $_POST['tenKhachHang'] . "%" : "%";
+            $trangThai = isset($_POST['trangThai']) && in_array($_POST['trangThai'], ['0', '3']) ? (int)$_POST['trangThai'] : 0;
 
-                // Lọc
-                $whereClause = $trangThai == 0 ? "TP_DonSanXuat.TrangThai IN (0, 2) AND TP_DonSanXuat.LoaiDon != 3" : "(TP_DonSanXuat.TrangThai = :trangThai OR TP_DonSanXuat.LoaiDon = 3)";
+            // Lọc
+            $whereClause = $trangThai == 0 ? "TP_DonSanXuat.TrangThai IN (0, 2) AND TP_DonSanXuat.LoaiDon != 3" : "(TP_DonSanXuat.TrangThai = :trangThai OR TP_DonSanXuat.LoaiDon = 3)";
 
-                // Đếm tổng số bản ghi
-                $sqlCount = "SELECT COUNT(DISTINCT TP_DonSanXuat.MaSoMe) as total 
-                            FROM TP_DonSanXuat 
-                            LEFT JOIN TP_KhachHang ON TP_DonSanXuat.MaKhachHang = TP_KhachHang.MaKhachHang 
-                            INNER JOIN TP_ChiTietDonSanXuat ON TP_DonSanXuat.MaSoMe = TP_ChiTietDonSanXuat.MaSoMe 
-                            WHERE $whereClause 
-                            AND TP_DonSanXuat.MaSoMe LIKE :maSoMe 
-                            AND TP_KhachHang.TenKhachHang LIKE :tenKhachHang 
-                            AND TP_ChiTietDonSanXuat.MaNhanVien = :maNhanVien";
-                $stmtCount = $pdo->prepare($sqlCount);
-                if ($trangThai != 0) {
-                    $stmtCount->bindValue(':trangThai', $trangThai, PDO::PARAM_INT);
-                }
-                $stmtCount->bindValue(':maSoMe', $maSoMe, PDO::PARAM_STR);
-                $stmtCount->bindValue(':tenKhachHang', $tenKhachHang, PDO::PARAM_STR);
-                $stmtCount->bindValue(':maNhanVien', $maNhanVien, PDO::PARAM_STR);
-                $stmtCount->execute();
-                $totalRecords = $stmtCount->fetch(PDO::FETCH_ASSOC)['total'];
-                $totalPages = ceil($totalRecords / $recordsPerPage);
-
-                // Lấy dữ liệu cho trang hiện tại
-                $sql = "SELECT DISTINCT TP_DonSanXuat.MaSoMe, TP_DonSanXuat.MaKhachHang, TP_DonSanXuat.MaDonHang, TP_DonSanXuat.MaVatTu, 
-                            TP_DonSanXuat.TenVai, TP_DonSanXuat.TongSoLuongGiao, TP_DonSanXuat.MaDVT, 
-                            TP_DonSanXuat.TrangThai, TP_DonSanXuat.NgayNhan,
-                            TP_KhachHang.TenKhachHang, TP_DonViTinh.TenDVT 
-                        FROM TP_DonSanXuat 
-                        LEFT JOIN TP_KhachHang ON TP_DonSanXuat.MaKhachHang = TP_KhachHang.MaKhachHang 
-                        LEFT JOIN TP_DonViTinh ON TP_DonSanXuat.MaDVT = TP_DonViTinh.MaDVT 
-                        INNER JOIN TP_ChiTietDonSanXuat ON TP_DonSanXuat.MaSoMe = TP_ChiTietDonSanXuat.MaSoMe 
-                        WHERE $whereClause 
-                        AND TP_DonSanXuat.MaSoMe LIKE :maSoMe 
-                        AND TP_KhachHang.TenKhachHang LIKE :tenKhachHang 
-                        AND TP_ChiTietDonSanXuat.MaNhanVien = :maNhanVien 
-                        ORDER BY TP_DonSanXuat.NgayNhan DESC 
-                        OFFSET :offset ROWS 
-                        FETCH NEXT :limit ROWS ONLY";
-                $stmt = $pdo->prepare($sql);
-                if ($trangThai != 0) {
-                    $stmt->bindValue(':trangThai', $trangThai, PDO::PARAM_INT);
-                }
-                $stmt->bindValue(':maSoMe', $maSoMe, PDO::PARAM_STR);
-                $stmt->bindValue(':tenKhachHang', $tenKhachHang, PDO::PARAM_STR);
-                $stmt->bindValue(':maNhanVien', $maNhanVien, PDO::PARAM_STR);
-                $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-                $stmt->bindValue(':limit', $recordsPerPage, PDO::PARAM_INT);
-                $stmt->execute();
-                $donSanXuat = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-                // Trả về JSON
-                header('Content-Type: application/json');
-                echo json_encode([
-                    'success' => true,
-                    'data' => $donSanXuat,
-                    'totalPages' => $totalPages,
-                    'currentPage' => $page,
-                    'offset' => $offset
-                ]);
-            } catch (Exception $e) {
-                header('Content-Type: application/json');
-                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+            // Đếm tổng số bản ghi
+            $sqlCount = "SELECT COUNT(*) as total 
+                         FROM TP_DonSanXuat 
+                         LEFT JOIN TP_KhachHang ON TP_DonSanXuat.MaKhachHang = TP_KhachHang.MaKhachHang 
+                         WHERE $whereClause 
+                         AND TP_DonSanXuat.MaSoMe LIKE :maSoMe 
+                         AND TP_KhachHang.TenKhachHang LIKE :tenKhachHang";
+            $stmtCount = $pdo->prepare($sqlCount);
+            if ($trangThai != 0) {
+                $stmtCount->bindValue(':trangThai', $trangThai, PDO::PARAM_INT);
             }
-            exit;
+            $stmtCount->bindValue(':maSoMe', $maSoMe, PDO::PARAM_STR);
+            $stmtCount->bindValue(':tenKhachHang', $tenKhachHang, PDO::PARAM_STR);
+            $stmtCount->execute();
+            $totalRecords = $stmtCount->fetch(PDO::FETCH_ASSOC)['total'];
+            $totalPages = ceil($totalRecords / $recordsPerPage);
+
+            // Lấy dữ liệu cho trang hiện tại
+            $sql = "SELECT TP_DonSanXuat.MaSoMe, TP_DonSanXuat.MaKhachHang, TP_DonSanXuat.MaDonHang, TP_DonSanXuat.MaVatTu, 
+                           TP_DonSanXuat.TenVai, TP_DonSanXuat.TongSoLuongGiao, TP_DonSanXuat.MaDVT, 
+                           TP_DonSanXuat.TrangThai, TP_DonSanXuat.NgayNhan,
+                           TP_KhachHang.TenKhachHang, TP_DonViTinh.TenDVT 
+                    FROM TP_DonSanXuat 
+                    LEFT JOIN TP_KhachHang ON TP_DonSanXuat.MaKhachHang = TP_KhachHang.MaKhachHang 
+                    LEFT JOIN TP_DonViTinh ON TP_DonSanXuat.MaDVT = TP_DonViTinh.MaDVT 
+                    WHERE $whereClause 
+                    AND TP_DonSanXuat.MaSoMe LIKE :maSoMe 
+                    AND TP_KhachHang.TenKhachHang LIKE :tenKhachHang 
+                    ORDER BY TP_DonSanXuat.NgayNhan DESC 
+                    OFFSET :offset ROWS 
+                    FETCH NEXT :limit ROWS ONLY";
+            $stmt = $pdo->prepare($sql);
+            if ($trangThai != 0) {
+                $stmt->bindValue(':trangThai', $trangThai, PDO::PARAM_INT);
+            }
+            $stmt->bindValue(':maSoMe', $maSoMe, PDO::PARAM_STR);
+            $stmt->bindValue(':tenKhachHang', $tenKhachHang, PDO::PARAM_STR);
+            $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+            $stmt->bindValue(':limit', $recordsPerPage, PDO::PARAM_INT);
+            $stmt->execute();
+            $donSanXuat = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Trả về JSON
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => true,
+                'data' => $donSanXuat,
+                'totalPages' => $totalPages,
+                'currentPage' => $page,
+                'offset' => $offset
+            ]);
         } elseif ($_POST['action'] === 'updateTrangThai' && isset($_POST['maSoMe'])) {
-                    // Xử lý cập nhật trạng thái
+            // Xử lý cập nhật trạng thái
             $maSoMe = $_POST['maSoMe'];
 
             // Kiểm tra trạng thái hiện tại
@@ -167,33 +147,28 @@ $offset = ($page - 1) * $recordsPerPage;
 // Điều kiện lọc
 $whereClause = $trangThai == 0 ? "TP_DonSanXuat.TrangThai IN (0, 2) AND TP_DonSanXuat.LoaiDon != 3" : "(TP_DonSanXuat.TrangThai = :trangThai OR TP_DonSanXuat.LoaiDon = 3)";
 
+
 // Đếm tổng số bản ghi
-$sqlCount = "SELECT COUNT(DISTINCT TP_DonSanXuat.MaSoMe) as total 
+$sqlCount = "SELECT COUNT(*) as total 
              FROM TP_DonSanXuat 
-             LEFT JOIN TP_KhachHang ON TP_DonSanXuat.MaKhachHang = TP_KhachHang.MaKhachHang 
-             INNER JOIN TP_ChiTietDonSanXuat ON TP_DonSanXuat.MaSoMe = TP_ChiTietDonSanXuat.MaSoMe 
-             WHERE $whereClause 
-             AND TP_ChiTietDonSanXuat.MaNhanVien = :maNhanVien";
+             WHERE $whereClause";
 $stmtCount = $pdo->prepare($sqlCount);
 if ($trangThai != 0) {
     $stmtCount->bindValue(':trangThai', $trangThai, PDO::PARAM_INT);
 }
-$stmtCount->bindValue(':maNhanVien', $maNhanVien, PDO::PARAM_STR);
 $stmtCount->execute();
 $totalRecords = $stmtCount->fetch(PDO::FETCH_ASSOC)['total'];
 $totalPages = ceil($totalRecords / $recordsPerPage);
 
 // Lấy dữ liệu cho trang hiện tại
-$sql = "SELECT DISTINCT TP_DonSanXuat.MaSoMe, TP_DonSanXuat.MaKhachHang, TP_DonSanXuat.MaDonHang, TP_DonSanXuat.MaVatTu,
+$sql = "SELECT TP_DonSanXuat.MaSoMe, TP_DonSanXuat.MaKhachHang, TP_DonSanXuat.MaDonHang, TP_DonSanXuat.MaVatTu,
                TP_DonSanXuat.TenVai, TP_DonSanXuat.TongSoLuongGiao, TP_DonSanXuat.MaDVT, 
                TP_DonSanXuat.TrangThai, TP_DonSanXuat.NgayNhan,
                TP_KhachHang.TenKhachHang, TP_DonViTinh.TenDVT 
         FROM TP_DonSanXuat 
         LEFT JOIN TP_KhachHang ON TP_DonSanXuat.MaKhachHang = TP_KhachHang.MaKhachHang 
         LEFT JOIN TP_DonViTinh ON TP_DonSanXuat.MaDVT = TP_DonViTinh.MaDVT 
-        INNER JOIN TP_ChiTietDonSanXuat ON TP_DonSanXuat.MaSoMe = TP_ChiTietDonSanXuat.MaSoMe 
         WHERE $whereClause 
-        AND TP_ChiTietDonSanXuat.MaNhanVien = :maNhanVien 
         ORDER BY TP_DonSanXuat.NgayNhan DESC 
         OFFSET :offset ROWS 
         FETCH NEXT :limit ROWS ONLY";
@@ -201,7 +176,6 @@ $stmt = $pdo->prepare($sql);
 if ($trangThai != 0) {
     $stmt->bindValue(':trangThai', $trangThai, PDO::PARAM_INT);
 }
-$stmt->bindValue(':maNhanVien', $maNhanVien, PDO::PARAM_STR);
 $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
 $stmt->bindValue(':limit', $recordsPerPage, PDO::PARAM_INT);
 $stmt->execute();
