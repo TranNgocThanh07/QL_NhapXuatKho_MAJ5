@@ -160,11 +160,11 @@ if ($maPhanQuyen && $maNhanVien) {
     if ($maPhanQuyen == 6) {
         $canViewChiTiet = true;
         $sqlChiTiet = "SELECT ct.*, m.TenMau, dvt.TenDVT 
-                       FROM TP_ChiTietDonSanXuat ct
-                       LEFT JOIN TP_Mau m ON ct.MaMau = m.MaMau
-                       LEFT JOIN TP_DonViTinh dvt ON ct.MaDVT = dvt.MaDVT
-                       WHERE ct.MaSoMe = ?
-                       ORDER BY ct.SoLot ASC, ct.SoKgCan ASC";
+                        FROM TP_ChiTietDonSanXuat ct
+                        LEFT JOIN TP_Mau m ON ct.MaMau = m.MaMau
+                        LEFT JOIN TP_DonViTinh dvt ON ct.MaDVT = dvt.MaDVT
+                        WHERE ct.MaSoMe = ?
+                        ORDER BY ct.SoLot ASC, ct.SoKgCan ASC";
         $stmtChiTiet = $pdo->prepare($sqlChiTiet);
         if (!$stmtChiTiet) {
             error_log("[" . date('Y-m-d H:i:s') . "] Lỗi chuẩn bị truy vấn quyền 6: " . print_r($pdo->errorInfo(), true));
@@ -210,6 +210,12 @@ if ($maPhanQuyen && $maNhanVien) {
 $lotGroups = [];
 $tongSoLuong = 0; // Khởi tạo $tongSoLuong
 if ($canViewChiTiet && !empty($chiTietList)) {
+    // Truy vấn GhiChuLot từ bảng TP_SoLotMe
+    $sqlGhiChuLot = "SELECT SoLot, GhiChu FROM TP_SoLotMe WHERE MaSoMe = ?";
+    $stmtGhiChuLot = $pdo->prepare($sqlGhiChuLot);
+    $stmtGhiChuLot->execute([$maSoMe]);
+    $ghiChuLotData = $stmtGhiChuLot->fetchAll(PDO::FETCH_KEY_PAIR); // Lấy SoLot làm key, GhiChu làm value
+
     foreach ($chiTietList as $chiTiet) {
         $lot = $chiTiet['SoLot'];
         if (!isset($lotGroups[$lot])) {
@@ -217,7 +223,8 @@ if ($canViewChiTiet && !empty($chiTietList)) {
                 'items' => [],
                 'totalQuantity' => 0,
                 'totalKg' => 0, // Khởi tạo tổng kg cho lot
-                'totalCay' => 0 // Khởi tạo tổng cây cho lot
+                'totalCay' => 0, // Khởi tạo tổng cây cho lot
+                'ghiChuLot' => isset($ghiChuLotData[$lot]) ? $ghiChuLotData[$lot] : '' // Gán GhiChuLot
             ];
         }
         $lotGroups[$lot]['items'][] = $chiTiet;
@@ -1027,19 +1034,23 @@ $percentCompleted = $don && $don['SoLuongDatHang'] > 0 ? min(100, round(($don['D
                                     ?>
                                         <tr class="bg-indigo-100 text-indigo-800 font-bold border-b border-gray-200">
                                             <td colspan="<?php echo (!empty($don) && isset($don['TenDVT']) && $don['TenDVT'] != 'KG') ? 10 : 9; ?>" class="p-2 sm:p-3">
-                                                <div class="flex items-center gap-2">
+                                                 <div class="flex items-center gap-2">
                                                     <i class="fas fa-folder-open"></i>
                                                     <span>Số Lot: <?php echo safeHtml($lot); ?> (Tổng nhập: <?php echo number_format($group['totalQuantity'], 2, '.', '') . ' ' . safeHtml($don['TenDVT']); ?>
                                                     <?php if (!empty($don) && isset($don['TenDVT']) && $don['TenDVT'] != 'KG'): ?>
                                                         , Tổng kg thực tế: <?php echo number_format($group['totalKg'], 2, '.', '') . ' KG'; ?>
                                                     <?php endif; ?>
-                                                    , Tổng cây: <?php echo $group['totalCay'] . ' Cây '; ?>)</span>
+                                                    , Tổng cây: <?php echo $group['totalCay'] . ' Cây'; ?>
+                                                    <?php if (!empty($group['ghiChuLot'])): ?>
+                                                        , Ghi chú Lot: <?php echo safeHtml($group['ghiChuLot']); ?>
+                                                    <?php endif; ?>
+                                                    )</span>
                                                 </div>
                                             </td>
                                         </tr>
                                         <?php foreach ($group['items'] as $chiTiet): ?>
                                             <tr class="border-b border-gray-200 hover:bg-red-100 transition-colors" data-note="<?php echo safeHtml($chiTiet['GhiChu']); ?>">
-                                                <td class="sticky left-0 bg-white p-2 sm:p-3"><?php echo $stt++; ?></td>
+                                                <td class="sticky left-0 bg-white p-2 sm:p-3"><?php echo safeHtml($chiTiet['STT']); ?></td>
                                                 <td class="font-bold p-2 sm:p-3 whitespace-normal <?php echo intval($chiTiet['SoLuong']) > 0 ? 'text-green-600' : 'text-red-600'; ?>">
                                                     <?php echo safeHtml($chiTiet['SoLuong']) . ' ' . safeHtml($chiTiet['TenDVT']); ?>
                                                 </td>

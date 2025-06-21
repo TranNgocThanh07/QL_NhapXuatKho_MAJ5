@@ -71,6 +71,8 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
             }
         }
         $columnWidthsPerRow = array_fill(0, 8, array($tableWidth * 0.25, $tableWidth * 0.75));
+        $columnWidthsPerRow = array_fill(0, 7, array($tableWidth * 0.25, $tableWidth * 0.75));
+        $columnWidthsPerRow[7] = array($tableWidth * 0.25, $tableWidth * 0.50, $tableWidth * 0.125, $tableWidth * 0.125);
         $columnWidthsPerRow[8] = array($tableWidth * 0.25, $tableWidth * 0.50, $tableWidth * 0.25);
         $columnWidthsPerRow[9] = array($tableWidth * 0.75, $tableWidth * 0.25);
 
@@ -205,7 +207,7 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->MultiCell($cellWidth, $cellHeight, $item['MaDonHang'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         }
                         break;
-                    case 7:
+                   case 7:
                         if ($col == 0) {
                             $pdf->SetFont($font, 'B', 8);
                             $pdf->MultiCell($cellWidth, $cellHeight / 2, 'SỐ LOT', 0, 'C', false, 1, $cellX, $cellY + $paddingCell);
@@ -214,6 +216,14 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                         } elseif ($col == 1) {
                             $pdf->SetFont($font, 'B', 9);
                             $pdf->MultiCell($cellWidth, $cellHeight, $item['SoLot'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
+                        } elseif ($col == 2) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, 'STT', 0, 'C', false, 1, $cellX, $cellY + $paddingCell);
+                            $pdf->SetFont($font, 'B', 6);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, '(NO.)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
+                        } elseif ($col == 3) {
+                            $pdf->SetFont($font, 'B', 9);
+                            $pdf->MultiCell($cellWidth, $cellHeight, $item['STT'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         }
                         break;
                     case 8:
@@ -304,7 +314,7 @@ function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
             array($tableWidth * 0.25, $tableWidth * 0.75),
             array($tableWidth * 0.25, $tableWidth * 0.75),
             array($tableWidth * 0.25, $tableWidth * 0.75),
-            array($tableWidth * 0.25, $tableWidth * 0.75),
+            array($tableWidth * 0.25, $tableWidth * 0.50,$tableWidth * 0.125,$tableWidth * 0.125),
             array($tableWidth * 0.25, $tableWidth * 0.50, $tableWidth * 0.25),
             array($tableWidth * 0.75, $tableWidth * 0.25)
         );
@@ -408,6 +418,14 @@ function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                         } elseif ($col == 1) {
                             $pdf->SetFont($font, 'B', 9);
                             $pdf->MultiCell($cellWidth, $cellHeight, $item['SoLot'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
+                        } elseif ($col == 2) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, 'STT', 0, 'C', false, 1, $cellX, $cellY + $paddingCell);
+                            $pdf->SetFont($font, 'B', 6);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, '(NO.)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
+                        } elseif ($col == 3) {
+                            $pdf->SetFont($font, 'B', 9);
+                            $pdf->MultiCell($cellWidth, $cellHeight, $item['STT'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         }
                         break;
                     case 6:
@@ -558,7 +576,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     try {
         $pdo->beginTransaction();     
 
-        $sqlDon = "SELECT SoKgQuyDoi, TenDVT,TongSoLuongGiao FROM TP_DonSanXuat ds
+        $sqlDon = "SELECT SoKgQuyDoi, TenDVT, TongSoLuongGiao FROM TP_DonSanXuat ds
                    LEFT JOIN TP_DonViTinh dvt ON ds.MaDVT = dvt.MaDVT
                    WHERE ds.MaSoMe = ?";
         $stmtDon = $pdo->prepare($sqlDon);
@@ -580,13 +598,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $sqlInsert = "INSERT INTO TP_ChiTietDonSanXuat (
             MaSoMe, MaNguoiLienHe, MaCTNHTP, MaDonHang, MaVai, MaVatTu, TenVai, 
             MaMau, MaDVT, Kho, SoLuong, MaQR, TrangThai, SoLot, NgayTao, 
-            MaKhachHang, MaNhanVien, TenThanhPhan, SoKgCan, OriginalTrangThai, MaKhuVuc, GhiChu
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            MaKhachHang, MaNhanVien, TenThanhPhan, SoKgCan, OriginalTrangThai, MaKhuVuc, GhiChu, STT
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $stmtInsert = $pdo->prepare($sqlInsert);
+
+        $sqlMaxSTT = "SELECT MAX(STT) as MaxSTT FROM TP_ChiTietDonSanXuat WHERE MaSoMe = ? AND SoLot = ?";
+        $stmtMaxSTT = $pdo->prepare($sqlMaxSTT);
 
         foreach ($data as $item) {
             $soKgCan = isset($item['SoKgCan']) && is_numeric($item['SoKgCan']) && $item['SoKgCan'] > 0 ? floatval($item['SoKgCan']) : null;
             
+            // Lưu hoặc cập nhật ghi chú số lot
+            if (!empty($item['GhiChuLot'])) {
+                $sqlCheckLot = "SELECT COUNT(*) as count FROM TP_SoLotMe WHERE MaSoMe = ? AND SoLot = ?";
+                $stmtCheckLot = $pdo->prepare($sqlCheckLot);
+                $stmtCheckLot->execute([$item['MaSoMe'], $item['SoLot']]);
+                $exists = $stmtCheckLot->fetch(PDO::FETCH_ASSOC)['count'] > 0;
+
+                if ($exists) {
+                    $sqlUpdateLot = "UPDATE TP_SoLotMe SET GhiChu = ? WHERE MaSoMe = ? AND SoLot = ?";
+                    $stmtUpdateLot = $pdo->prepare($sqlUpdateLot);
+                    $stmtUpdateLot->execute([$item['GhiChuLot'], $item['MaSoMe'], $item['SoLot']]);
+                } else {
+                    $sqlInsertLot = "INSERT INTO TP_SoLotMe (MaSoMe, SoLot, GhiChu) VALUES (?, ?, ?)";
+                    $stmtInsertLot = $pdo->prepare($sqlInsertLot);
+                    $stmtInsertLot->execute([$item['MaSoMe'], $item['SoLot'], $item['GhiChuLot']]);
+                }
+            }
+
+            // Xác định STT dựa trên SoLot
+            $stmtMaxSTT->execute([$item['MaSoMe'], $item['SoLot']]);
+            $maxSTTResult = $stmtMaxSTT->fetch(PDO::FETCH_ASSOC);
+            $stt = ($maxSTTResult['MaxSTT'] !== null) ? intval($maxSTTResult['MaxSTT']) + 1 : 1;
+
             $stmtInsert->bindValue(1, $item['MaSoMe']);
             $stmtInsert->bindValue(2, $item['MaNguoiLienHe']);
             $stmtInsert->bindValue(3, $item['MaCTNHTP']);
@@ -607,21 +651,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $stmtInsert->bindValue(18, $item['TenThanhPhan']);
             $stmtInsert->bindValue(19, $soKgCan);
             $stmtInsert->bindValue(20, $item['OriginalTrangThai']);
-             $stmtInsert->bindValue(21, $item['MaKhuVuc']);
-              $stmtInsert->bindValue(22, $item['GhiChu']);
+            $stmtInsert->bindValue(21, $item['MaKhuVuc']);
+            $stmtInsert->bindValue(22, $item['GhiChu']);
+            $stmtInsert->bindValue(23, $stt);
             $stmtInsert->execute();
         }
 
         $pdo->commit();
 
         $soLuongConLai = $soLuongGiao - $tongSoLuongMoi;
-       $message = "<div style=\"font-size: 14px;\">" .
+        $message = "<div style=\"font-size: 14px;\">" .
                     "Nhập kho thành công!<br>" .
                     "Tổng số lượng: <span style=\"color: red;\">" . number_format($soLuongGiao) . "</span> $tenDVT<br>" .
                     "Tổng đã nhập: <span style=\"color: red;\">" . number_format($tongSoLuongMoi) . "</span> $tenDVT<br>" .
                     "Còn lại nhập: <span style=\"color: red;\">" . number_format($soLuongConLai) . "</span> $tenDVT" .
                     "</div>";
-
 
         echo json_encode([
             'success' => true,
@@ -645,6 +689,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'saveOrUpdateGhiChuLot') {
+    header('Content-Type: application/json');
+    $maSoMe = $_POST['maSoMe'] ?? '';
+    $soLot = $_POST['soLot'] ?? '';
+    $ghiChuLot = $_POST['ghiChuLot'] ?? '';
+
+    if (empty($maSoMe) || empty($soLot)) {
+        echo json_encode(['success' => false, 'message' => 'Thiếu mã số mẻ hoặc số lot.']);
+        exit;
+    }
+
+    try {
+        // Kiểm tra xem số lot đã tồn tại chưa
+        $sqlCheck = "SELECT COUNT(*) as count FROM TP_SoLotMe WHERE MaSoMe = ? AND SoLot = ?";
+        $stmtCheck = $pdo->prepare($sqlCheck);
+        $stmtCheck->execute([$maSoMe, $soLot]);
+        $exists = $stmtCheck->fetch(PDO::FETCH_ASSOC)['count'] > 0;
+
+        if ($exists) {
+            // Cập nhật ghi chú
+            $sqlUpdate = "UPDATE TP_SoLotMe SET GhiChu = ? WHERE MaSoMe = ? AND SoLot = ?";
+            $stmtUpdate = $pdo->prepare($sqlUpdate);
+            $stmtUpdate->execute([$ghiChuLot, $maSoMe, $soLot]);
+        } else {
+            // Thêm mới số lot
+            $sqlInsert = "INSERT INTO TP_SoLotMe (MaSoMe, SoLot, GhiChu) VALUES (?, ?, ?)";
+            $stmtInsert = $pdo->prepare($sqlInsert);
+            $stmtInsert->execute([$maSoMe, $soLot, $ghiChuLot]);
+        }
+
+        echo json_encode(['success' => true]);
+    } catch (PDOException $e) {
+        echo json_encode(['success' => false, 'message' => 'Lỗi cơ sở dữ liệu: ' . $e->getMessage()]);
+    }
+    exit;
+}
 // Truy vấn thông tin đơn hàng và TenThanhPhan
 $maSoMe = $_GET['maSoMe'] ?? '';
 $soLuongGiao = 0;
@@ -803,13 +883,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 
     try {
-        $sqlChiTiet = "SELECT SoLuong, SoKgCan, SoLot, TenThanhPhan, MaKhuVuc, GhiChu
-                       FROM TP_ChiTietDonSanXuat 
-                       WHERE MaSoMe = ? AND TrangThai = 0
-                       ORDER BY NgayTao DESC";
+        $sqlChiTiet = "SELECT ctdsx.SoLuong, ctdsx.SoKgCan, ctdsx.SoLot, ctdsx.TenThanhPhan, ctdsx.MaKhuVuc, ctdsx.GhiChu, ctdsx.STT, slm.GhiChu as GhiChuLot
+                       FROM TP_ChiTietDonSanXuat ctdsx
+                       LEFT JOIN TP_SoLotMe slm ON ctdsx.MaSoMe = slm.MaSoMe AND ctdsx.SoLot = slm.SoLot
+                       WHERE ctdsx.MaSoMe = ? AND ctdsx.TrangThai = 0
+                       ORDER BY ctdsx.SoLot, ctdsx.STT";
         $stmtChiTiet = $pdo->prepare($sqlChiTiet);
         $stmtChiTiet->execute([$maSoMe]);
         $chiTietList = $stmtChiTiet->fetchAll(PDO::FETCH_ASSOC);
+
+        // Ghi log để kiểm tra dữ liệu trả về
+        error_log("[" . date('Y-m-d H:i:s') . "] Dữ liệu chi tiết nhập kho: " . json_encode($chiTietList));
 
         echo json_encode([
             'success' => true,
@@ -819,6 +903,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         echo json_encode(['success' => false, 'message' => 'Lỗi cơ sở dữ liệu: ' . $e->getMessage()]);
     }
     exit;
+}
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'checkSoLot') {
+    $soLot = $_POST['soLot'] ?? '';
+    $maSoMe = $_POST['maSoMe'] ?? '';
+
+    if (empty($soLot) || empty($maSoMe)) {
+        echo json_encode(['success' => false, 'message' => 'Thiếu số lot hoặc mã số mẻ.']);
+        exit;
+    }
+
+    try {
+        $sql = "SELECT GhiChu FROM TP_SoLotMe WHERE MaSoMe = ? AND SoLot = ?";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$maSoMe, $soLot]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            'success' => true,
+            'data' => $result ? ['GhiChu' => $result['GhiChu'] ?? ''] : null
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode(['success' => false, 'message' => 'Lỗi cơ sở dữ liệu: ' . $e->getMessage()]);
+    }
+    exit;
+}
+
+$maSoMe = $_GET['maSoMe'] ?? '';
+$soLotList = [];
+if ($maSoMe) {
+    $sqlSoLot = "SELECT SoLot, GhiChu FROM TP_SoLotMe WHERE MaSoMe = ? ORDER BY SoLot";
+    $stmtSoLot = $pdo->prepare($sqlSoLot);
+    $stmtSoLot->execute([$maSoMe]);
+    $soLotList = $stmtSoLot->fetchAll(PDO::FETCH_ASSOC);
 }
 ?>
 
@@ -1030,13 +1147,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                    
                     <!-- Khuvuc Và Ghi Chú -->
                      <div class="grid grid-cols-2 gap-4">
-                       <div>
+                     
+                        <div>
                             <label class="block text-xs font-bold text-gray-700 mb-1">Số Lot</label>
                             <input type="text" id="soLot" name="SoLot" value=""
+                                list="soLotList"
                                 oninput="restrictLotNumber(this)"
                                 class="input-field w-full p-2 rounded-lg text-xs border-gray-300 focus:border-blue-500"
-                                placeholder="Nhập số lot (tối đa 8 số)">
+                                placeholder="Nhập số lot (tối đa 8 số)" required>
+                            <datalist id="soLotList">
+                                <?php foreach ($soLotList as $lot): ?>
+                                    <option value="<?php echo htmlspecialchars($lot['SoLot']); ?>" data-ghichu="<?php echo htmlspecialchars($lot['GhiChu'] ?? ''); ?>">
+                                <?php endforeach; ?>
+                            </datalist>
                         </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Ghi Chú Lot</label>
+                            <input type="text" id="ghiChuLot" name="GhiChuLot"
+                                class="input-field w-full p-2 rounded-lg text-xs border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="Nhập ghi chú cho số lot (nếu có)">
+                        </div>
+
                         <div>
                             <label class="block text-xs font-bold text-gray-700 mb-1">Khu Vực</label>
                             <select name="MaKhuVuc" id="MaKhuVuc" class="input-field w-full p-2 text-xs rounded-lg">
@@ -1219,6 +1350,39 @@ function restrictLotNumber(input) {
     }
 }
 
+// sự kiện để tự động điền ghi chú lot khi chọn số lot
+document.getElementById('soLot').addEventListener('input', async function(e) {
+    const soLot = e.target.value.trim();
+    const maSoMe = '<?php echo htmlspecialchars($maSoMe); ?>';
+    const ghiChuLotInput = document.getElementById('ghiChuLot');
+
+    if (soLot && maSoMe) {
+        try {
+            const formData = new FormData();
+            formData.append('action', 'checkSoLot');
+            formData.append('soLot', soLot);
+            formData.append('maSoMe', maSoMe);
+
+            const response = await fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+
+            if (result.success && result.data && result.data.GhiChu) {
+                ghiChuLotInput.value = result.data.GhiChu;
+            } else {
+                ghiChuLotInput.value = ''; // Xóa ghi chú nếu không tìm thấy
+            }
+        } catch (error) {
+            console.error('Lỗi khi lấy ghi chú lot:', error);
+            ghiChuLotInput.value = ''; // Xóa ghi chú nếu có lỗi
+        }
+    } else {
+        ghiChuLotInput.value = ''; // Xóa ghi chú nếu số lot trống
+    }
+});
+
 // Xử lý sự kiện submit form nhập kho, kiểm tra và thêm dữ liệu vào tempData
 document.getElementById('nhapHangForm').addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -1230,6 +1394,7 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
     const tenThanhPhanElement = document.getElementById('TenThanhPhan');
     const maKhuVucElement = document.getElementById('MaKhuVuc');
     const ghiChuElement = document.getElementById('GhiChu');
+    const ghiChuLotElement = document.getElementById('ghiChuLot');
 
     // Kiểm tra sự tồn tại của các phần tử
     let errorMessages = [];
@@ -1239,6 +1404,7 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
     if (!tenThanhPhanElement) errorMessages.push("Không tìm thấy trường thành phần.");
     if (!maKhuVucElement) errorMessages.push("Không tìm thấy trường mã khu vực.");
     if (!ghiChuElement) errorMessages.push("Không tìm thấy trường ghi chú.");
+    if (!ghiChuLotElement) errorMessages.push("Không tìm thấy trường ghi chú số lot.");
 
     if (errorMessages.length > 0) {
         Swal.fire({
@@ -1264,6 +1430,7 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
     const tenThanhPhan = tenThanhPhanElement.value.trim();
     const maKhuVuc = maKhuVucElement.value.trim();
     const ghiChu = ghiChuElement.value.trim();
+    let ghiChuLot = ghiChuLotElement.value.trim(); // Lấy giá trị từ input
 
     // Kiểm tra dữ liệu đầu vào
     errorMessages = [];
@@ -1276,9 +1443,9 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
     if (!tenThanhPhan) errorMessages.push("Thành phần không được để trống.");
     if (!maKhuVuc) errorMessages.push("Mã khu vực không được để trống.");
 
-    // Kiểm tra số cây tối đa trong bảng tạm (tempData)
+    // Kiểm tra số cây tối đa
     const currentTotalTrees = tempData.length;
-    const newTotalTrees = currentTotalTrees + 1; // Mỗi lần submit thêm 1 cây
+    const newTotalTrees = currentTotalTrees + 1;
     if (newTotalTrees > 20) {
         errorMessages.push(`
             <div style="background-color: #fff8e1; border: 1px solid #ffe0a3; padding: 14px 18px; border-radius: 10px; color: #7c5700; font-size: 14px; line-height: 1.6; margin: 12px 0; box-shadow: 0 2px 6px rgba(0,0,0,0.05); font-family: 'Segoe UI', Tahoma, sans-serif;">
@@ -1288,7 +1455,6 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
             </div>
         `);
     }
-
 
     if (errorMessages.length > 0) {
         Swal.fire({
@@ -1307,7 +1473,6 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
         return;
     }
 
-    // Kiểm tra giá trị hợp lệ cho MaKhuVuc
     const validMaKhuVuc = <?php echo json_encode(array_column($MaKhuVucList, 'MaKhuVuc')); ?>;
     if (!validMaKhuVuc.includes(maKhuVuc)) {
         Swal.fire({
@@ -1332,7 +1497,7 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
     const maSoMe = formData.get('MaSoMe');
 
     try {
-        // Kiểm tra số lượng nhập so với số lượng giao
+        // Kiểm tra số lượng nhập
         const tongSoLuongDaNhapDB = await getTongSoLuongNhap(maSoMe);
         const tongSoLuongDaNhapTrongTemp = tempData.reduce((sum, item) => sum + item.SoLuong, 0);
         const tongSoLuongHienTai = tongSoLuongDaNhapDB + tongSoLuongDaNhapTrongTemp;
@@ -1374,13 +1539,25 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
             return;
         }
 
-        const maQRBase = `${formData.get('MaKhachHang')}_${formData.get('MaVai')}_${formData.get('MaMau')}_${formData.get('MaDVT')}_${formData.get('Kho')}_${soLuong}_${soLot}`;
+        // Kiểm tra số lot và lấy ghi chú từ server nếu input rỗng
+        const serverGhiChuLot = await checkSoLot(soLot, maSoMe);
+        const finalGhiChuLot = ghiChuLot ;
 
-        // Thêm 1 cây vào tempData
-        tempSTT++;
-        const maCTNHTP = generateMaCTNHTP(tempSTT);
+        // Tính STT
+        const existingItems = tempData.filter(item => item.SoLot === soLot);
+        const existingInDB = await getSTTForSoLot(maSoMe, soLot);
+        const maxSTT = Math.max(
+            ...existingItems.map(item => item.STT || 0),
+            existingInDB || 0
+        );
+        const newSTT = maxSTT + 1;
+
+        const maQRBase = `${formData.get('MaKhachHang')}_${formData.get('MaVai')}_${formData.get('MaMau')}_${formData.get('MaDVT')}_${formData.get(' تقریباً Kho')}_${soLuong}_${soLot}`;
+
+        // Thêm vào tempData
+        const maCTNHTP = generateMaCTNHTP(newSTT);
         tempData.push({
-            STT: tempSTT,
+            STT: newSTT,
             MaSoMe: maSoMe,
             MaNguoiLienHe: formData.get('MaNguoiLienHe'),
             MaCTNHTP: maCTNHTP,
@@ -1402,15 +1579,23 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
             SoKgCan: soKGCan,
             OriginalTrangThai: 0,
             MaKhuVuc: maKhuVuc,
-            GhiChu: ghiChu || null
+            GhiChu: ghiChu || null,
+            GhiChuLot: finalGhiChuLot || null // Sử dụng finalGhiChuLot
         });
+
+        console.log('tempData sau khi thêm:', tempData); // Debug
+
+        // Lưu hoặc cập nhật ghi chú số lot
+        if (finalGhiChuLot) {
+            await saveOrUpdateGhiChuLot(maSoMe, soLot, finalGhiChuLot);
+        }
 
         updateTable();
         soLuongElement.value = '';
         soKGCanElement.value = '';
-        // soLotElement.value = ''; // Giữ lại nếu không muốn reset
         maKhuVucElement.value = '';
         ghiChuElement.value = '';
+        //ghiChuLotElement.value = '';
 
         Swal.fire({
             icon: 'success',
@@ -1442,28 +1627,121 @@ document.getElementById('nhapHangForm').addEventListener('submit', async functio
     }
 });
 
+// Kiểm tra số lot và load ghi chú nếu có
+async function checkSoLot(soLot, maSoMe) {
+    const formData = new FormData();
+    formData.append('action', 'checkSoLot');
+    formData.append('soLot', soLot);
+    formData.append('maSoMe', maSoMe);
+
+    try {
+        const response = await fetch(window.location.href, {
+            method: 'POST',
+            body: formData
+        });
+        const result = await response.json();
+        console.log('Kết quả checkSoLot:', result); // Debug
+        if (result.success && result.data) {
+            return result.data.GhiChu || '';
+        }
+        return '';
+    } catch (error) {
+        console.error('Lỗi khi kiểm tra SoLot:', error);
+        return '';
+    }
+}
+
+// Lấy STT lớn nhất cho số lot
+async function getSTTForSoLot(maSoMe, soLot) {
+    try {
+        const formData = new FormData();
+        formData.append('action', 'getMaxSTTForSoLot');
+        formData.append('maSoMe', maSoMe);
+        formData.append('soLot', soLot);
+
+        const response = await fetch(window.location.href, {
+            method: 'POST',
+            body: formData
+        });
+        const result = await response.json();
+
+        if (result.success) {
+            return result.maxSTT || 0;
+        }
+        return 0;
+    } catch (error) {
+        console.error('Lỗi khi lấy STT lớn nhất:', error);
+        return 0;
+    }
+}
+
+// Lưu hoặc cập nhật ghi chú số lot
+async function saveOrUpdateGhiChuLot(maSoMe, soLot, ghiChuLot) {
+    try {
+        const formData = new FormData();
+        formData.append('action', 'saveOrUpdateGhiChuLot');
+        formData.append('maSoMe', maSoMe);
+        formData.append('soLot', soLot);
+        formData.append('ghiChuLot', ghiChuLot);
+
+        const response = await fetch(window.location.href, {
+            method: 'POST',
+            body: formData
+        });
+        const result = await response.json();
+
+        if (!result.success) {
+            console.error('Lỗi khi lưu ghi chú số lot:', result.message);
+            throw new Error(result.message || 'Không thể lưu ghi chú số lot');
+        }
+    } catch (error) {
+        console.error('Lỗi khi lưu ghi chú số lot:', error);
+        throw error;
+    }
+}
 // Cập nhật bảng hiển thị dữ liệu nhập kho tạm thời
 function updateTable() {
     const tbody = document.getElementById('dataTableBody');
     tbody.innerHTML = '';
     const isKgUnit = '<?php echo $don['MaDVT'] === '1' || $tenDVT === 'KG' ? 'true' : 'false'; ?>';
-    tempData.forEach((item, index) => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${item.STT}</td>
-            <td>${item.SoLuong} <?php echo $tenDVT; ?></td>
-            ${isKgUnit === 'false' ? `<td>${item.SoKgCan ? item.SoKgCan + ' kg' : ''}</td>` : ''}
-            <td>${item.SoLot}</td>
-            <td>${item.TenThanhPhan}</td>
-            <td>${item.MaKhuVuc }</td>
-            <td>${item.GhiChu || ''}</td>
-            <td>
-                <button onclick="deleteRow(${index})" class="text-red-600 hover:text-red-800">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </td>
+
+    const groupedBySoLot = tempData.reduce((acc, item) => {
+        if (!acc[item.SoLot]) {
+            acc[item.SoLot] = { items: [], GhiChuLot: '' };
+        }
+        acc[item.SoLot].items.push(item);
+        // Cập nhật GhiChuLot với giá trị từ bản ghi cuối cùng
+        acc[item.SoLot].GhiChuLot = item.GhiChuLot || '';
+        return acc;
+    }, {});
+
+    Object.entries(groupedBySoLot).forEach(([soLot, data], groupIndex) => {
+        const lotRow = document.createElement('tr');
+        lotRow.className = 'bg-gray-200 font-semibold';
+        const ghiChuDisplay = data.GhiChuLot ? data.GhiChuLot : ''; // Sử dụng GhiChuLot từ bản ghi cuối
+        lotRow.innerHTML = `
+            <td colspan="${isKgUnit === 'false' ? 7 : 6}">Số Lot: ${soLot} ${ghiChuDisplay ? `Ghi chú: ${ghiChuDisplay}` : ''}</td>
         `;
-        tbody.appendChild(row);
+        tbody.appendChild(lotRow);
+
+        data.items.forEach((item, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${item.STT}</td>
+                <td>${item.SoLuong} <?php echo $tenDVT; ?></td>
+                ${isKgUnit === 'false' ? `<td>${item.SoKgCan ? item.SoKgCan + ' kg' : ''}</td>` : ''}
+                <td>${item.SoLot}</td>
+                <td>${item.TenThanhPhan}</td>
+                <td>${item.MaKhuVuc}</td>
+                <td>${item.GhiChu || ''}</td>
+                <td>
+                    <button onclick="deleteRow(${item.STT - 1})" class="text-red-600 hover:text-red-800">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
     });
 }
 
@@ -2329,19 +2607,41 @@ document.getElementById('XemChiTietNhap').addEventListener('click', async functi
         const result = await response.json();
 
         if (result.success && result.data.length > 0) {
+            // Nhóm dữ liệu theo số lot
+            const groupedBySoLot = result.data.reduce((acc, item) => {
+                if (!acc[item.SoLot]) {
+                    acc[item.SoLot] = { items: [], ghiChuLot: item.GhiChuLot || '' };
+                }
+                acc[item.SoLot].items.push(item);
+                return acc;
+            }, {});
+
             // Hàm tạo HTML cho bảng
-            function generateTableRows(data) {
-                return data.map((item, index) => `
-                    <tr data-note="${item.GhiChu || ''}">
-                        <td class="border px-4 py-2">${index + 1}</td>
-                        <td class="border px-4 py-2">${parseFloat(item.SoLuong).toFixed(2)} <?php echo $tenDVT; ?></td>
-                        ${isKgUnit === 'false' ? `<td class="border px-4 py-2">${item.SoKgCan ? parseFloat(item.SoKgCan).toFixed(2) + ' kg' : ''}</td>` : ''}
-                        <td class="border px-4 py-2">${item.SoLot}</td>
-                        <td class="border px-4 py-2">${item.TenThanhPhan}</td>
-                        <td class="border px-4 py-2">${item.MaKhuVuc || ''}</td>
-                        <td class="border px-4 py-2">${item.GhiChu || ''}</td>
-                    </tr>
-                `).join('');
+            function generateTableRows(groupedData) {
+                let html = '';
+                Object.entries(groupedBySoLot).forEach(([soLot, data], groupIndex) => {
+                    html += `
+                        <tr class="bg-gray-200 font-semibold">
+                            <td colspan="${isKgUnit === 'false' ? 7 : 6}" class="border px-4 py-2">
+                                Số Lot: ${soLot} ${data.ghiChuLot ? `(Ghi chú: ${data.ghiChuLot})` : ''}
+                            </td>
+                        </tr>
+                    `;
+                    data.items.forEach((item, index) => {
+                        html += `
+                            <tr data-note="${item.GhiChu || ''}">
+                                <td class="border px-4 py-2">${item.STT}</td>
+                                <td class="border px-4 py-2">${parseFloat(item.SoLuong).toFixed(2)} <?php echo $tenDVT; ?></td>
+                                ${isKgUnit === 'false' ? `<td class="border px-4 py-2">${item.SoKgCan ? parseFloat(item.SoKgCan).toFixed(2) + ' kg' : ''}</td>` : ''}
+                                <td class="border px-4 py-2">${item.SoLot}</td>
+                                <td class="border px-4 py-2">${item.TenThanhPhan}</td>
+                                <td class="border px-4 py-2">${item.MaKhuVuc || ''}</td>
+                                <td class="border px-4 py-2">${item.GhiChu || ''}</td>
+                            </tr>
+                        `;
+                    });
+                });
+                return html;
             }
 
             const htmlContent = `
@@ -2366,7 +2666,7 @@ document.getElementById('XemChiTietNhap').addEventListener('click', async functi
                                     <th class="border px-6 py-3 font-semibold min-w-[150px] whitespace-nowrap">📝 Ghi Chú</th>
                                 </tr>
                             </thead>
-                            <tbody>${generateTableRows(result.data)}</tbody>
+                            <tbody>${generateTableRows(groupedBySoLot)}</tbody>
                         </table>
                     </div>
                 </div>
@@ -2394,7 +2694,6 @@ document.getElementById('XemChiTietNhap').addEventListener('click', async functi
                 },
                 buttonsStyling: false,
                 didRender: () => {
-                    // Hàm lọc bảng
                     window.filterTable = function() {
                         const filterValue = document.getElementById('filterChiTiet').value;
                         const table = document.getElementById('chiTietTable');
@@ -2402,7 +2701,11 @@ document.getElementById('XemChiTietNhap').addEventListener('click', async functi
 
                         for (let row of rows) {
                             const note = row.getAttribute('data-note');
-                            row.style.display = (filterValue === 'hasNote' && (!note || note.trim() === '')) ? 'none' : '';
+                            if (row.classList.contains('bg-gray-200')) {
+                                row.style.display = ''; // Luôn hiển thị hàng tiêu đề số lot
+                            } else {
+                                row.style.display = (filterValue === 'hasNote' && (!note || note.trim() === '')) ? 'none' : '';
+                            }
                         }
                     };
                 }

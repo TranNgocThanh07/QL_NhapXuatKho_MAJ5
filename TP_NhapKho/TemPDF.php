@@ -56,6 +56,8 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
             }
         }
         $columnWidthsPerRow = array_fill(0, 8, array($tableWidth * 0.25, $tableWidth * 0.75));
+        $columnWidthsPerRow = array_fill(0, 7, array($tableWidth * 0.25, $tableWidth * 0.75));
+        $columnWidthsPerRow[7] = array($tableWidth * 0.25, $tableWidth * 0.50, $tableWidth * 0.125, $tableWidth * 0.125);
         $columnWidthsPerRow[8] = array($tableWidth * 0.25, $tableWidth * 0.50, $tableWidth * 0.25);
         $columnWidthsPerRow[9] = array($tableWidth * 0.75, $tableWidth * 0.25);
 
@@ -68,7 +70,7 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
             $watermarkHeight = $watermarkWidth * $imgInfo[1] / $imgInfo[0];
             $x = $centerX - $watermarkWidth / 2;
             $y = $centerY - $watermarkHeight / 2;
-            $pdf->SetAlpha(0.4);
+            $pdf->SetAlpha(0.05);
             $pdf->Image($watermarkPath, $x, $y, $watermarkWidth, $watermarkHeight);
             $pdf->SetAlpha(1);
         }
@@ -190,7 +192,7 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                             $pdf->MultiCell($cellWidth, $cellHeight, $item['MaDonHang'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         }
                         break;
-                    case 7:
+                   case 7:
                         if ($col == 0) {
                             $pdf->SetFont($font, 'B', 8);
                             $pdf->MultiCell($cellWidth, $cellHeight / 2, 'SỐ LOT', 0, 'C', false, 1, $cellX, $cellY + $paddingCell);
@@ -199,6 +201,14 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                         } elseif ($col == 1) {
                             $pdf->SetFont($font, 'B', 9);
                             $pdf->MultiCell($cellWidth, $cellHeight, $item['SoLot'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
+                        } elseif ($col == 2) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, 'STT', 0, 'C', false, 1, $cellX, $cellY + $paddingCell);
+                            $pdf->SetFont($font, 'B', 6);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, '(NO.)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
+                        } elseif ($col == 3) {
+                            $pdf->SetFont($font, 'B', 9);
+                            $pdf->MultiCell($cellWidth, $cellHeight, $item['STT'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         }
                         break;
                     case 8:
@@ -261,6 +271,7 @@ function generateSystemLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
 // Hàm tạo PDF Tem Khách Lẻ
 function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
     $font = 'freesans';
+
     foreach ($pdfData as $item) {
         if (!isset($item['SoLot'], $item['SoLuong'], $item['TenThanhPhan'])) {
             continue;
@@ -288,7 +299,7 @@ function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
             array($tableWidth * 0.25, $tableWidth * 0.75),
             array($tableWidth * 0.25, $tableWidth * 0.75),
             array($tableWidth * 0.25, $tableWidth * 0.75),
-            array($tableWidth * 0.25, $tableWidth * 0.75),
+            array($tableWidth * 0.25, $tableWidth * 0.50,$tableWidth * 0.125,$tableWidth * 0.125),
             array($tableWidth * 0.25, $tableWidth * 0.50, $tableWidth * 0.25),
             array($tableWidth * 0.75, $tableWidth * 0.25)
         );
@@ -392,6 +403,14 @@ function generateRetailLabel($pdf, $pdfData, $don, $tenMau, $tenDVT, $maSoMe) {
                         } elseif ($col == 1) {
                             $pdf->SetFont($font, 'B', 9);
                             $pdf->MultiCell($cellWidth, $cellHeight, $item['SoLot'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
+                        } elseif ($col == 2) {
+                            $pdf->SetFont($font, 'B', 8);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, 'STT', 0, 'C', false, 1, $cellX, $cellY + $paddingCell);
+                            $pdf->SetFont($font, 'B', 6);
+                            $pdf->MultiCell($cellWidth, $cellHeight / 2, '(NO.)', 0, 'C', false, 1, $cellX, $cellY + $paddingCell + 15);
+                        } elseif ($col == 3) {
+                            $pdf->SetFont($font, 'B', 9);
+                            $pdf->MultiCell($cellWidth, $cellHeight, $item['STT'], 0, 'C', false, 1, $cellX + $padding, $cellY + $padding + 7);
                         }
                         break;
                     case 6:
